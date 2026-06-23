@@ -125,6 +125,24 @@ export async function upsertClientAction(_prevState: AdminFormState, formData: F
   return { success: 'Cliente creado correctamente.' }
 }
 
+export async function approveClientAction(formData: FormData) {
+  await requireAdmin()
+  const id = String(formData.get('id') ?? '')
+  const supabase = await createSupabaseServerClient()
+  if (!id) return
+  await supabase.from('clients').update({ status: 'active' }).eq('id', id)
+  revalidatePath('/paneladmin/clientes')
+}
+
+export async function rejectClientAction(formData: FormData) {
+  await requireAdmin()
+  const id = String(formData.get('id') ?? '')
+  const supabase = await createSupabaseServerClient()
+  if (!id) return
+  await supabase.from('clients').update({ status: 'inactive' }).eq('id', id)
+  revalidatePath('/paneladmin/clientes')
+}
+
 export async function deactivateClientAction(formData: FormData) {
   await requireAdmin()
   const id = String(formData.get('id') ?? '')

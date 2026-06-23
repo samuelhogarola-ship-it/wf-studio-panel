@@ -49,7 +49,13 @@ export const getAdminClientsPageData = cache(async (search: string, editingId?: 
     clientsQuery = clientsQuery.or(`name.ilike.%${query}%,company.ilike.%${query}%,email.ilike.%${query}%`)
   }
 
-  const [{ data: clients }, { data: editingClient }, { data: summaries }] = await Promise.all([
+  const pendingQuery = supabase
+    .from('clients')
+    .select('id, name, email, created_at')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+
+  const [{ data: clients }, { data: editingClient }, { data: summaries }, { data: pendingClients }] = await Promise.all([
     clientsQuery,
     editingId
       ? supabase
@@ -59,12 +65,14 @@ export const getAdminClientsPageData = cache(async (search: string, editingId?: 
           .maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from('client_summary').select('*'),
+    pendingQuery,
   ])
 
   return {
     clients: clients ?? [],
     editingClient,
     summaries: summaries ?? [],
+    pendingClients: pendingClients ?? [],
   }
 })
 

@@ -55,7 +55,7 @@ export type Database = {
           company: string | null
           email: string
           phone: string | null
-          status: 'active' | 'inactive'
+          status: 'active' | 'inactive' | 'pending'
           created_at: string
           updated_at: string
         }
@@ -65,7 +65,7 @@ export type Database = {
           company?: string | null
           email: string
           phone?: string | null
-          status?: 'active' | 'inactive'
+          status?: 'active' | 'inactive' | 'pending'
           created_at?: string
           updated_at?: string
         }

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { ClientLoginForm } from '@/components/auth/client-login-form'
@@ -23,7 +24,10 @@ export default async function ClientLoginPage() {
       <div className="self-center">
         <ClientLoginForm />
         <Card className="mt-4 p-5 text-sm text-muted">
-          El acceso solo se concede si tu cuenta está activa y el email coincide con tu ficha de cliente.
+          ¿Primera vez?{' '}
+          <Link href="/cliente/registro" className="font-semibold text-foreground underline underline-offset-2">
+            Solicita acceso
+          </Link>
         </Card>
       </div>
     </main>

@@ -4,7 +4,7 @@ import { ClientForm } from '@/components/admin/client-form'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { deactivateClientAction } from '@/lib/actions/admin'
+import { approveClientAction, deactivateClientAction, rejectClientAction } from '@/lib/actions/admin'
 import { requireAdmin } from '@/lib/auth'
 import { getAdminClientsPageData } from '@/lib/data/admin'
 import { formatDate, formatDuration } from '@/lib/utils'
@@ -23,6 +23,34 @@ export default async function AdminClientsPage({
 
   return (
     <AdminShell title="Clientes" description="Alta, edición, desactivación y búsqueda de clientes del estudio." currentPath="/paneladmin/clientes" userEmail={identity.email}>
+      {data.pendingClients.length > 0 && (
+        <Card className="mb-6 overflow-hidden border-amber-200">
+          <div className="border-b border-amber-200 bg-amber-50 px-6 py-4">
+            <h2 className="font-bold text-amber-900">Solicitudes pendientes ({data.pendingClients.length})</h2>
+            <p className="text-sm text-amber-700">Nuevos clientes que esperan tu aprobación.</p>
+          </div>
+          <div className="divide-y divide-line">
+            {data.pendingClients.map((client) => (
+              <div key={client.id} className="flex items-center justify-between px-6 py-4">
+                <div>
+                  <p className="font-semibold text-foreground">{client.name}</p>
+                  <p className="text-sm text-muted">{client.email}</p>
+                </div>
+                <div className="flex gap-2">
+                  <form action={approveClientAction}>
+                    <input type="hidden" name="id" value={client.id} />
+                    <button className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Aprobar</button>
+                  </form>
+                  <form action={rejectClientAction}>
+                    <input type="hidden" name="id" value={client.id} />
+                    <button className="rounded-full bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">Rechazar</button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <ClientForm editingClient={data.editingClient} />
 
