@@ -2,23 +2,38 @@ import Link from 'next/link'
 import { type ReactNode } from 'react'
 
 import { signOutAction } from '@/lib/actions/auth'
+import { type Locale, t } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
-const navItems = [
-  { href: '/paneladmin/dashboard', label: 'Dashboard' },
-  { href: '/paneladmin/clientes', label: 'Clientes' },
-  { href: '/paneladmin/bonos', label: 'Bonos' },
-  { href: '/paneladmin/actividades', label: 'Actividades' },
-  { href: '/paneladmin/facturas', label: 'Facturas' },
-]
+export function AdminShell({
+  title,
+  description,
+  currentPath,
+  userEmail,
+  locale,
+  children,
+}: {
+  title: string
+  description: string
+  currentPath: string
+  userEmail: string
+  locale: Locale
+  children: ReactNode
+}) {
+  const navItems = [
+    { href: '/paneladmin/dashboard', label: t(locale, 'shell.nav.dashboard') },
+    { href: '/paneladmin/clientes', label: t(locale, 'shell.nav.clients') },
+    { href: '/paneladmin/bonos', label: t(locale, 'shell.nav.packs') },
+    { href: '/paneladmin/actividades', label: t(locale, 'shell.nav.activities') },
+    { href: '/paneladmin/facturas', label: t(locale, 'shell.nav.invoices') },
+  ]
 
-export function AdminShell({ title, description, currentPath, userEmail, children }: { title: string; description: string; currentPath: string; userEmail: string; children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-line bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">WF-Studio</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">{t(locale, 'shell.brand')}</p>
             <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
             <p className="mt-1 max-w-2xl text-sm text-muted">{description}</p>
           </div>
@@ -26,7 +41,7 @@ export function AdminShell({ title, description, currentPath, userEmail, childre
             <div className="rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-600">{userEmail}</div>
             <form action={signOutAction}>
               <button className="rounded-full border border-line px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                Cerrar sesión
+                {t(locale, 'shell.signOut')}
               </button>
             </form>
           </div>

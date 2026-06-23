@@ -3,6 +3,9 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 
 import '@/app/globals.css'
+import { LocaleToggle } from '@/components/layout/locale-toggle'
+import { getLocale } from '@/lib/locale'
+import { t } from '@/lib/i18n'
 
 export const metadata: Metadata = {
   title: 'Panel de control · WF-Studio',
@@ -14,20 +17,24 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getLocale()
+
   return (
-    <html lang="es">
+    <html lang={locale}>
       <body>
         <div className="min-h-screen">
           <div className="border-b border-line bg-white">
             <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 lg:px-8">
               <Link href="/" className="text-sm font-bold tracking-[0.14em] text-brand uppercase">
-                WF-Studio
+                {t(locale, 'nav.brand')}
               </Link>
               <div className="flex items-center gap-3 text-sm text-muted">
-                <Link href="/paneladmin">Admin</Link>
+                <Link href="/paneladmin">{t(locale, 'nav.admin')}</Link>
                 <span className="text-slate-300">/</span>
-                <Link href="/cliente">Cliente</Link>
+                <Link href="/cliente">{t(locale, 'nav.client')}</Link>
+                <span className="text-slate-300">/</span>
+                <LocaleToggle locale={locale} />
               </div>
             </div>
           </div>

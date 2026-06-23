@@ -1,6 +1,8 @@
 import { Card } from '@/components/ui/card'
 import { requireClientAccess } from '@/lib/auth'
 import { getClientDashboardData } from '@/lib/data/client'
+import { getLocale } from '@/lib/locale'
+import { t } from '@/lib/i18n'
 import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -8,20 +10,21 @@ export const dynamic = 'force-dynamic'
 export default async function ClientDashboardPage() {
   const identity = await requireClientAccess()
   const data = await getClientDashboardData(identity.email)
+  const locale = await getLocale()
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
       <div className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-brand">Portal cliente</p>
-        <h1 className="mt-3 text-4xl font-black tracking-tight text-foreground">Hola, {identity.client.name}</h1>
-        <p className="mt-3 max-w-2xl text-muted">Aquí tienes tu resumen actualizado de minutos contratados, consumo y trabajos registrados.</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-brand">{t(locale, 'clientDashboard.eyebrow')}</p>
+        <h1 className="mt-3 text-4xl font-black tracking-tight text-foreground">{t(locale, 'clientDashboard.greeting')} {identity.client.name}</h1>
+        <p className="mt-3 max-w-2xl text-muted">{t(locale, 'clientDashboard.summary')}</p>
       </div>
 
       <section className="grid gap-4 md:grid-cols-3">
         {[
-          { label: 'Tiempo contratado', value: formatDuration(data.summary?.total_minutes ?? 0) },
-          { label: 'Tiempo consumido', value: formatDuration(data.summary?.used_minutes ?? 0) },
-          { label: 'Tiempo restante', value: formatDuration(data.summary?.remaining_minutes ?? 0) },
+          { label: t(locale, 'clientDashboard.stat.total'), value: formatDuration(data.summary?.total_minutes ?? 0) },
+          { label: t(locale, 'clientDashboard.stat.used'), value: formatDuration(data.summary?.used_minutes ?? 0) },
+          { label: t(locale, 'clientDashboard.stat.remaining'), value: formatDuration(data.summary?.remaining_minutes ?? 0) },
         ].map((item) => (
           <Card key={item.label} className="p-6">
             <p className="text-sm text-muted">{item.label}</p>
@@ -33,17 +36,17 @@ export default async function ClientDashboardPage() {
       <section className="mt-8 grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <Card className="overflow-hidden">
           <div className="border-b border-line px-6 py-5">
-            <h2 className="text-xl font-bold text-foreground">Historial de actividad</h2>
-            <p className="text-sm text-muted">Ordenado de la más reciente a la más antigua.</p>
+            <h2 className="text-xl font-bold text-foreground">{t(locale, 'clientDashboard.activity.title')}</h2>
+            <p className="text-sm text-muted">{t(locale, 'clientDashboard.activity.description')}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
-                  <th className="px-6 py-4">Fecha</th>
-                  <th className="px-6 py-4">Servicio</th>
-                  <th className="px-6 py-4">Descripción</th>
-                  <th className="px-6 py-4">Tiempo</th>
+                  <th className="px-6 py-4">{t(locale, 'clientDashboard.activity.col.date')}</th>
+                  <th className="px-6 py-4">{t(locale, 'clientDashboard.activity.col.service')}</th>
+                  <th className="px-6 py-4">{t(locale, 'clientDashboard.activity.col.description')}</th>
+                  <th className="px-6 py-4">{t(locale, 'clientDashboard.activity.col.time')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -57,26 +60,26 @@ export default async function ClientDashboardPage() {
                 ))}
               </tbody>
             </table>
-            {data.activities.length === 0 ? <p className="px-6 py-8 text-sm text-muted">Aún no hay actividades registradas para tu cuenta.</p> : null}
+            {data.activities.length === 0 ? <p className="px-6 py-8 text-sm text-muted">{t(locale, 'clientDashboard.activity.empty')}</p> : null}
           </div>
         </Card>
 
         <Card className="p-6">
-          <h2 className="text-xl font-bold text-foreground">Notificaciones</h2>
-          <p className="mt-2 text-sm text-muted">Avisos internos generados a partir de nuevas actividades y actualizaciones de servicio.</p>
+          <h2 className="text-xl font-bold text-foreground">{t(locale, 'clientDashboard.notifications.title')}</h2>
+          <p className="mt-2 text-sm text-muted">{t(locale, 'clientDashboard.notifications.description')}</p>
           <div className="mt-6 grid gap-4">
             {data.notifications.map((notification) => (
               <div key={notification.id} className="rounded-3xl border border-line bg-slate-50 p-4">
                 <p className="font-semibold text-foreground">{notification.title}</p>
-                <p className="mt-1 text-sm text-slate-500">{notification.body || 'Actividad registrada'}</p>
+                <p className="mt-1 text-sm text-slate-500">{notification.body || t(locale, 'clientDashboard.notifications.default')}</p>
                 <div className="mt-3 flex flex-wrap gap-3 text-sm">
                   {notification.minutes_delta !== null ? <span className="font-semibold text-rose-600">{formatDuration(notification.minutes_delta)}</span> : null}
-                  {notification.remaining_minutes !== null ? <span className="font-semibold text-brand">Restante: {formatDuration(notification.remaining_minutes)}</span> : null}
+                  {notification.remaining_minutes !== null ? <span className="font-semibold text-brand">{t(locale, 'clientDashboard.notifications.remaining')} {formatDuration(notification.remaining_minutes)}</span> : null}
                 </div>
                 <p className="mt-3 text-xs uppercase tracking-[0.12em] text-slate-400">{formatDate(notification.created_at)}</p>
               </div>
             ))}
-            {data.notifications.length === 0 ? <p className="text-sm text-muted">No hay notificaciones disponibles todavía.</p> : null}
+            {data.notifications.length === 0 ? <p className="text-sm text-muted">{t(locale, 'clientDashboard.notifications.empty')}</p> : null}
           </div>
         </Card>
       </section>

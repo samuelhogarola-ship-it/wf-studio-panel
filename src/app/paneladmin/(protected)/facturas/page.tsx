@@ -7,42 +7,51 @@ import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
 import { deleteInvoiceAction, markInvoicePaidAction } from '@/lib/actions/invoices'
 import { getInvoicesPageData } from '@/lib/data/invoices'
+import { getLocale } from '@/lib/locale'
+import { t } from '@/lib/i18n'
 import { formatDate } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  cash: 'Efectivo',
-  card: 'Tarjeta',
-  transfer: 'Transferencia',
-}
-
 export default async function AdminFacturasPage() {
   const identity = await requireAdmin()
   const data = await getInvoicesPageData()
+  const locale = await getLocale()
+
+  const PAYMENT_METHOD_LABELS: Record<string, string> = {
+    cash: t(locale, 'invoices.payment.cash'),
+    card: t(locale, 'invoices.payment.card'),
+    transfer: t(locale, 'invoices.payment.transfer'),
+  }
 
   return (
-    <AdminShell title="Facturas" description="Gestión de facturas emitidas a clientes." currentPath="/paneladmin/facturas" userEmail={identity.email}>
+    <AdminShell
+      title={t(locale, 'invoices.title')}
+      description={t(locale, 'invoices.description')}
+      currentPath="/paneladmin/facturas"
+      userEmail={identity.email}
+      locale={locale}
+    >
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <InvoiceForm clients={data.clients} />
+        <InvoiceForm clients={data.clients} locale={locale} />
 
         <Card className="overflow-hidden">
           <div className="border-b border-line px-6 py-5">
-            <h2 className="text-xl font-bold text-foreground">Facturas emitidas</h2>
-            <p className="text-sm text-muted">Historial completo de facturas, ordenado por fecha.</p>
+            <h2 className="text-xl font-bold text-foreground">{t(locale, 'invoices.list.title')}</h2>
+            <p className="text-sm text-muted">{t(locale, 'invoices.list.description')}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
-                  <th className="px-6 py-4">Número</th>
-                  <th className="px-6 py-4">Cliente</th>
-                  <th className="px-6 py-4">Concepto</th>
-                  <th className="px-6 py-4">Importe</th>
-                  <th className="px-6 py-4">Método</th>
-                  <th className="px-6 py-4">Estado</th>
-                  <th className="px-6 py-4">Fecha</th>
-                  <th className="px-6 py-4">Acciones</th>
+                  <th className="px-6 py-4">{t(locale, 'invoices.list.col.number')}</th>
+                  <th className="px-6 py-4">{t(locale, 'invoices.list.col.client')}</th>
+                  <th className="px-6 py-4">{t(locale, 'invoices.list.col.concept')}</th>
+                  <th className="px-6 py-4">{t(locale, 'invoices.list.col.amount')}</th>
+                  <th className="px-6 py-4">{t(locale, 'invoices.list.col.method')}</th>
+                  <th className="px-6 py-4">{t(locale, 'invoices.list.col.status')}</th>
+                  <th className="px-6 py-4">{t(locale, 'invoices.list.col.date')}</th>
+                  <th className="px-6 py-4">{t(locale, 'invoices.list.col.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -62,7 +71,7 @@ export default async function AdminFacturasPage() {
                     <td className="px-6 py-4 text-slate-500">{PAYMENT_METHOD_LABELS[invoice.payment_method] ?? invoice.payment_method}</td>
                     <td className="px-6 py-4">
                       <Badge className={invoice.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}>
-                        {invoice.status === 'paid' ? 'Pagada' : 'Pendiente'}
+                        {invoice.status === 'paid' ? t(locale, 'invoices.list.paid') : t(locale, 'invoices.list.pending')}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-slate-500">{formatDate(invoice.issued_at)}</td>
@@ -73,17 +82,17 @@ export default async function AdminFacturasPage() {
                           target="_blank"
                           className="rounded-full bg-slate-100 px-3 py-2 font-semibold text-slate-700"
                         >
-                          Imprimir
+                          {t(locale, 'invoices.list.print')}
                         </Link>
                         {invoice.status === 'pending' ? (
                           <form action={markInvoicePaidAction}>
                             <input type="hidden" name="id" value={invoice.id} />
-                            <button className="rounded-full bg-emerald-50 px-3 py-2 font-semibold text-emerald-700">Marcar pagada</button>
+                            <button className="rounded-full bg-emerald-50 px-3 py-2 font-semibold text-emerald-700">{t(locale, 'invoices.list.markPaid')}</button>
                           </form>
                         ) : null}
                         <form action={deleteInvoiceAction}>
                           <input type="hidden" name="id" value={invoice.id} />
-                          <button className="rounded-full bg-rose-50 px-3 py-2 font-semibold text-rose-700">Eliminar</button>
+                          <button className="rounded-full bg-rose-50 px-3 py-2 font-semibold text-rose-700">{t(locale, 'invoices.list.delete')}</button>
                         </form>
                       </div>
                     </td>
@@ -91,7 +100,7 @@ export default async function AdminFacturasPage() {
                 ))}
               </tbody>
             </table>
-            {data.invoices.length === 0 ? <p className="px-6 py-8 text-sm text-muted">Aún no hay facturas emitidas.</p> : null}
+            {data.invoices.length === 0 ? <p className="px-6 py-8 text-sm text-muted">{t(locale, 'invoices.list.empty')}</p> : null}
           </div>
         </Card>
       </div>

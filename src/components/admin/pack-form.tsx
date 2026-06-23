@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 
 import { upsertPackAction, type AdminFormState } from '@/lib/actions/admin'
+import { type Locale, t } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { FormMessage } from '@/components/ui/form-message'
@@ -32,21 +33,21 @@ type EditingPack = {
 
 const initialState: AdminFormState = {}
 
-export function PackForm({ clients, editingPack }: { clients: ClientOption[]; editingPack: EditingPack }) {
+export function PackForm({ clients, editingPack, locale }: { clients: ClientOption[]; editingPack: EditingPack; locale: Locale }) {
   const [state, action, pending] = useActionState(upsertPackAction, initialState)
 
   return (
     <Card className="p-6">
       <div className="mb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{editingPack ? 'Editar pack' : 'Nuevo pack'}</p>
-        <h2 className="mt-2 text-xl font-bold text-foreground">{editingPack ? editingPack.name : 'Registrar nuevo bono'}</h2>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{editingPack ? t(locale, 'packForm.eyebrow.edit') : t(locale, 'packForm.eyebrow.new')}</p>
+        <h2 className="mt-2 text-xl font-bold text-foreground">{editingPack ? editingPack.name : t(locale, 'packForm.title.new')}</h2>
       </div>
       <form action={action} className="grid gap-4 md:grid-cols-2">
         <input type="hidden" name="id" value={editingPack?.id ?? ''} />
         <div>
-          <Label htmlFor="client_id">Cliente</Label>
+          <Label htmlFor="client_id">{t(locale, 'packForm.client')}</Label>
           <Select id="client_id" name="client_id" defaultValue={editingPack?.client_id ?? ''} required>
-            <option value="">Selecciona un cliente</option>
+            <option value="">{t(locale, 'packForm.client.placeholder')}</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id} disabled={client.status !== 'active'}>
                 {client.name} · {client.email}
@@ -55,46 +56,46 @@ export function PackForm({ clients, editingPack }: { clients: ClientOption[]; ed
           </Select>
         </div>
         <div>
-          <Label htmlFor="name">Nombre del pack</Label>
-          <Input id="name" name="name" defaultValue={editingPack?.name ?? ''} placeholder="Pack 600 min / Horas sueltas" required />
+          <Label htmlFor="name">{t(locale, 'packForm.name')}</Label>
+          <Input id="name" name="name" defaultValue={editingPack?.name ?? ''} placeholder={t(locale, 'packForm.name.placeholder')} required />
         </div>
         <div>
-          <Label htmlFor="minutes_total">Minutos totales</Label>
+          <Label htmlFor="minutes_total">{t(locale, 'packForm.minutes')}</Label>
           <Input id="minutes_total" name="minutes_total" type="number" step="1" min="1" defaultValue={editingPack?.minutes_total ?? ''} required />
         </div>
         <div>
-          <Label htmlFor="price">Precio</Label>
+          <Label htmlFor="price">{t(locale, 'packForm.price')}</Label>
           <Input id="price" name="price" type="number" step="0.01" min="0" defaultValue={editingPack?.price ?? ''} />
         </div>
         <div>
-          <Label htmlFor="invoice_number">Factura</Label>
+          <Label htmlFor="invoice_number">{t(locale, 'packForm.invoice')}</Label>
           <Input id="invoice_number" name="invoice_number" defaultValue={editingPack?.invoice_number ?? ''} />
         </div>
         <div>
-          <Label htmlFor="purchase_date">Fecha de compra</Label>
+          <Label htmlFor="purchase_date">{t(locale, 'packForm.purchaseDate')}</Label>
           <Input id="purchase_date" name="purchase_date" type="date" defaultValue={editingPack?.purchase_date ?? ''} required />
         </div>
         <div>
-          <Label htmlFor="status">Estado</Label>
+          <Label htmlFor="status">{t(locale, 'packForm.status')}</Label>
           <Select id="status" name="status" defaultValue={editingPack?.status ?? 'active'}>
-            <option value="active">Activo</option>
-            <option value="inactive">Inactivo</option>
+            <option value="active">{t(locale, 'packForm.status.active')}</option>
+            <option value="inactive">{t(locale, 'packForm.status.inactive')}</option>
           </Select>
         </div>
         <div className="md:col-span-2">
-          <Label htmlFor="notes">Notas</Label>
-          <Textarea id="notes" name="notes" defaultValue={editingPack?.notes ?? ''} placeholder="Detalles internos, contexto o condiciones del pack." />
+          <Label htmlFor="notes">{t(locale, 'packForm.notes')}</Label>
+          <Textarea id="notes" name="notes" defaultValue={editingPack?.notes ?? ''} placeholder={t(locale, 'packForm.notes.placeholder')} />
         </div>
         <div className="md:col-span-2">
           <FormMessage error={state.error} success={state.success} />
         </div>
         <div className="md:col-span-2 flex flex-wrap gap-3">
           <Button type="submit" disabled={pending}>
-            {pending ? 'Guardando...' : editingPack ? 'Guardar cambios' : 'Crear pack'}
+            {pending ? t(locale, 'packForm.submitting') : editingPack ? t(locale, 'packForm.submit.edit') : t(locale, 'packForm.submit.new')}
           </Button>
           {editingPack ? (
             <a href="/paneladmin/bonos" className="inline-flex items-center rounded-full bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700">
-              Cancelar edición
+              {t(locale, 'packForm.cancel')}
             </a>
           ) : null}
         </div>

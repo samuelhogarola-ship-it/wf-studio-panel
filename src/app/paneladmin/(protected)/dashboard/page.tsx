@@ -3,6 +3,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
 import { getAdminDashboardData } from '@/lib/data/admin'
+import { getLocale } from '@/lib/locale'
+import { t } from '@/lib/i18n'
 import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -10,15 +12,22 @@ export const dynamic = 'force-dynamic'
 export default async function AdminDashboardPage() {
   const identity = await requireAdmin()
   const data = await getAdminDashboardData()
+  const locale = await getLocale()
 
   return (
-    <AdminShell title="Dashboard" description="Visión rápida del estado de clientes, packs y actividad mensual." currentPath="/paneladmin/dashboard" userEmail={identity.email}>
+    <AdminShell
+      title={t(locale, 'dashboard.title')}
+      description={t(locale, 'dashboard.description')}
+      currentPath="/paneladmin/dashboard"
+      userEmail={identity.email}
+      locale={locale}
+    >
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: 'Clientes activos', value: data.activeClients.toString() },
-          { label: 'Tiempo pendiente', value: formatDuration(data.pendingMinutes) },
-          { label: 'Bonos activos', value: data.activePacks.toString() },
-          { label: 'Actividades este mes', value: data.monthActivities.toString() },
+          { label: t(locale, 'dashboard.stat.activeClients'), value: data.activeClients.toString() },
+          { label: t(locale, 'dashboard.stat.pendingTime'), value: formatDuration(data.pendingMinutes) },
+          { label: t(locale, 'dashboard.stat.activePacks'), value: data.activePacks.toString() },
+          { label: t(locale, 'dashboard.stat.monthActivities'), value: data.monthActivities.toString() },
         ].map((item) => (
           <Card key={item.label} className="p-6">
             <p className="text-sm text-muted">{item.label}</p>
@@ -31,10 +40,10 @@ export default async function AdminDashboardPage() {
         <Card className="overflow-hidden">
           <div className="flex items-center justify-between border-b border-line px-6 py-5">
             <div>
-              <h2 className="text-xl font-bold text-foreground">Actividad reciente</h2>
-              <p className="text-sm text-muted">Últimos movimientos registrados por el equipo.</p>
+              <h2 className="text-xl font-bold text-foreground">{t(locale, 'dashboard.recent.title')}</h2>
+              <p className="text-sm text-muted">{t(locale, 'dashboard.recent.description')}</p>
             </div>
-            <Badge>En tiempo real</Badge>
+            <Badge>{t(locale, 'dashboard.recent.badge')}</Badge>
           </div>
           <div className="divide-y divide-line">
             {data.recentActivities.map((activity) => (
@@ -42,7 +51,7 @@ export default async function AdminDashboardPage() {
                 <div>
                   <p className="font-semibold text-foreground">{activity.title}</p>
                   <p className="text-sm text-muted">
-                    {activity.clients?.name ?? 'Cliente'} · {activity.packs?.name ?? 'Pack'}
+                    {activity.clients?.name ?? t(locale, 'dashboard.recent.client')} · {activity.packs?.name ?? t(locale, 'dashboard.recent.pack')}
                   </p>
                 </div>
                 <div className="text-left md:text-right">
@@ -51,7 +60,7 @@ export default async function AdminDashboardPage() {
                 </div>
               </div>
             ))}
-            {data.recentActivities.length === 0 ? <p className="px-6 py-8 text-sm text-muted">Todavía no hay actividad registrada.</p> : null}
+            {data.recentActivities.length === 0 ? <p className="px-6 py-8 text-sm text-muted">{t(locale, 'dashboard.recent.empty')}</p> : null}
           </div>
         </Card>
       </section>

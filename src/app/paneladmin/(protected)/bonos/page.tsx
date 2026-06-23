@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
 import { getAdminPacksPageData } from '@/lib/data/admin'
+import { getLocale } from '@/lib/locale'
+import { t } from '@/lib/i18n'
 import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -19,26 +21,33 @@ export default async function AdminPacksPage({
   const params = await searchParams
   const data = await getAdminPacksPageData(params.edit)
   const summaryMap = new Map(data.packSummaries.map((item) => [item.pack_id, item]))
+  const locale = await getLocale()
 
   return (
-    <AdminShell title="Bonos y packs" description="Control de packs de minutos, historial y saldo restante por bono." currentPath="/paneladmin/bonos" userEmail={identity.email}>
+    <AdminShell
+      title={t(locale, 'packs.title')}
+      description={t(locale, 'packs.description')}
+      currentPath="/paneladmin/bonos"
+      userEmail={identity.email}
+      locale={locale}
+    >
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <PackForm clients={data.clients} editingPack={data.editingPack} />
+        <PackForm clients={data.clients} editingPack={data.editingPack} locale={locale} />
 
         <Card className="overflow-hidden">
           <div className="border-b border-line px-6 py-5">
-            <h2 className="text-xl font-bold text-foreground">Historial de packs</h2>
-            <p className="text-sm text-muted">Todos los bonos, incluidos los minutos sueltos modelados como packs.</p>
+            <h2 className="text-xl font-bold text-foreground">{t(locale, 'packs.list.title')}</h2>
+            <p className="text-sm text-muted">{t(locale, 'packs.list.description')}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
-                  <th className="px-6 py-4">Pack</th>
-                  <th className="px-6 py-4">Tiempo</th>
-                  <th className="px-6 py-4">Estado</th>
-                  <th className="px-6 py-4">Fecha</th>
-                  <th className="px-6 py-4">Acciones</th>
+                  <th className="px-6 py-4">{t(locale, 'packs.list.col.pack')}</th>
+                  <th className="px-6 py-4">{t(locale, 'packs.list.col.time')}</th>
+                  <th className="px-6 py-4">{t(locale, 'packs.list.col.status')}</th>
+                  <th className="px-6 py-4">{t(locale, 'packs.list.col.date')}</th>
+                  <th className="px-6 py-4">{t(locale, 'packs.list.col.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -49,12 +58,12 @@ export default async function AdminPacksPage({
                     <tr key={pack.id}>
                       <td className="px-6 py-4">
                         <p className="font-semibold text-foreground">{pack.name}</p>
-                        <p className="text-slate-500">{pack.clients?.name ?? 'Cliente sin nombre'}</p>
+                        <p className="text-slate-500">{pack.clients?.name ?? t(locale, 'packs.list.noName')}</p>
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-medium text-foreground">{formatDuration(summary?.minutes_total ?? pack.minutes_total)}</p>
                         <p className="text-slate-500">
-                          Usados {formatDuration(summary?.used_minutes ?? 0)} · Restantes {formatDuration(summary?.remaining_minutes ?? 0)}
+                          {t(locale, 'packs.list.used')} {formatDuration(summary?.used_minutes ?? 0)} · {t(locale, 'packs.list.remaining')} {formatDuration(summary?.remaining_minutes ?? 0)}
                         </p>
                       </td>
                       <td className="px-6 py-4">
@@ -63,7 +72,7 @@ export default async function AdminPacksPage({
                       <td className="px-6 py-4 text-slate-500">{formatDate(pack.purchase_date)}</td>
                       <td className="px-6 py-4">
                         <Link href={`/paneladmin/bonos?edit=${pack.id}`} className="rounded-full bg-slate-100 px-3 py-2 font-semibold text-slate-700">
-                          Editar
+                          {t(locale, 'packs.list.edit')}
                         </Link>
                       </td>
                     </tr>
@@ -71,7 +80,7 @@ export default async function AdminPacksPage({
                 })}
               </tbody>
             </table>
-            {data.packs.length === 0 ? <p className="px-6 py-8 text-sm text-muted">Todavía no hay packs registrados.</p> : null}
+            {data.packs.length === 0 ? <p className="px-6 py-8 text-sm text-muted">{t(locale, 'packs.list.empty')}</p> : null}
           </div>
         </Card>
       </div>

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useActionState } from 'react'
 
 import { clientMagicLinkAction, clientPasswordLoginAction, type AuthFormState } from '@/lib/actions/auth'
+import { type Locale, t } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { FormMessage } from '@/components/ui/form-message'
@@ -12,7 +13,7 @@ import { Label } from '@/components/ui/label'
 
 const initialState: AuthFormState = {}
 
-export function ClientLoginForm() {
+export function ClientLoginForm({ locale }: { locale: Locale }) {
   const [tab, setTab] = useState<'magic' | 'password'>('magic')
   const [magicState, magicAction, magicPending] = useActionState(clientMagicLinkAction, initialState)
   const [passState, passAction, passPending] = useActionState(clientPasswordLoginAction, initialState)
@@ -25,26 +26,26 @@ export function ClientLoginForm() {
           onClick={() => setTab('magic')}
           className={`flex-1 rounded-md py-2 text-sm font-semibold transition-colors ${tab === 'magic' ? 'bg-white text-foreground shadow-sm' : 'text-muted'}`}
         >
-          Magic link
+          {t(locale, 'clientLoginForm.tabMagic')}
         </button>
         <button
           type="button"
           onClick={() => setTab('password')}
           className={`flex-1 rounded-md py-2 text-sm font-semibold transition-colors ${tab === 'password' ? 'bg-white text-foreground shadow-sm' : 'text-muted'}`}
         >
-          Contraseña
+          {t(locale, 'clientLoginForm.tabPassword')}
         </button>
       </div>
 
       {tab === 'magic' && (
         <form action={magicAction} className="grid gap-5">
           <div>
-            <Label htmlFor="magic-email">Email del cliente</Label>
+            <Label htmlFor="magic-email">{t(locale, 'clientLoginForm.magicEmail')}</Label>
             <Input id="magic-email" name="email" type="email" placeholder="cliente@empresa.com" required />
           </div>
           <FormMessage error={magicState.error} success={magicState.success} />
           <Button type="submit" fullWidth disabled={magicPending}>
-            {magicPending ? 'Enviando...' : 'Recibir enlace mágico'}
+            {magicPending ? t(locale, 'clientLoginForm.magicSubmitting') : t(locale, 'clientLoginForm.magicSubmit')}
           </Button>
         </form>
       )}
@@ -52,16 +53,16 @@ export function ClientLoginForm() {
       {tab === 'password' && (
         <form action={passAction} className="grid gap-5">
           <div>
-            <Label htmlFor="pass-email">Email</Label>
+            <Label htmlFor="pass-email">{t(locale, 'clientLoginForm.passEmail')}</Label>
             <Input id="pass-email" name="email" type="email" placeholder="cliente@empresa.com" required />
           </div>
           <div>
-            <Label htmlFor="pass-password">Contraseña</Label>
+            <Label htmlFor="pass-password">{t(locale, 'clientLoginForm.passPassword')}</Label>
             <Input id="pass-password" name="password" type="password" placeholder="••••••••" required />
           </div>
           <FormMessage error={passState.error} success={passState.success} />
           <Button type="submit" fullWidth disabled={passPending}>
-            {passPending ? 'Entrando...' : 'Entrar'}
+            {passPending ? t(locale, 'clientLoginForm.passSubmitting') : t(locale, 'clientLoginForm.passSubmit')}
           </Button>
         </form>
       )}

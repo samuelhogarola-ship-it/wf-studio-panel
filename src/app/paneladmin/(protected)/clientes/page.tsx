@@ -7,6 +7,8 @@ import { Card } from '@/components/ui/card'
 import { approveClientAction, deactivateClientAction, rejectClientAction } from '@/lib/actions/admin'
 import { requireAdmin } from '@/lib/auth'
 import { getAdminClientsPageData } from '@/lib/data/admin'
+import { getLocale } from '@/lib/locale'
+import { t } from '@/lib/i18n'
 import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -20,14 +22,21 @@ export default async function AdminClientsPage({
   const params = await searchParams
   const data = await getAdminClientsPageData(params.q ?? '', params.edit)
   const summaryMap = new Map(data.summaries.map((item) => [item.client_id, item]))
+  const locale = await getLocale()
 
   return (
-    <AdminShell title="Clientes" description="Alta, edición, desactivación y búsqueda de clientes del estudio." currentPath="/paneladmin/clientes" userEmail={identity.email}>
+    <AdminShell
+      title={t(locale, 'clients.title')}
+      description={t(locale, 'clients.description')}
+      currentPath="/paneladmin/clientes"
+      userEmail={identity.email}
+      locale={locale}
+    >
       {data.pendingClients.length > 0 && (
         <Card className="mb-6 overflow-hidden border-amber-200">
           <div className="border-b border-amber-200 bg-amber-50 px-6 py-4">
-            <h2 className="font-bold text-amber-900">Solicitudes pendientes ({data.pendingClients.length})</h2>
-            <p className="text-sm text-amber-700">Nuevos clientes que esperan tu aprobación.</p>
+            <h2 className="font-bold text-amber-900">{t(locale, 'clients.pending.title')} ({data.pendingClients.length})</h2>
+            <p className="text-sm text-amber-700">{t(locale, 'clients.pending.description')}</p>
           </div>
           <div className="divide-y divide-line">
             {data.pendingClients.map((client) => (
@@ -39,11 +48,11 @@ export default async function AdminClientsPage({
                 <div className="flex gap-2">
                   <form action={approveClientAction}>
                     <input type="hidden" name="id" value={client.id} />
-                    <button className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">Aprobar</button>
+                    <button className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white">{t(locale, 'clients.pending.approve')}</button>
                   </form>
                   <form action={rejectClientAction}>
                     <input type="hidden" name="id" value={client.id} />
-                    <button className="rounded-full bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">Rechazar</button>
+                    <button className="rounded-full bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">{t(locale, 'clients.pending.reject')}</button>
                   </form>
                 </div>
               </div>
@@ -52,24 +61,24 @@ export default async function AdminClientsPage({
         </Card>
       )}
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <ClientForm editingClient={data.editingClient} />
+        <ClientForm editingClient={data.editingClient} locale={locale} />
 
         <Card className="overflow-hidden">
           <div className="border-b border-line px-6 py-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="text-xl font-bold text-foreground">Base de clientes</h2>
-                <p className="text-sm text-muted">Búsqueda rápida y estado actual de minutos por cliente.</p>
+                <h2 className="text-xl font-bold text-foreground">{t(locale, 'clients.list.title')}</h2>
+                <p className="text-sm text-muted">{t(locale, 'clients.list.description')}</p>
               </div>
               <form className="flex gap-2" action="/paneladmin/clientes">
                 <input
                   type="search"
                   name="q"
                   defaultValue={params.q ?? ''}
-                  placeholder="Buscar por nombre, empresa o email"
+                  placeholder={t(locale, 'clients.list.searchPlaceholder')}
                   className="min-h-11 rounded-full border border-line bg-white px-4 text-sm text-foreground outline-none focus:border-brand"
                 />
-                <button className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">Buscar</button>
+                <button className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">{t(locale, 'clients.list.searchBtn')}</button>
               </form>
             </div>
           </div>
@@ -77,11 +86,11 @@ export default async function AdminClientsPage({
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
-                  <th className="px-6 py-4">Cliente</th>
-                  <th className="px-6 py-4">Estado</th>
-                  <th className="px-6 py-4">Tiempo restante</th>
-                  <th className="px-6 py-4">Creado</th>
-                  <th className="px-6 py-4">Acciones</th>
+                  <th className="px-6 py-4">{t(locale, 'clients.list.col.client')}</th>
+                  <th className="px-6 py-4">{t(locale, 'clients.list.col.status')}</th>
+                  <th className="px-6 py-4">{t(locale, 'clients.list.col.remaining')}</th>
+                  <th className="px-6 py-4">{t(locale, 'clients.list.col.created')}</th>
+                  <th className="px-6 py-4">{t(locale, 'clients.list.col.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -102,12 +111,12 @@ export default async function AdminClientsPage({
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-2">
                           <Link href={`/paneladmin/clientes?edit=${client.id}`} className="rounded-full bg-slate-100 px-3 py-2 font-semibold text-slate-700">
-                            Editar
+                            {t(locale, 'clients.list.edit')}
                           </Link>
                           {client.status === 'active' ? (
                             <form action={deactivateClientAction}>
                               <input type="hidden" name="id" value={client.id} />
-                              <button className="rounded-full bg-rose-50 px-3 py-2 font-semibold text-rose-700">Desactivar</button>
+                              <button className="rounded-full bg-rose-50 px-3 py-2 font-semibold text-rose-700">{t(locale, 'clients.list.deactivate')}</button>
                             </form>
                           ) : null}
                         </div>
@@ -117,7 +126,7 @@ export default async function AdminClientsPage({
                 })}
               </tbody>
             </table>
-            {data.clients.length === 0 ? <p className="px-6 py-8 text-sm text-muted">No se han encontrado clientes con ese criterio.</p> : null}
+            {data.clients.length === 0 ? <p className="px-6 py-8 text-sm text-muted">{t(locale, 'clients.list.empty')}</p> : null}
           </div>
         </Card>
       </div>

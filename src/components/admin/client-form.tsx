@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 
 import { upsertClientAction, type AdminFormState } from '@/lib/actions/admin'
+import { type Locale, t } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { FormMessage } from '@/components/ui/form-message'
@@ -21,38 +22,38 @@ type EditingClient = {
 
 const initialState: AdminFormState = {}
 
-export function ClientForm({ editingClient }: { editingClient: EditingClient }) {
+export function ClientForm({ editingClient, locale }: { editingClient: EditingClient; locale: Locale }) {
   const [state, action, pending] = useActionState(upsertClientAction, initialState)
 
   return (
     <Card className="p-6">
       <div className="mb-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{editingClient ? 'Editar cliente' : 'Nuevo cliente'}</p>
-        <h2 className="mt-2 text-xl font-bold text-foreground">{editingClient ? editingClient.name : 'Alta rápida de cliente'}</h2>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{editingClient ? t(locale, 'clientForm.eyebrow.edit') : t(locale, 'clientForm.eyebrow.new')}</p>
+        <h2 className="mt-2 text-xl font-bold text-foreground">{editingClient ? editingClient.name : t(locale, 'clientForm.title.new')}</h2>
       </div>
       <form action={action} className="grid gap-4 md:grid-cols-2">
         <input type="hidden" name="id" value={editingClient?.id ?? ''} />
         <div>
-          <Label htmlFor="name">Nombre</Label>
+          <Label htmlFor="name">{t(locale, 'clientForm.name')}</Label>
           <Input id="name" name="name" defaultValue={editingClient?.name ?? ''} required />
         </div>
         <div>
-          <Label htmlFor="company">Empresa</Label>
+          <Label htmlFor="company">{t(locale, 'clientForm.company')}</Label>
           <Input id="company" name="company" defaultValue={editingClient?.company ?? ''} />
         </div>
         <div>
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t(locale, 'clientForm.email')}</Label>
           <Input id="email" name="email" type="email" defaultValue={editingClient?.email ?? ''} required />
         </div>
         <div>
-          <Label htmlFor="phone">Teléfono</Label>
+          <Label htmlFor="phone">{t(locale, 'clientForm.phone')}</Label>
           <Input id="phone" name="phone" defaultValue={editingClient?.phone ?? ''} />
         </div>
         <div>
-          <Label htmlFor="status">Estado</Label>
+          <Label htmlFor="status">{t(locale, 'clientForm.status')}</Label>
           <Select id="status" name="status" defaultValue={editingClient?.status ?? 'active'}>
-            <option value="active">Activo</option>
-            <option value="inactive">Inactivo</option>
+            <option value="active">{t(locale, 'clientForm.status.active')}</option>
+            <option value="inactive">{t(locale, 'clientForm.status.inactive')}</option>
           </Select>
         </div>
         <div className="md:col-span-2">
@@ -60,11 +61,11 @@ export function ClientForm({ editingClient }: { editingClient: EditingClient }) 
         </div>
         <div className="md:col-span-2 flex flex-wrap gap-3">
           <Button type="submit" disabled={pending}>
-            {pending ? 'Guardando...' : editingClient ? 'Guardar cambios' : 'Crear cliente'}
+            {pending ? t(locale, 'clientForm.submitting') : editingClient ? t(locale, 'clientForm.submit.edit') : t(locale, 'clientForm.submit.new')}
           </Button>
           {editingClient ? (
             <a href="/paneladmin/clientes" className="inline-flex items-center rounded-full bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700">
-              Cancelar edición
+              {t(locale, 'clientForm.cancel')}
             </a>
           ) : null}
         </div>
