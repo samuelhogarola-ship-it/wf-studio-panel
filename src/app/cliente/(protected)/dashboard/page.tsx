@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card'
 import { requireClientAccess } from '@/lib/auth'
 import { getClientDashboardData } from '@/lib/data/client'
-import { formatDate, formatHours } from '@/lib/utils'
+import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,14 +14,14 @@ export default async function ClientDashboardPage() {
       <div className="mb-8">
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-brand">Portal cliente</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight text-foreground">Hola, {identity.client.name}</h1>
-        <p className="mt-3 max-w-2xl text-muted">Aquí tienes tu resumen actualizado de horas contratadas, consumo y trabajos registrados.</p>
+        <p className="mt-3 max-w-2xl text-muted">Aquí tienes tu resumen actualizado de minutos contratados, consumo y trabajos registrados.</p>
       </div>
 
       <section className="grid gap-4 md:grid-cols-3">
         {[
-          { label: 'Horas contratadas', value: formatHours(data.summary?.total_hours ?? 0) },
-          { label: 'Horas consumidas', value: formatHours(data.summary?.used_hours ?? 0) },
-          { label: 'Horas restantes', value: formatHours(data.summary?.remaining_hours ?? 0) },
+          { label: 'Tiempo contratado', value: formatDuration(data.summary?.total_minutes ?? 0) },
+          { label: 'Tiempo consumido', value: formatDuration(data.summary?.used_minutes ?? 0) },
+          { label: 'Tiempo restante', value: formatDuration(data.summary?.remaining_minutes ?? 0) },
         ].map((item) => (
           <Card key={item.label} className="p-6">
             <p className="text-sm text-muted">{item.label}</p>
@@ -52,7 +52,7 @@ export default async function ClientDashboardPage() {
                     <td className="px-6 py-4 text-slate-500">{formatDate(activity.work_date)}</td>
                     <td className="px-6 py-4 font-semibold text-foreground">{activity.title}</td>
                     <td className="px-6 py-4 text-slate-500">{activity.description || activity.activity_type}</td>
-                    <td className="px-6 py-4 font-semibold text-foreground">{formatHours(activity.hours_used)}</td>
+                    <td className="px-6 py-4 font-semibold text-foreground">{formatDuration(activity.minutes_used)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -70,8 +70,8 @@ export default async function ClientDashboardPage() {
                 <p className="font-semibold text-foreground">{notification.title}</p>
                 <p className="mt-1 text-sm text-slate-500">{notification.body || 'Actividad registrada'}</p>
                 <div className="mt-3 flex flex-wrap gap-3 text-sm">
-                  {notification.hours_delta !== null ? <span className="font-semibold text-rose-600">{formatHours(notification.hours_delta)}</span> : null}
-                  {notification.remaining_hours !== null ? <span className="font-semibold text-brand">Horas restantes: {formatHours(notification.remaining_hours)}</span> : null}
+                  {notification.minutes_delta !== null ? <span className="font-semibold text-rose-600">{formatDuration(notification.minutes_delta)}</span> : null}
+                  {notification.remaining_minutes !== null ? <span className="font-semibold text-brand">Restante: {formatDuration(notification.remaining_minutes)}</span> : null}
                 </div>
                 <p className="mt-3 text-xs uppercase tracking-[0.12em] text-slate-400">{formatDate(notification.created_at)}</p>
               </div>

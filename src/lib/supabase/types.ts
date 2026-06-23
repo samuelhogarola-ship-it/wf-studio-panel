@@ -11,7 +11,7 @@ export type Database = {
           activity_type: string
           title: string
           description: string | null
-          hours_used: number
+          minutes_used: number
           work_date: string
           notify_client: boolean
           created_at: string
@@ -24,7 +24,7 @@ export type Database = {
           activity_type: string
           title: string
           description?: string | null
-          hours_used: number
+          minutes_used: number
           work_date?: string
           notify_client?: boolean
           created_at?: string
@@ -72,6 +72,46 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['clients']['Insert']>
         Relationships: []
       }
+      invoices: {
+        Row: {
+          id: string
+          client_id: string
+          number: string
+          concept: string
+          amount: number
+          payment_method: 'cash' | 'card' | 'transfer'
+          status: 'pending' | 'paid'
+          notes: string | null
+          issued_at: string
+          paid_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          client_id: string
+          number: string
+          concept: string
+          amount: number
+          payment_method: 'cash' | 'card' | 'transfer'
+          status?: 'pending' | 'paid'
+          notes?: string | null
+          issued_at?: string
+          paid_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['invoices']['Insert']>
+        Relationships: [
+          {
+            foreignKeyName: 'invoices_client_id_fkey'
+            columns: ['client_id']
+            isOneToOne: false
+            referencedRelation: 'clients'
+            referencedColumns: ['id']
+          }
+        ]
+      }
       notifications: {
         Row: {
           id: string
@@ -79,8 +119,8 @@ export type Database = {
           activity_id: string | null
           title: string
           body: string | null
-          hours_delta: number | null
-          remaining_hours: number | null
+          minutes_delta: number | null
+          remaining_minutes: number | null
           created_at: string
         }
         Insert: {
@@ -89,8 +129,8 @@ export type Database = {
           activity_id?: string | null
           title: string
           body?: string | null
-          hours_delta?: number | null
-          remaining_hours?: number | null
+          minutes_delta?: number | null
+          remaining_minutes?: number | null
           created_at?: string
         }
         Update: Partial<Database['public']['Tables']['notifications']['Insert']>
@@ -116,7 +156,7 @@ export type Database = {
           id: string
           client_id: string
           name: string
-          hours_total: number
+          minutes_total: number
           price: number | null
           invoice_number: string | null
           purchase_date: string
@@ -129,7 +169,7 @@ export type Database = {
           id?: string
           client_id: string
           name: string
-          hours_total: number
+          minutes_total: number
           price?: number | null
           invoice_number?: string | null
           purchase_date?: string
@@ -172,9 +212,9 @@ export type Database = {
           client_id: string
           client_name: string
           client_email: string
-          total_hours: number
-          used_hours: number
-          remaining_hours: number
+          total_minutes: number
+          used_minutes: number
+          remaining_minutes: number
         }
         Relationships: []
       }
@@ -183,9 +223,9 @@ export type Database = {
           pack_id: string
           client_id: string
           pack_name: string
-          hours_total: number
-          used_hours: number
-          remaining_hours: number
+          minutes_total: number
+          used_minutes: number
+          remaining_minutes: number
         }
         Relationships: []
       }
@@ -202,6 +242,10 @@ export type Database = {
       is_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      next_invoice_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
     }
     Enums: Record<string, never>

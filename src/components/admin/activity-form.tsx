@@ -39,7 +39,7 @@ export function ActivityForm({ clients, packs }: { clients: ClientOption[]; pack
     <Card className="p-6">
       <div className="mb-5">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Nueva actividad</p>
-        <h2 className="mt-2 text-xl font-bold text-foreground">Registrar consumo de horas</h2>
+        <h2 className="mt-2 text-xl font-bold text-foreground">Registrar consumo de minutos</h2>
       </div>
       <form action={action} className="grid gap-4 md:grid-cols-2">
         <div>
@@ -79,8 +79,8 @@ export function ActivityForm({ clients, packs }: { clients: ClientOption[]; pack
           <Input id="title" name="title" placeholder="Optimización SEO local" required />
         </div>
         <div>
-          <Label htmlFor="hours_used">Horas consumidas</Label>
-          <Input id="hours_used" name="hours_used" type="number" step="0.5" min="0.5" placeholder="1.5" required />
+          <Label htmlFor="minutes_used">Minutos utilizados</Label>
+          <Input id="minutes_used" name="minutes_used" type="number" step="1" min="1" placeholder="90" required />
         </div>
         <div>
           <Label htmlFor="work_date">Fecha</Label>

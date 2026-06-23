@@ -27,7 +27,7 @@ const packSchema = z.object({
   id: z.string().uuid().optional().or(z.literal('')),
   client_id: z.string().uuid('Selecciona un cliente.'),
   name: z.string().min(2, 'El nombre del pack es obligatorio.'),
-  hours_total: z.coerce.number().positive('Las horas deben ser mayores que 0.'),
+  minutes_total: z.coerce.number().positive('Los minutos deben ser mayores que 0.'),
   price: z.union([z.coerce.number(), z.nan()]).optional(),
   invoice_number: z.string().optional(),
   purchase_date: z.string().min(1, 'La fecha es obligatoria.'),
@@ -41,7 +41,7 @@ const activitySchema = z.object({
   activity_type: z.enum(ACTIVITY_TYPES),
   title: z.string().min(2, 'El título es obligatorio.'),
   description: z.string().optional(),
-  hours_used: z.coerce.number().positive('Las horas deben ser mayores que 0.'),
+  minutes_used: z.coerce.number().positive('Los minutos deben ser mayores que 0.'),
   work_date: z.string().min(1, 'La fecha es obligatoria.'),
   notify_client: z.enum(['on']).optional(),
 })
@@ -144,7 +144,7 @@ export async function upsertPackAction(_prevState: AdminFormState, formData: For
     id: formData.get('id'),
     client_id: formData.get('client_id'),
     name: formData.get('name'),
-    hours_total: formData.get('hours_total'),
+    minutes_total: formData.get('minutes_total'),
     price: formData.get('price') || Number.NaN,
     invoice_number: formData.get('invoice_number'),
     purchase_date: formData.get('purchase_date'),
@@ -160,7 +160,7 @@ export async function upsertPackAction(_prevState: AdminFormState, formData: For
   const record = {
     client_id: payload.client_id,
     name: payload.name,
-    hours_total: payload.hours_total,
+    minutes_total: payload.minutes_total,
     price: Number.isNaN(payload.price) ? null : payload.price,
     invoice_number: payload.invoice_number || null,
     purchase_date: payload.purchase_date,
@@ -189,7 +189,7 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
     activity_type: formData.get('activity_type'),
     title: formData.get('title'),
     description: formData.get('description'),
-    hours_used: formData.get('hours_used'),
+    minutes_used: formData.get('minutes_used'),
     work_date: formData.get('work_date'),
     notify_client: formData.get('notify_client') ?? undefined,
   })
@@ -218,7 +218,7 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
       activity_type: payload.activity_type,
       title: payload.title,
       description: payload.description || null,
-      hours_used: payload.hours_used,
+      minutes_used: payload.minutes_used,
       work_date: payload.work_date,
       notify_client: payload.notify_client === 'on',
     })
@@ -236,8 +236,8 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
     activity_id: createdActivity.id,
     title: `${payload.title}`,
     body: `${payload.activity_type.toUpperCase()} realizado`,
-    hours_delta: payload.hours_used * -1,
-    remaining_hours: Number(summary?.remaining_hours ?? 0),
+    minutes_delta: payload.minutes_used * -1,
+    remaining_minutes: Number(summary?.remaining_minutes ?? 0),
   })
 
   let success = 'Actividad registrada correctamente.'
@@ -248,8 +248,8 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
         clientEmail: pack.clients.email,
         clientName: pack.clients.name ?? 'cliente',
         activityTitle: payload.title,
-        hoursUsed: payload.hours_used,
-        remainingHours: Number(summary?.remaining_hours ?? 0),
+        minutesUsed: payload.minutes_used,
+        remainingMinutes: Number(summary?.remaining_minutes ?? 0),
       })
       success = 'Actividad registrada y email enviado correctamente.'
     } catch {

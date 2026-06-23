@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { getPublicEnv } from '@/lib/env'
 import type { Database } from '@/lib/supabase/types'
 
-const ADMIN_PROTECTED_PREFIXES = ['/paneladmin/dashboard', '/paneladmin/clientes', '/paneladmin/bonos', '/paneladmin/actividades']
+const ADMIN_PROTECTED_PREFIXES = ['/paneladmin/dashboard', '/paneladmin/clientes', '/paneladmin/bonos', '/paneladmin/actividades', '/paneladmin/facturas']
 const CLIENT_PROTECTED_PREFIXES = ['/cliente/dashboard']
 
 export async function updateSession(request: NextRequest) {

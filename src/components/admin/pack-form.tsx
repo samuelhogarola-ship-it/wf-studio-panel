@@ -22,7 +22,7 @@ type EditingPack = {
   id: string
   client_id: string
   name: string
-  hours_total: number
+  minutes_total: number
   price: number | null
   invoice_number: string | null
   purchase_date: string
@@ -56,11 +56,11 @@ export function PackForm({ clients, editingPack }: { clients: ClientOption[]; ed
         </div>
         <div>
           <Label htmlFor="name">Nombre del pack</Label>
-          <Input id="name" name="name" defaultValue={editingPack?.name ?? ''} placeholder="Pack 10h / Horas sueltas" required />
+          <Input id="name" name="name" defaultValue={editingPack?.name ?? ''} placeholder="Pack 600 min / Horas sueltas" required />
         </div>
         <div>
-          <Label htmlFor="hours_total">Horas contratadas</Label>
-          <Input id="hours_total" name="hours_total" type="number" step="0.5" min="0.5" defaultValue={editingPack?.hours_total ?? ''} required />
+          <Label htmlFor="minutes_total">Minutos totales</Label>
+          <Input id="minutes_total" name="minutes_total" type="number" step="1" min="1" defaultValue={editingPack?.minutes_total ?? ''} required />
         </div>
         <div>
           <Label htmlFor="price">Precio</Label>

@@ -5,10 +5,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatHours(value: number | string | null | undefined) {
-  const amount = Number(value ?? 0)
-  return `${amount.toFixed(1)} h`
+export function formatDuration(minutes: number | string | null | undefined): string {
+  const total = Math.round(Number(minutes ?? 0))
+  if (total <= 0) return '0 min'
+  const h = Math.floor(total / 60)
+  const m = total % 60
+  if (h === 0) return `${m} min`
+  if (m === 0) return `${h} h`
+  return `${h} h ${m} min`
 }
+
+// Backwards-compat alias
+export const formatHours = formatDuration
 
 export function formatDate(value: string | null | undefined) {
   if (!value) return 'Sin fecha'

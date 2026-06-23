@@ -17,19 +17,19 @@ export const getAdminDashboardData = cache(async () => {
         .gte('work_date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)),
       supabase
         .from('activities')
-        .select('id, title, hours_used, work_date, clients(name), packs(name)')
+        .select('id, title, minutes_used, work_date, clients(name), packs(name)')
         .order('work_date', { ascending: false })
         .limit(6),
     ])
 
-  const pendingHours =
+  const pendingMinutes =
     summaries?.reduce((sum, item) => {
-      return sum + Number(item.remaining_hours ?? 0)
+      return sum + Number(item.remaining_minutes ?? 0)
     }, 0) ?? 0
 
   return {
     activeClients: activeClients ?? 0,
-    pendingHours,
+    pendingMinutes,
     activePacks: activePacks ?? 0,
     monthActivities: monthActivities ?? 0,
     recentActivities: recentActivities ?? [],
@@ -75,13 +75,13 @@ export const getAdminPacksPageData = cache(async (editingId?: string) => {
     supabase.from('clients').select('id, name, email, status').order('name'),
     supabase
       .from('packs')
-      .select('id, name, client_id, hours_total, price, invoice_number, purchase_date, status, notes, clients(name)')
+      .select('id, name, client_id, minutes_total, price, invoice_number, purchase_date, status, notes, clients(name)')
       .order('purchase_date', { ascending: false }),
     supabase.from('pack_summary').select('*'),
     editingId
       ? supabase
           .from('packs')
-          .select('id, client_id, name, hours_total, price, invoice_number, purchase_date, status, notes')
+          .select('id, client_id, name, minutes_total, price, invoice_number, purchase_date, status, notes')
           .eq('id', editingId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -107,7 +107,7 @@ export const getAdminActivitiesPageData = cache(async () => {
       .order('purchase_date', { ascending: false }),
     supabase
       .from('activities')
-      .select('id, title, activity_type, hours_used, work_date, notify_client, clients(name), packs(name)')
+      .select('id, title, activity_type, minutes_used, work_date, notify_client, clients(name), packs(name)')
       .order('work_date', { ascending: false })
       .limit(12),
   ])

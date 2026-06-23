@@ -9,6 +9,7 @@ const navItems = [
   { href: '/paneladmin/clientes', label: 'Clientes' },
   { href: '/paneladmin/bonos', label: 'Bonos' },
   { href: '/paneladmin/actividades', label: 'Actividades' },
+  { href: '/paneladmin/facturas', label: 'Facturas' },
 ]
 
 export function AdminShell({ title, description, currentPath, userEmail, children }: { title: string; description: string; currentPath: string; userEmail: string; children: ReactNode }) {

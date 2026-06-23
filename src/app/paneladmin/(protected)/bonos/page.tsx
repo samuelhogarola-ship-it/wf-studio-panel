@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
 import { getAdminPacksPageData } from '@/lib/data/admin'
-import { formatDate, formatHours } from '@/lib/utils'
+import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,21 +21,21 @@ export default async function AdminPacksPage({
   const summaryMap = new Map(data.packSummaries.map((item) => [item.pack_id, item]))
 
   return (
-    <AdminShell title="Bonos y packs" description="Control de packs de horas, historial y saldo restante por bono." currentPath="/paneladmin/bonos" userEmail={identity.email}>
+    <AdminShell title="Bonos y packs" description="Control de packs de minutos, historial y saldo restante por bono." currentPath="/paneladmin/bonos" userEmail={identity.email}>
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <PackForm clients={data.clients} editingPack={data.editingPack} />
 
         <Card className="overflow-hidden">
           <div className="border-b border-line px-6 py-5">
             <h2 className="text-xl font-bold text-foreground">Historial de packs</h2>
-            <p className="text-sm text-muted">Todos los bonos, incluidas las horas sueltas modeladas como packs.</p>
+            <p className="text-sm text-muted">Todos los bonos, incluidos los minutos sueltos modelados como packs.</p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
                 <tr>
                   <th className="px-6 py-4">Pack</th>
-                  <th className="px-6 py-4">Horas</th>
+                  <th className="px-6 py-4">Tiempo</th>
                   <th className="px-6 py-4">Estado</th>
                   <th className="px-6 py-4">Fecha</th>
                   <th className="px-6 py-4">Acciones</th>
@@ -52,9 +52,9 @@ export default async function AdminPacksPage({
                         <p className="text-slate-500">{pack.clients?.name ?? 'Cliente sin nombre'}</p>
                       </td>
                       <td className="px-6 py-4">
-                        <p className="font-medium text-foreground">{formatHours(summary?.hours_total ?? pack.hours_total)}</p>
+                        <p className="font-medium text-foreground">{formatDuration(summary?.minutes_total ?? pack.minutes_total)}</p>
                         <p className="text-slate-500">
-                          Usadas {formatHours(summary?.used_hours ?? 0)} · Restantes {formatHours(summary?.remaining_hours ?? 0)}
+                          Usados {formatDuration(summary?.used_minutes ?? 0)} · Restantes {formatDuration(summary?.remaining_minutes ?? 0)}
                         </p>
                       </td>
                       <td className="px-6 py-4">

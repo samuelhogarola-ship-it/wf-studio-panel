@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
 import { getAdminDashboardData } from '@/lib/data/admin'
-import { formatDate, formatHours } from '@/lib/utils'
+import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,7 +16,7 @@ export default async function AdminDashboardPage() {
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
           { label: 'Clientes activos', value: data.activeClients.toString() },
-          { label: 'Horas pendientes', value: formatHours(data.pendingHours) },
+          { label: 'Tiempo pendiente', value: formatDuration(data.pendingMinutes) },
           { label: 'Bonos activos', value: data.activePacks.toString() },
           { label: 'Actividades este mes', value: data.monthActivities.toString() },
         ].map((item) => (
@@ -46,7 +46,7 @@ export default async function AdminDashboardPage() {
                   </p>
                 </div>
                 <div className="text-left md:text-right">
-                  <p className="font-semibold text-foreground">{formatHours(activity.hours_used)}</p>
+                  <p className="font-semibold text-foreground">{formatDuration(activity.minutes_used)}</p>
                   <p className="text-sm text-muted">{formatDate(activity.work_date)}</p>
                 </div>
               </div>

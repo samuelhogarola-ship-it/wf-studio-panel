@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card'
 import { deactivateClientAction } from '@/lib/actions/admin'
 import { requireAdmin } from '@/lib/auth'
 import { getAdminClientsPageData } from '@/lib/data/admin'
-import { formatDate, formatHours } from '@/lib/utils'
+import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +31,7 @@ export default async function AdminClientsPage({
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-xl font-bold text-foreground">Base de clientes</h2>
-                <p className="text-sm text-muted">Búsqueda rápida y estado actual de horas por cliente.</p>
+                <p className="text-sm text-muted">Búsqueda rápida y estado actual de minutos por cliente.</p>
               </div>
               <form className="flex gap-2" action="/paneladmin/clientes">
                 <input
@@ -51,7 +51,7 @@ export default async function AdminClientsPage({
                 <tr>
                   <th className="px-6 py-4">Cliente</th>
                   <th className="px-6 py-4">Estado</th>
-                  <th className="px-6 py-4">Horas restantes</th>
+                  <th className="px-6 py-4">Tiempo restante</th>
                   <th className="px-6 py-4">Creado</th>
                   <th className="px-6 py-4">Acciones</th>
                 </tr>
@@ -69,7 +69,7 @@ export default async function AdminClientsPage({
                       <td className="px-6 py-4">
                         <Badge className={client.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}>{client.status}</Badge>
                       </td>
-                      <td className="px-6 py-4 font-medium text-foreground">{formatHours(summary?.remaining_hours ?? 0)}</td>
+                      <td className="px-6 py-4 font-medium text-foreground">{formatDuration(summary?.remaining_minutes ?? 0)}</td>
                       <td className="px-6 py-4 text-slate-500">{formatDate(client.created_at)}</td>
                       <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-2">

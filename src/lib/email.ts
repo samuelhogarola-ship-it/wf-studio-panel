@@ -1,7 +1,7 @@
 import { Resend } from 'resend'
 
 import { getRequiredServerEnv } from '@/lib/env'
-import { formatHours } from '@/lib/utils'
+import { formatDuration } from '@/lib/utils'
 
 let resendClient: Resend | null = null
 
@@ -17,27 +17,27 @@ export async function sendActivityNotificationEmail({
   clientEmail,
   clientName,
   activityTitle,
-  hoursUsed,
-  remainingHours,
+  minutesUsed,
+  remainingMinutes,
 }: {
   clientEmail: string
   clientName: string
   activityTitle: string
-  hoursUsed: number
-  remainingHours: number
+  minutesUsed: number
+  remainingMinutes: number
 }) {
   const resend = getResend()
 
   return resend.emails.send({
     from: getRequiredServerEnv('RESEND_FROM_EMAIL'),
     to: clientEmail,
-    subject: 'Actualización de horas contratadas',
+    subject: 'Actualización de minutos contratados',
     text: [
       `Hola ${clientName},`,
       'Se ha registrado una nueva actividad.',
       `Servicio: ${activityTitle}`,
-      `Tiempo consumido: ${formatHours(hoursUsed)}`,
-      `Horas restantes: ${formatHours(remainingHours)}`,
+      `Tiempo consumido: ${formatDuration(minutesUsed)}`,
+      `Minutos restantes: ${formatDuration(remainingMinutes)}`,
       'WF-Studio',
     ].join('\n'),
   })

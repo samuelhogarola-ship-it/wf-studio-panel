@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
 import { getAdminActivitiesPageData } from '@/lib/data/admin'
-import { formatDate, formatHours } from '@/lib/utils'
+import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +13,7 @@ export default async function AdminActivitiesPage() {
   const data = await getAdminActivitiesPageData()
 
   return (
-    <AdminShell title="Actividades" description="Registro de trabajo realizado, consumo de horas y notificación opcional al cliente." currentPath="/paneladmin/actividades" userEmail={identity.email}>
+    <AdminShell title="Actividades" description="Registro de trabajo realizado, consumo de minutos y notificación opcional al cliente." currentPath="/paneladmin/actividades" userEmail={identity.email}>
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <ActivityForm clients={data.clients} packs={data.packs} />
 
@@ -35,7 +35,7 @@ export default async function AdminActivitiesPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge>{activity.activity_type}</Badge>
                     {activity.notify_client ? <Badge className="bg-brandSoft text-brand">email</Badge> : null}
-                    <span className="font-semibold text-foreground">{formatHours(activity.hours_used)}</span>
+                    <span className="font-semibold text-foreground">{formatDuration(activity.minutes_used)}</span>
                   </div>
                 </div>
                 <p className="mt-2 text-sm text-muted">{formatDate(activity.work_date)}</p>
