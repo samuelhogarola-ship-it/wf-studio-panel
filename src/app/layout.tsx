@@ -5,8 +5,13 @@ import type { ReactNode } from 'react'
 import '@/app/globals.css'
 
 export const metadata: Metadata = {
-  title: 'Studio Panel | WF-Studio',
-  description: 'Gestión de clientes, bonos de horas y actividades para WF-Studio.',
+  title: 'Panel de control · WF-Studio',
+  description: 'Panel de control para WF-Studio.',
+  openGraph: {
+    title: 'Panel de control · WF-Studio',
+    description: 'Panel de control para WF-Studio.',
+    images: [{ url: '/icon.png', width: 512, height: 512 }],
+  },
 }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
