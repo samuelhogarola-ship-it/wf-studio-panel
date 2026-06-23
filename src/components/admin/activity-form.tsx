@@ -80,8 +80,8 @@ export function ActivityForm({ clients, packs, locale }: { clients: ClientOption
           <Input id="title" name="title" placeholder={t(locale, 'activityForm.activityTitle.placeholder')} required />
         </div>
         <div>
-          <Label htmlFor="minutes_used">{t(locale, 'activityForm.minutes')}</Label>
-          <Input id="minutes_used" name="minutes_used" type="number" step="1" min="1" placeholder="90" required />
+          <Label htmlFor="hours_used">{t(locale, 'activityForm.hours')}</Label>
+          <Input id="hours_used" name="hours_used" type="number" step="0.5" min="0.5" placeholder="1.5" required />
         </div>
         <div>
           <Label htmlFor="work_date">{t(locale, 'activityForm.date')}</Label>

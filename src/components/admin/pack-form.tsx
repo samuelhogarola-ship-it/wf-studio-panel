@@ -60,8 +60,8 @@ export function PackForm({ clients, editingPack, locale }: { clients: ClientOpti
           <Input id="name" name="name" defaultValue={editingPack?.name ?? ''} placeholder={t(locale, 'packForm.name.placeholder')} required />
         </div>
         <div>
-          <Label htmlFor="minutes_total">{t(locale, 'packForm.minutes')}</Label>
-          <Input id="minutes_total" name="minutes_total" type="number" step="1" min="1" defaultValue={editingPack?.minutes_total ?? ''} required />
+          <Label htmlFor="hours_total">{t(locale, 'packForm.hours')}</Label>
+          <Input id="hours_total" name="hours_total" type="number" step="0.5" min="0.5" defaultValue={editingPack ? editingPack.minutes_total / 60 : ''} placeholder="10" required />
         </div>
         <div>
           <Label htmlFor="price">{t(locale, 'packForm.price')}</Label>
