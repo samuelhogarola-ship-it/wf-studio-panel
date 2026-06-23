@@ -27,6 +27,20 @@ export async function adminLoginAction(_prevState: AuthFormState, formData: Form
   redirect('/paneladmin/dashboard')
 }
 
+export async function clientPasswordLoginAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const email = String(formData.get('email') ?? '').trim()
+  const password = String(formData.get('password') ?? '')
+  const supabase = await createSupabaseServerClient()
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (error) {
+    return { error: 'Email o contraseña incorrectos.' }
+  }
+
+  redirect('/cliente/dashboard')
+}
+
 export async function clientMagicLinkAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get('email') ?? '').trim()
   const supabase = await createSupabaseServerClient()
