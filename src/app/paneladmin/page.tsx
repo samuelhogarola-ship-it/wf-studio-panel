@@ -33,9 +33,6 @@ export default async function AdminLoginPage() {
           <h1 className="text-[28px] font-semibold leading-[34px] tracking-tight text-white">
             {t(locale, 'adminLogin.headline')}
           </h1>
-          <p className="mt-2 text-sm text-white/50">
-            {t(locale, 'adminLogin.subheadline')}
-          </p>
         </div>
 
         <AdminLoginForm locale={locale} />
