@@ -13,6 +13,34 @@ function getResend() {
   return resendClient
 }
 
+export async function sendAdminRequestEmail({
+  clientName,
+  clientEmail,
+  subject,
+  body,
+}: {
+  clientName: string
+  clientEmail: string
+  subject: string
+  body: string
+}) {
+  const resend = getResend()
+  return resend.emails.send({
+    from: getRequiredServerEnv('RESEND_FROM_EMAIL'),
+    to: 'samuel.hogarola@gmail.com',
+    subject: `[WF-Studio] Solicitud de ${clientName}: ${subject}`,
+    text: [
+      `Nueva solicitud de ${clientName} (${clientEmail})`,
+      '',
+      subject,
+      '',
+      body,
+      '',
+      '— Enviado desde el panel de cliente WF-Studio',
+    ].join('\n'),
+  })
+}
+
 export async function sendActivityNotificationEmail({
   clientEmail,
   clientName,
