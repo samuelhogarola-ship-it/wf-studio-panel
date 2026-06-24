@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -24,15 +26,17 @@ export default async function AdminDashboardPage() {
     >
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: t(locale, 'dashboard.stat.activeClients'), value: data.activeClients.toString() },
-          { label: t(locale, 'dashboard.stat.pendingTime'), value: formatDuration(data.pendingMinutes) },
-          { label: t(locale, 'dashboard.stat.activePacks'), value: data.activePacks.toString() },
-          { label: t(locale, 'dashboard.stat.monthActivities'), value: data.monthActivities.toString() },
+          { label: t(locale, 'dashboard.stat.activeClients'), value: data.activeClients.toString(), href: '/paneladmin/clientes' },
+          { label: t(locale, 'dashboard.stat.pendingTime'), value: formatDuration(data.pendingMinutes), href: '/paneladmin/bonos' },
+          { label: t(locale, 'dashboard.stat.activePacks'), value: data.activePacks.toString(), href: '/paneladmin/bonos' },
+          { label: t(locale, 'dashboard.stat.monthActivities'), value: data.monthActivities.toString(), href: '/paneladmin/actividades' },
         ].map((item) => (
-          <Card key={item.label} className="p-6">
-            <p className="text-sm text-muted">{item.label}</p>
-            <p className="mt-4 text-3xl font-black tracking-tight text-foreground">{item.value}</p>
-          </Card>
+          <Link key={item.label} href={item.href}>
+            <Card className="p-6 transition hover:shadow-md hover:border-brand/30 cursor-pointer">
+              <p className="text-sm text-muted">{item.label}</p>
+              <p className="mt-4 text-3xl font-black tracking-tight text-foreground">{item.value}</p>
+            </Card>
+          </Link>
         ))}
       </section>
 
