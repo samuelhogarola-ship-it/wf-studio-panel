@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useActionState } from 'react'
 
@@ -133,9 +134,9 @@ export function PackForm({ clients, editingPack, locale }: { clients: ClientOpti
             {pending ? t(locale, 'packForm.submitting') : editingPack ? t(locale, 'packForm.submit.edit') : t(locale, 'packForm.submit.new')}
           </Button>
           {editingPack ? (
-            <a href="/paneladmin/bonos" className="inline-flex items-center rounded-full bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700">
+            <Link href="/paneladmin/bonos" className="inline-flex items-center rounded-full bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700">
               {t(locale, 'packForm.cancel')}
-            </a>
+            </Link>
           ) : null}
         </div>
       </form>

@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useActionState } from 'react'
 
@@ -68,9 +69,9 @@ export function ClientForm({ editingClient, locale }: { editingClient: EditingCl
               {pending ? t(locale, 'clientForm.submitting') : editingClient ? t(locale, 'clientForm.submit.edit') : t(locale, 'clientForm.submit.new')}
             </Button>
             {editingClient ? (
-              <a href="/paneladmin/clientes" className="inline-flex items-center rounded-full bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700">
+              <Link href="/paneladmin/clientes" className="inline-flex items-center rounded-full bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700">
                 {t(locale, 'clientForm.cancel')}
-              </a>
+              </Link>
             ) : null}
           </div>
         </form>
