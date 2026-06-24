@@ -287,6 +287,7 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
   revalidatePath('/paneladmin/dashboard')
   revalidatePath('/cliente/dashboard')
   revalidatePath('/paneladmin/bonos')
+  revalidatePath(`/paneladmin/bonos/${payload.pack_id}`)
   return { success }
 }
 

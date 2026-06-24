@@ -161,3 +161,23 @@ export const getAdminActivitiesPageData = cache(async () => {
     activities: activities ?? [],
   }
 })
+
+export const getPackDetailData = cache(async (packId: string) => {
+  const supabase = await createSupabaseServerClient()
+
+  const [{ data: pack }, { data: activities }, { data: summary }] = await Promise.all([
+    supabase
+      .from('packs')
+      .select('id, name, pack_type, client_id, minutes_total, price, purchase_date, renewal_date, status, notes, clients(id, name, email)')
+      .eq('id', packId)
+      .maybeSingle(),
+    supabase
+      .from('activities')
+      .select('id, title, description, activity_type, minutes_used, work_date, notify_client')
+      .eq('pack_id', packId)
+      .order('work_date', { ascending: false }),
+    supabase.from('pack_summary').select('*').eq('pack_id', packId).maybeSingle(),
+  ])
+
+  return { pack, activities: activities ?? [], summary }
+})
