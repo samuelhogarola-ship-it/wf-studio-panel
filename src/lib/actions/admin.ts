@@ -289,3 +289,48 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
   revalidatePath('/paneladmin/bonos')
   return { success }
 }
+
+const createClientDirectSchema = z.object({
+  name: z.string().min(2, 'El nombre es obligatorio.'),
+  email: z.string().email('Email inválido.'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.'),
+})
+
+export async function createClientDirectAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
+  await requireAdmin()
+  const supabase = await createSupabaseServerClient()
+  const adminClient = getSupabaseAdminClient()
+
+  const parsed = createClientDirectSchema.safeParse({
+    name: formData.get('name'),
+    email: formData.get('email'),
+    password: formData.get('password'),
+  })
+
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' }
+
+  const { name, email, password } = parsed.data
+
+  const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+
+  if (authError) return { error: authError.message }
+
+  const { error: clientError } = await supabase.from('clients').insert({
+    id: authUser.user.id,
+    name,
+    email,
+    status: 'active',
+  })
+
+  if (clientError) {
+    await adminClient.auth.admin.deleteUser(authUser.user.id)
+    return { error: 'No se pudo crear el cliente.' }
+  }
+
+  revalidatePath('/paneladmin/clientes')
+  return { success: `Cliente ${name} creado correctamente. Ya puede acceder con su contraseña.` }
+}

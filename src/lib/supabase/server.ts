@@ -1,8 +1,16 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 import { getPublicEnv } from '@/lib/env'
 import type { Database } from '@/lib/supabase/types'
+
+export function createSupabaseAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = process.env.SUPABASE_SECRET_KEY
+  if (!url || !serviceKey) throw new Error('Missing Supabase admin environment variables')
+  return createClient<Database>(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+}
 
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies()
