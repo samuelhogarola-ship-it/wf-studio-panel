@@ -215,6 +215,7 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
     title: formData.get('title'),
     description: formData.get('description'),
     hours_used: formData.get('hours_used') || 0,
+    minutes_direct: formData.get('minutes_direct') ?? undefined,
     work_date: formData.get('work_date'),
     notify_client: formData.get('notify_client') ?? undefined,
   })
