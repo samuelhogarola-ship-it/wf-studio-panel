@@ -18,7 +18,7 @@ type EditingClient = {
   company: string | null
   email: string
   phone: string | null
-  status: 'active' | 'inactive'
+  status: string
 } | null
 
 const initialState: AdminFormState = {}

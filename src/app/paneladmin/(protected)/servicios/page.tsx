@@ -119,16 +119,7 @@ export default async function AdminServiciosPage({
           </div>
           <ServiceForm
             clients={data.clients}
-            editingService={
-              editingService
-                ? {
-                    ...editingService,
-                    pack_id: editingService.pack_id ?? null,
-                    price: editingService.price ?? null,
-                    notes: editingService.notes ?? null,
-                  }
-                : null
-            }
+            editingService={editingService ?? null}
           />
         </div>
       )}
@@ -158,7 +149,7 @@ export default async function AdminServiciosPage({
                     )}
                   </td>
                   <td className="px-6 py-4 text-slate-500">
-                    {!Array.isArray(service.clients) ? service.clients?.name : '—'}
+                    {service.client_name ?? '—'}
                   </td>
                   <td className="px-6 py-4">
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">

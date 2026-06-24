@@ -18,15 +18,15 @@ type ClientOption = {
   id: string
   name: string
   email: string
-  status: 'active' | 'inactive'
+  status: string
 }
 
 type PackOption = {
   id: string
   client_id: string
   name: string
-  pack_type: 'hours' | 'tasks'
-  status: 'active' | 'inactive'
+  pack_type: string
+  status: string
 }
 
 const initialState: AdminFormState = {}

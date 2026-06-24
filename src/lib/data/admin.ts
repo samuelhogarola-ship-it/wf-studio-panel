@@ -190,13 +190,15 @@ export const getAdminServicesPageData = cache(async () => {
     supabase.from('clients').select('id, name, email, status').order('name'),
     supabase
       .from('services')
-      .select('id, name, service_type, price, service_date, status, notes, client_id, pack_id, clients(name), packs(name)')
+      .select('id, name, service_type, price, service_date, status, notes, client_id, pack_id')
       .order('service_date', { ascending: false }),
   ])
 
+  const clientMap = new Map((clients ?? []).map((c) => [c.id, c.name]))
+
   return {
     clients: clients ?? [],
-    services: services ?? [],
+    services: (services ?? []).map((s) => ({ ...s, client_name: clientMap.get(s.client_id) ?? null })),
   }
 })
 

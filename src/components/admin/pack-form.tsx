@@ -17,20 +17,20 @@ type ClientOption = {
   id: string
   name: string
   email: string
-  status: 'active' | 'inactive'
+  status: string
 }
 
 type EditingPack = {
   id: string
   client_id: string
   name: string
-  pack_type: 'hours' | 'tasks' | 'domain' | 'hosting' | 'service'
+  pack_type: string
   minutes_total: number
   price: number | null
   invoice_number: string | null
   purchase_date: string
   renewal_date: string | null
-  status: 'active' | 'inactive'
+  status: string
   notes: string | null
 } | null
 
@@ -38,7 +38,7 @@ const initialState: AdminFormState = {}
 
 export function PackForm({ clients, editingPack, locale }: { clients: ClientOption[]; editingPack: EditingPack; locale: Locale }) {
   const [state, action, pending] = useActionState(upsertPackAction, initialState)
-  const [packType, setPackType] = useState<'hours' | 'tasks' | 'domain' | 'hosting' | 'service'>(editingPack?.pack_type ?? 'hours')
+  const [packType, setPackType] = useState(editingPack?.pack_type ?? 'hours')
 
   const showHours = packType === 'hours'
   const showRenewal = packType === 'domain' || packType === 'hosting' || packType === 'service'

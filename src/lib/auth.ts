@@ -5,7 +5,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 type AuthIdentity = {
   userId: string
   email: string
-  role: 'admin' | 'client'
+  role: string
 }
 
 async function getProfileIdentity() {

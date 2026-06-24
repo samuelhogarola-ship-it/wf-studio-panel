@@ -16,7 +16,7 @@ type ClientOption = {
   id: string
   name: string
   email: string
-  status: 'active' | 'inactive'
+  status: string
 }
 
 const initialState: InvoiceFormState = {}
