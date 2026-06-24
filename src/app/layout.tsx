@@ -30,10 +30,6 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
                 {t(locale, 'nav.brand')}
               </Link>
               <div className="flex items-center gap-3 text-sm text-muted">
-                <Link href="/paneladmin">{t(locale, 'nav.admin')}</Link>
-                <span className="text-slate-300">/</span>
-                <Link href="/cliente">{t(locale, 'nav.client')}</Link>
-                <span className="text-slate-300">/</span>
                 <LocaleToggle locale={locale} />
               </div>
             </div>
