@@ -162,6 +162,23 @@ export const getAdminActivitiesPageData = cache(async () => {
   }
 })
 
+export const getAdminServicesPageData = cache(async () => {
+  const supabase = await createSupabaseServerClient()
+
+  const [{ data: clients }, { data: services }] = await Promise.all([
+    supabase.from('clients').select('id, name, email, status').order('name'),
+    supabase
+      .from('services')
+      .select('id, name, service_type, price, service_date, status, notes, client_id, pack_id, clients(name), packs(name)')
+      .order('service_date', { ascending: false }),
+  ])
+
+  return {
+    clients: clients ?? [],
+    services: services ?? [],
+  }
+})
+
 export const getPackDetailData = cache(async (packId: string) => {
   const supabase = await createSupabaseServerClient()
 

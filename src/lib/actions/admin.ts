@@ -341,3 +341,49 @@ export async function createClientDirectAction(_prevState: AdminFormState, formD
   revalidatePath('/paneladmin/clientes')
   return { success: `Cliente ${name} creado correctamente. Ya puede acceder con su contraseña.` }
 }
+
+const serviceSchema = z.object({
+  id: z.string().uuid().optional(),
+  client_id: z.string().uuid('Selecciona un cliente.'),
+  pack_id: z.string().uuid().optional(),
+  name: z.string().min(2, 'El nombre es obligatorio.'),
+  service_type: z.string().min(1),
+  price: z.coerce.number().nonnegative().optional(),
+  service_date: z.string().min(1, 'La fecha es obligatoria.'),
+  status: z.enum(['active', 'completed', 'cancelled']),
+  notes: z.string().optional(),
+})
+
+export async function upsertServiceAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
+  await requireAdmin()
+  const supabase = await createSupabaseServerClient()
+
+  const parsed = serviceSchema.safeParse({
+    id: formData.get('id') || undefined,
+    client_id: formData.get('client_id'),
+    pack_id: formData.get('pack_id') || undefined,
+    name: formData.get('name'),
+    service_type: formData.get('service_type'),
+    price: formData.get('price') || undefined,
+    service_date: formData.get('service_date'),
+    status: formData.get('status'),
+    notes: formData.get('notes') || undefined,
+  })
+
+  if (!parsed.success) {
+    return toStateError(parsed.error.issues[0]?.message ?? 'No se pudo guardar el servicio.')
+  }
+
+  const { id, ...payload } = parsed.data
+
+  if (id) {
+    const { error } = await supabase.from('services').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', id)
+    if (error) return toStateError('No se pudo actualizar el servicio.')
+  } else {
+    const { error } = await supabase.from('services').insert(payload)
+    if (error) return toStateError('No se pudo guardar el servicio.')
+  }
+
+  revalidatePath('/paneladmin/servicios')
+  return { success: id ? 'Servicio actualizado.' : 'Servicio registrado correctamente.' }
+}
