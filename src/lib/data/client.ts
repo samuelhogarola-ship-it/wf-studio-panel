@@ -53,16 +53,6 @@ export const getClientBonosData = cache(async (clientId: string) => {
   return { packs: packs ?? [], summaryMap }
 })
 
-export const getClientMessages = async (clientId: string) => {
-  const supabase = await createSupabaseServerClient()
-  const { data } = await supabase
-    .from('messages')
-    .select('id, subject, body, direction, type, read_at, reply_to_id, created_at')
-    .eq('client_id', clientId)
-    .order('created_at', { ascending: false })
-  return data ?? []
-}
-
 export const getClientDashboardData = cache(async (clientId: string) => {
   const supabase = await createSupabaseServerClient()
 

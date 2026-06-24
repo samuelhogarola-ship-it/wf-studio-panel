@@ -13,15 +13,6 @@ export type Database = {
           { foreignKeyName: "activities_pack_id_fkey"; columns: ["pack_id"]; isOneToOne: false; referencedRelation: "packs"; referencedColumns: ["id"] },
         ]
       }
-      messages: {
-        Row: { body: string; client_id: string; created_at: string; direction: string; id: string; read_at: string | null; reply_to_id: string | null; subject: string; type: string }
-        Insert: { body: string; client_id: string; created_at?: string; direction?: string; id?: string; read_at?: string | null; reply_to_id?: string | null; subject: string; type?: string }
-        Update: { body?: string; client_id?: string; created_at?: string; direction?: string; id?: string; read_at?: string | null; reply_to_id?: string | null; subject?: string; type?: string }
-        Relationships: [
-          { foreignKeyName: "messages_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
-          { foreignKeyName: "messages_reply_to_id_fkey"; columns: ["reply_to_id"]; isOneToOne: false; referencedRelation: "messages"; referencedColumns: ["id"] },
-        ]
-      }
       clients: {
         Row: { company: string | null; created_at: string; email: string; id: string; name: string; phone: string | null; status: string; updated_at: string }
         Insert: { company?: string | null; created_at?: string; email: string; id?: string; name: string; phone?: string | null; status?: string; updated_at?: string }
