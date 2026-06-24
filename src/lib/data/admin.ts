@@ -76,15 +76,22 @@ export const getAdminClientsPageData = cache(async (search: string, editingId?: 
   }
 })
 
-export const getAdminPacksPageData = cache(async (editingId?: string) => {
+export const getAdminPacksPageData = cache(async (editingId?: string, typeFilter?: string) => {
   const supabase = await createSupabaseServerClient()
+
+  let packsQuery = supabase
+    .from('packs')
+    .select('id, name, pack_type, client_id, minutes_total, price, invoice_number, purchase_date, renewal_date, status, notes, clients(name)')
+    .order('purchase_date', { ascending: false })
+
+  const validTypes = ['hours', 'tasks', 'domain', 'hosting', 'service']
+  if (typeFilter && validTypes.includes(typeFilter)) {
+    packsQuery = packsQuery.eq('pack_type', typeFilter)
+  }
 
   const [{ data: clients }, { data: packs }, { data: packSummaries }, { data: editingPack }] = await Promise.all([
     supabase.from('clients').select('id, name, email, status').order('name'),
-    supabase
-      .from('packs')
-      .select('id, name, pack_type, client_id, minutes_total, price, invoice_number, purchase_date, renewal_date, status, notes, clients(name)')
-      .order('purchase_date', { ascending: false }),
+    packsQuery,
     supabase.from('pack_summary').select('*'),
     editingId
       ? supabase
