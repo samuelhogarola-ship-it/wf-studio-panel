@@ -53,6 +53,32 @@ export default async function AdminPacksPage({
       userEmail={identity.email}
       locale={locale}
     >
+      {/* Filter tabs + new button — arriba del todo */}
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="flex gap-1.5 overflow-x-auto">
+          {TYPE_TABS.map((tab) => (
+            <Link
+              key={tab.key}
+              href={tab.key ? `/paneladmin/bonos?type=${tab.key}` : '/paneladmin/bonos'}
+              className={cn(
+                'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition',
+                activeType === tab.key
+                  ? 'bg-brand text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+              )}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+        <Link
+          href={`/paneladmin/bonos?new=1${typeParam}`}
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition"
+        >
+          <span className="text-base leading-none">+</span> Nuevo bono
+        </Link>
+      </div>
+
       {/* Form panel — visible when ?new=1 or ?edit=... */}
       {showNew && (
         <div className="mb-6 rounded-xl border border-line bg-white p-6 shadow-sm">
@@ -72,31 +98,6 @@ export default async function AdminPacksPage({
       )}
 
       <Card className="overflow-hidden">
-        {/* Header row: filter tabs + new button */}
-        <div className="flex items-center justify-between gap-4 border-b border-line px-4 py-3">
-          <div className="flex gap-1.5 overflow-x-auto">
-            {TYPE_TABS.map((tab) => (
-              <Link
-                key={tab.key}
-                href={tab.key ? `/paneladmin/bonos?type=${tab.key}` : '/paneladmin/bonos'}
-                className={cn(
-                  'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition',
-                  activeType === tab.key
-                    ? 'bg-brand text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-                )}
-              >
-                {tab.label}
-              </Link>
-            ))}
-          </div>
-          <Link
-            href={`/paneladmin/bonos?new=1${typeParam}`}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition"
-          >
-            <span className="text-base leading-none">+</span> Nuevo bono
-          </Link>
-        </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
