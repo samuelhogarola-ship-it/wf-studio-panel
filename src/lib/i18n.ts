@@ -82,7 +82,7 @@ export const translations = {
     'shell.nav.dashboard': 'Dashboard',
     'shell.nav.clients': 'Clientes',
     'shell.nav.packs': 'Bonos',
-    'shell.nav.activities': 'Actividades',
+    'shell.nav.activities': 'Historial',
     'shell.nav.invoices': 'Facturas',
 
     // Admin dashboard page
@@ -91,7 +91,7 @@ export const translations = {
     'dashboard.stat.activeClients': 'Clientes activos',
     'dashboard.stat.pendingTime': 'Tiempo pendiente',
     'dashboard.stat.activePacks': 'Bonos activos',
-    'dashboard.stat.monthActivities': 'Actividades este mes',
+    'dashboard.stat.monthActivities': 'Trabajos este mes',
     'dashboard.recent.title': 'Actividad reciente',
     'dashboard.recent.description': 'Últimos movimientos registrados por el equipo.',
     'dashboard.recent.badge': 'En tiempo real',
@@ -379,7 +379,7 @@ export const translations = {
     'shell.nav.dashboard': 'Dashboard',
     'shell.nav.clients': 'Clients',
     'shell.nav.packs': 'Packs',
-    'shell.nav.activities': 'Activities',
+    'shell.nav.activities': 'History',
     'shell.nav.invoices': 'Invoices',
 
     // Admin dashboard page
@@ -388,7 +388,7 @@ export const translations = {
     'dashboard.stat.activeClients': 'Active clients',
     'dashboard.stat.pendingTime': 'Pending time',
     'dashboard.stat.activePacks': 'Active packs',
-    'dashboard.stat.monthActivities': 'Activities this month',
+    'dashboard.stat.monthActivities': 'Jobs this month',
     'dashboard.recent.title': 'Recent activity',
     'dashboard.recent.description': 'Latest movements recorded by the team.',
     'dashboard.recent.badge': 'Real time',
