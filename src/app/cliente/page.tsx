@@ -17,7 +17,7 @@ export default async function ClientLoginPage() {
   const locale = await getLocale()
 
   return (
-    <main className="mx-auto grid min-h-[calc(100vh-73px)] max-w-6xl gap-6 px-4 py-10 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
+    <main className="mx-auto grid min-h-screen max-w-6xl gap-6 px-4 py-10 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
       <div className="self-center">
         <p className="text-sm font-semibold uppercase tracking-[0.16em] text-brand">{t(locale, 'clientLogin.eyebrow')}</p>
         <h1 className="mt-4 text-4xl font-black tracking-tight text-foreground">{t(locale, 'clientLogin.headline')}</h1>
