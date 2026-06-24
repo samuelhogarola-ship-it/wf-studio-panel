@@ -45,14 +45,14 @@ export function PackActivityForm({
 
       {isHoursPack && (
         <div>
-          <Label htmlFor="pa-hours">Horas</Label>
+          <Label htmlFor="pa-minutes">Tiempo (min)</Label>
           <Input
-            id="pa-hours"
-            name="hours_used"
+            id="pa-minutes"
+            name="minutes_direct"
             type="number"
-            step="0.5"
-            min="0.5"
-            placeholder="1.5"
+            step="1"
+            min="1"
+            placeholder="30"
             required
           />
         </div>

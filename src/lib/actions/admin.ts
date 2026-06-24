@@ -44,6 +44,7 @@ const activitySchema = z.object({
   title: z.string().min(2, 'El título es obligatorio.'),
   description: z.string().optional(),
   hours_used: z.coerce.number().nonnegative().optional(),
+  minutes_direct: z.coerce.number().int().nonnegative().optional(),
   work_date: z.string().min(1, 'La fecha es obligatoria.'),
   notify_client: z.enum(['on']).optional(),
 })
@@ -234,7 +235,11 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
     return toStateError('No se puede registrar actividad sobre un pack inactivo o no válido.')
   }
 
-  const minutesUsed = pack.pack_type === 'tasks' ? 0 : Math.round((payload.hours_used ?? 0) * 60)
+  const minutesUsed = pack.pack_type === 'tasks'
+    ? 0
+    : payload.minutes_direct !== undefined
+      ? payload.minutes_direct
+      : Math.round((payload.hours_used ?? 0) * 60)
 
   const { data: createdActivity, error: activityError } = await supabase
     .from('activities')
