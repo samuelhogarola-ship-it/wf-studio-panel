@@ -25,6 +25,7 @@ type PackOption = {
   id: string
   client_id: string
   name: string
+  pack_type: 'hours' | 'tasks'
   status: 'active' | 'inactive'
 }
 
@@ -33,8 +34,11 @@ const initialState: AdminFormState = {}
 export function ActivityForm({ clients, packs, locale }: { clients: ClientOption[]; packs: PackOption[]; locale: Locale }) {
   const [state, action, pending] = useActionState(createActivityAction, initialState)
   const [selectedClientId, setSelectedClientId] = useState(clients[0]?.id ?? '')
+  const [selectedPackId, setSelectedPackId] = useState('')
 
   const filteredPacks = useMemo(() => packs.filter((pack) => pack.client_id === selectedClientId), [packs, selectedClientId])
+  const selectedPack = filteredPacks.find((p) => p.id === selectedPackId)
+  const isTasksPack = selectedPack?.pack_type === 'tasks'
 
   return (
     <Card className="p-6">
@@ -45,7 +49,13 @@ export function ActivityForm({ clients, packs, locale }: { clients: ClientOption
       <form action={action} className="grid gap-4 md:grid-cols-2">
         <div>
           <Label htmlFor="client_id">{t(locale, 'activityForm.client')}</Label>
-          <Select id="client_id" name="client_id" value={selectedClientId} onChange={(event) => setSelectedClientId(event.target.value)} required>
+          <Select
+            id="client_id"
+            name="client_id"
+            value={selectedClientId}
+            onChange={(e) => { setSelectedClientId(e.target.value); setSelectedPackId('') }}
+            required
+          >
             <option value="">{t(locale, 'activityForm.client.placeholder')}</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
@@ -56,11 +66,17 @@ export function ActivityForm({ clients, packs, locale }: { clients: ClientOption
         </div>
         <div>
           <Label htmlFor="pack_id">{t(locale, 'activityForm.pack')}</Label>
-          <Select id="pack_id" name="pack_id" required defaultValue="">
+          <Select
+            id="pack_id"
+            name="pack_id"
+            value={selectedPackId}
+            onChange={(e) => setSelectedPackId(e.target.value)}
+            required
+          >
             <option value="">{t(locale, 'activityForm.pack.placeholder')}</option>
             {filteredPacks.map((pack) => (
               <option key={pack.id} value={pack.id}>
-                {pack.name}
+                {pack.name}{pack.pack_type === 'tasks' ? ' · tareas' : ''}
               </option>
             ))}
           </Select>
@@ -79,10 +95,12 @@ export function ActivityForm({ clients, packs, locale }: { clients: ClientOption
           <Label htmlFor="title">{t(locale, 'activityForm.activityTitle')}</Label>
           <Input id="title" name="title" placeholder={t(locale, 'activityForm.activityTitle.placeholder')} required />
         </div>
-        <div>
-          <Label htmlFor="hours_used">{t(locale, 'activityForm.hours')}</Label>
-          <Input id="hours_used" name="hours_used" type="number" step="0.5" min="0.5" placeholder="1.5" required />
-        </div>
+        {!isTasksPack && (
+          <div>
+            <Label htmlFor="hours_used">{t(locale, 'activityForm.hours')}</Label>
+            <Input id="hours_used" name="hours_used" type="number" step="0.5" min="0.5" placeholder="1.5" required={!isTasksPack} />
+          </div>
+        )}
         <div>
           <Label htmlFor="work_date">{t(locale, 'activityForm.date')}</Label>
           <Input id="work_date" name="work_date" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />

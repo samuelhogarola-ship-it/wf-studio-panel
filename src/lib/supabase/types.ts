@@ -156,10 +156,12 @@ export type Database = {
           id: string
           client_id: string
           name: string
+          pack_type: 'hours' | 'tasks' | 'domain' | 'hosting' | 'service'
           minutes_total: number
           price: number | null
           invoice_number: string | null
           purchase_date: string
+          renewal_date: string | null
           status: 'active' | 'inactive'
           notes: string | null
           created_at: string
@@ -169,10 +171,12 @@ export type Database = {
           id?: string
           client_id: string
           name: string
-          minutes_total: number
+          pack_type?: 'hours' | 'tasks' | 'domain' | 'hosting' | 'service'
+          minutes_total?: number
           price?: number | null
           invoice_number?: string | null
           purchase_date?: string
+          renewal_date?: string | null
           status?: 'active' | 'inactive'
           notes?: string | null
           created_at?: string

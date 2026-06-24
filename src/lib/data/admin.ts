@@ -83,13 +83,13 @@ export const getAdminPacksPageData = cache(async (editingId?: string) => {
     supabase.from('clients').select('id, name, email, status').order('name'),
     supabase
       .from('packs')
-      .select('id, name, client_id, minutes_total, price, invoice_number, purchase_date, status, notes, clients(name)')
+      .select('id, name, pack_type, client_id, minutes_total, price, invoice_number, purchase_date, renewal_date, status, notes, clients(name)')
       .order('purchase_date', { ascending: false }),
     supabase.from('pack_summary').select('*'),
     editingId
       ? supabase
           .from('packs')
-          .select('id, client_id, name, minutes_total, price, invoice_number, purchase_date, status, notes')
+          .select('id, client_id, name, pack_type, minutes_total, price, invoice_number, purchase_date, renewal_date, status, notes')
           .eq('id', editingId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -103,6 +103,33 @@ export const getAdminPacksPageData = cache(async (editingId?: string) => {
   }
 })
 
+export const getClientDetailPageData = cache(async (clientId: string) => {
+  const supabase = await createSupabaseServerClient()
+
+  const [{ data: client }, { data: packs }, { data: packSummaries }, { data: recentActivities }] = await Promise.all([
+    supabase.from('clients').select('id, name, company, email, phone, status, created_at').eq('id', clientId).maybeSingle(),
+    supabase
+      .from('packs')
+      .select('id, name, pack_type, minutes_total, price, purchase_date, renewal_date, status, notes')
+      .eq('client_id', clientId)
+      .order('purchase_date', { ascending: false }),
+    supabase.from('pack_summary').select('*').eq('client_id', clientId),
+    supabase
+      .from('activities')
+      .select('id, title, activity_type, minutes_used, work_date, packs(name)')
+      .eq('client_id', clientId)
+      .order('work_date', { ascending: false })
+      .limit(10),
+  ])
+
+  return {
+    client,
+    packs: packs ?? [],
+    packSummaries: packSummaries ?? [],
+    recentActivities: recentActivities ?? [],
+  }
+})
+
 export const getAdminActivitiesPageData = cache(async () => {
   const supabase = await createSupabaseServerClient()
 
@@ -110,8 +137,9 @@ export const getAdminActivitiesPageData = cache(async () => {
     supabase.from('clients').select('id, name, email, status').eq('status', 'active').order('name'),
     supabase
       .from('packs')
-      .select('id, client_id, name, status')
+      .select('id, client_id, name, pack_type, status')
       .eq('status', 'active')
+      .in('pack_type', ['hours', 'tasks'])
       .order('purchase_date', { ascending: false }),
     supabase
       .from('activities')

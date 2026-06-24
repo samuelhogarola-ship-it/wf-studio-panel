@@ -100,7 +100,9 @@ export default async function AdminClientsPage({
                   return (
                     <tr key={client.id}>
                       <td className="px-6 py-4">
-                        <p className="font-semibold text-foreground">{client.name}</p>
+                        <Link href={`/paneladmin/clientes/${client.id}`} className="font-semibold text-foreground hover:text-brand hover:underline">
+                          {client.name}
+                        </Link>
                         <p className="text-slate-500">{client.company || client.email}</p>
                       </td>
                       <td className="px-6 py-4">

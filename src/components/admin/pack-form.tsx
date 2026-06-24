@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useActionState } from 'react'
 
 import { upsertPackAction, type AdminFormState } from '@/lib/actions/admin'
@@ -23,10 +24,12 @@ type EditingPack = {
   id: string
   client_id: string
   name: string
+  pack_type: 'hours' | 'tasks' | 'domain' | 'hosting' | 'service'
   minutes_total: number
   price: number | null
   invoice_number: string | null
   purchase_date: string
+  renewal_date: string | null
   status: 'active' | 'inactive'
   notes: string | null
 } | null
@@ -35,6 +38,10 @@ const initialState: AdminFormState = {}
 
 export function PackForm({ clients, editingPack, locale }: { clients: ClientOption[]; editingPack: EditingPack; locale: Locale }) {
   const [state, action, pending] = useActionState(upsertPackAction, initialState)
+  const [packType, setPackType] = useState<'hours' | 'tasks' | 'domain' | 'hosting' | 'service'>(editingPack?.pack_type ?? 'hours')
+
+  const showHours = packType === 'hours'
+  const showRenewal = packType === 'domain' || packType === 'hosting' || packType === 'service'
 
   return (
     <Card className="p-6">
@@ -56,13 +63,39 @@ export function PackForm({ clients, editingPack, locale }: { clients: ClientOpti
           </Select>
         </div>
         <div>
+          <Label htmlFor="pack_type">{t(locale, 'packForm.packType')}</Label>
+          <Select
+            id="pack_type"
+            name="pack_type"
+            value={packType}
+            onChange={(e) => setPackType(e.target.value as typeof packType)}
+          >
+            <option value="hours">{t(locale, 'packForm.packType.hours')}</option>
+            <option value="tasks">{t(locale, 'packForm.packType.tasks')}</option>
+            <option value="domain">{t(locale, 'packForm.packType.domain')}</option>
+            <option value="hosting">{t(locale, 'packForm.packType.hosting')}</option>
+            <option value="service">{t(locale, 'packForm.packType.service')}</option>
+          </Select>
+        </div>
+        <div>
           <Label htmlFor="name">{t(locale, 'packForm.name')}</Label>
           <Input id="name" name="name" defaultValue={editingPack?.name ?? ''} placeholder={t(locale, 'packForm.name.placeholder')} required />
         </div>
-        <div>
-          <Label htmlFor="hours_total">{t(locale, 'packForm.hours')}</Label>
-          <Input id="hours_total" name="hours_total" type="number" step="0.5" min="0.5" defaultValue={editingPack ? editingPack.minutes_total / 60 : ''} placeholder="10" required />
-        </div>
+        {showHours && (
+          <div>
+            <Label htmlFor="hours_total">{t(locale, 'packForm.hours')}</Label>
+            <Input
+              id="hours_total"
+              name="hours_total"
+              type="number"
+              step="0.5"
+              min="0.5"
+              defaultValue={editingPack?.pack_type === 'hours' ? editingPack.minutes_total / 60 : ''}
+              placeholder="10"
+              required
+            />
+          </div>
+        )}
         <div>
           <Label htmlFor="price">{t(locale, 'packForm.price')}</Label>
           <Input id="price" name="price" type="number" step="0.01" min="0" defaultValue={editingPack?.price ?? ''} />
@@ -75,6 +108,12 @@ export function PackForm({ clients, editingPack, locale }: { clients: ClientOpti
           <Label htmlFor="purchase_date">{t(locale, 'packForm.purchaseDate')}</Label>
           <Input id="purchase_date" name="purchase_date" type="date" defaultValue={editingPack?.purchase_date ?? ''} required />
         </div>
+        {showRenewal && (
+          <div>
+            <Label htmlFor="renewal_date">{t(locale, 'packForm.renewalDate')}</Label>
+            <Input id="renewal_date" name="renewal_date" type="date" defaultValue={editingPack?.renewal_date ?? ''} />
+          </div>
+        )}
         <div>
           <Label htmlFor="status">{t(locale, 'packForm.status')}</Label>
           <Select id="status" name="status" defaultValue={editingPack?.status ?? 'active'}>

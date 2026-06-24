@@ -27,10 +27,12 @@ const packSchema = z.object({
   id: z.string().uuid().optional().or(z.literal('')),
   client_id: z.string().uuid('Selecciona un cliente.'),
   name: z.string().min(2, 'El nombre del pack es obligatorio.'),
-  hours_total: z.coerce.number().positive('Las horas deben ser mayores que 0.'),
+  pack_type: z.enum(['hours', 'tasks', 'domain', 'hosting', 'service']),
+  hours_total: z.coerce.number().nonnegative().optional(),
   price: z.union([z.coerce.number(), z.nan()]).optional(),
   invoice_number: z.string().optional(),
   purchase_date: z.string().min(1, 'La fecha es obligatoria.'),
+  renewal_date: z.string().optional(),
   status: z.enum(['active', 'inactive']),
   notes: z.string().optional(),
 })
@@ -41,7 +43,7 @@ const activitySchema = z.object({
   activity_type: z.enum(ACTIVITY_TYPES),
   title: z.string().min(2, 'El título es obligatorio.'),
   description: z.string().optional(),
-  hours_used: z.coerce.number().positive('Las horas deben ser mayores que 0.'),
+  hours_used: z.coerce.number().nonnegative().optional(),
   work_date: z.string().min(1, 'La fecha es obligatoria.'),
   notify_client: z.enum(['on']).optional(),
 })
@@ -162,10 +164,12 @@ export async function upsertPackAction(_prevState: AdminFormState, formData: For
     id: formData.get('id'),
     client_id: formData.get('client_id'),
     name: formData.get('name'),
-    hours_total: formData.get('hours_total'),
+    pack_type: formData.get('pack_type'),
+    hours_total: formData.get('hours_total') || 0,
     price: formData.get('price') || Number.NaN,
     invoice_number: formData.get('invoice_number'),
     purchase_date: formData.get('purchase_date'),
+    renewal_date: formData.get('renewal_date'),
     status: formData.get('status'),
     notes: formData.get('notes'),
   })
@@ -178,7 +182,9 @@ export async function upsertPackAction(_prevState: AdminFormState, formData: For
   const record = {
     client_id: payload.client_id,
     name: payload.name,
-    minutes_total: Math.round(payload.hours_total * 60),
+    pack_type: payload.pack_type,
+    minutes_total: payload.pack_type === 'hours' ? Math.round((payload.hours_total ?? 0) * 60) : 0,
+    renewal_date: payload.renewal_date || null,
     price: Number.isNaN(payload.price) ? null : payload.price,
     invoice_number: payload.invoice_number || null,
     purchase_date: payload.purchase_date,
@@ -207,7 +213,7 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
     activity_type: formData.get('activity_type'),
     title: formData.get('title'),
     description: formData.get('description'),
-    hours_used: formData.get('hours_used'),
+    hours_used: formData.get('hours_used') || 0,
     work_date: formData.get('work_date'),
     notify_client: formData.get('notify_client') ?? undefined,
   })
@@ -219,7 +225,7 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
   const payload = parsed.data
   const { data: pack } = await supabase
     .from('packs')
-    .select('id, name, status, client_id, clients(name, email)')
+    .select('id, name, status, pack_type, client_id, clients(name, email)')
     .eq('id', payload.pack_id)
     .eq('client_id', payload.client_id)
     .maybeSingle()
@@ -227,6 +233,8 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
   if (!pack || pack.status !== 'active') {
     return toStateError('No se puede registrar actividad sobre un pack inactivo o no válido.')
   }
+
+  const minutesUsed = pack.pack_type === 'tasks' ? 0 : Math.round((payload.hours_used ?? 0) * 60)
 
   const { data: createdActivity, error: activityError } = await supabase
     .from('activities')
@@ -236,7 +244,7 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
       activity_type: payload.activity_type,
       title: payload.title,
       description: payload.description || null,
-      minutes_used: Math.round(payload.hours_used * 60),
+      minutes_used: minutesUsed,
       work_date: payload.work_date,
       notify_client: payload.notify_client === 'on',
     })
@@ -247,7 +255,6 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
     return toStateError('No se pudo guardar la actividad.')
   }
 
-  const minutesUsed = Math.round(payload.hours_used * 60)
   const { data: summary } = await supabase.from('client_summary').select('*').eq('client_id', payload.client_id).maybeSingle()
 
   await supabase.from('notifications').insert({
