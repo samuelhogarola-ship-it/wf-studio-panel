@@ -1,9 +1,9 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { getRequiredServerEnv } from '@/lib/env'
 
 export type AuthFormState = {
   error?: string
@@ -44,11 +44,15 @@ export async function clientPasswordLoginAction(_prevState: AuthFormState, formD
 export async function clientMagicLinkAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get('email') ?? '').trim()
   const supabase = await createSupabaseServerClient()
+  const headersList = await headers()
+  const host = headersList.get('x-forwarded-host') ?? headersList.get('host') ?? 'localhost:3000'
+  const proto = headersList.get('x-forwarded-proto') ?? 'https'
+  const baseUrl = `${proto}://${host}`
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${getRequiredServerEnv('NEXT_PUBLIC_APP_URL')}/auth/callback?next=/cliente/dashboard`,
+      emailRedirectTo: `${baseUrl}/auth/callback?next=/cliente/dashboard`,
     },
   })
 
