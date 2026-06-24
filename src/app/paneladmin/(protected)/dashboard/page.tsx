@@ -51,11 +51,19 @@ export default async function AdminDashboardPage() {
           </div>
           <div className="divide-y divide-line">
             {data.recentActivities.map((activity) => (
-              <div key={activity.id} className="flex flex-col gap-3 px-6 py-5 md:flex-row md:items-center md:justify-between">
+              <div key={activity.id} className="flex flex-col gap-3 px-6 py-5 md:flex-row md:items-center md:justify-between hover:bg-slate-50 transition-colors">
                 <div>
-                  <p className="font-semibold text-foreground">{activity.title}</p>
+                  <Link href={`/paneladmin/actividades?highlight=${activity.id}`} className="font-semibold text-foreground hover:text-brand hover:underline">
+                    {activity.title}
+                  </Link>
                   <p className="text-sm text-muted">
-                    {activity.clients?.name ?? t(locale, 'dashboard.recent.client')} · {activity.packs?.name ?? t(locale, 'dashboard.recent.pack')}
+                    {activity.clients && !Array.isArray(activity.clients) && activity.clients.name ? (
+                      <Link href={`/paneladmin/clientes/${(activity.clients as { id: string; name: string }).id}`} className="hover:text-foreground hover:underline transition-colors">
+                        {(activity.clients as { id: string; name: string }).name}
+                      </Link>
+                    ) : (t(locale, 'dashboard.recent.client'))}
+                    {' · '}
+                    {activity.packs?.name ?? t(locale, 'dashboard.recent.pack')}
                   </p>
                 </div>
                 <div className="text-left md:text-right">

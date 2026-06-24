@@ -17,7 +17,7 @@ export const getAdminDashboardData = cache(async () => {
         .gte('work_date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)),
       supabase
         .from('activities')
-        .select('id, title, minutes_used, work_date, clients(name), packs(name)')
+        .select('id, title, minutes_used, work_date, client_id, clients(id, name), packs(name)')
         .order('work_date', { ascending: false })
         .limit(6),
     ])
