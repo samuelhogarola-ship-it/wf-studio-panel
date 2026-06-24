@@ -36,18 +36,9 @@ export const getAdminDashboardData = cache(async () => {
   }
 })
 
-export const getAdminClientsPageData = cache(async (search: string, editingId?: string) => {
+export const getAdminClientsPageData = cache(async (search: string, editingId?: string, category?: string) => {
   const supabase = await createSupabaseServerClient()
   const query = normalizeSearch(search)
-
-  let clientsQuery = supabase
-    .from('clients')
-    .select('id, name, company, email, phone, status, created_at, updated_at')
-    .order('created_at', { ascending: false })
-
-  if (query) {
-    clientsQuery = clientsQuery.or(`name.ilike.%${query}%,company.ilike.%${query}%,email.ilike.%${query}%`)
-  }
 
   const pendingQuery = supabase
     .from('clients')
@@ -55,24 +46,54 @@ export const getAdminClientsPageData = cache(async (search: string, editingId?: 
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
 
-  const [{ data: clients }, { data: editingClient }, { data: summaries }, { data: pendingClients }] = await Promise.all([
-    clientsQuery,
+  const [{ data: allClients }, { data: editingClient }, { data: summaries }, { data: pendingClients }, { data: packs }, { data: services }] = await Promise.all([
+    supabase
+      .from('clients')
+      .select('id, name, company, email, phone, status, created_at, updated_at')
+      .order('name'),
     editingId
-      ? supabase
-          .from('clients')
-          .select('id, name, company, email, phone, status')
-          .eq('id', editingId)
-          .maybeSingle()
+      ? supabase.from('clients').select('id, name, company, email, phone, status').eq('id', editingId).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from('client_summary').select('*'),
     pendingQuery,
+    supabase.from('packs').select('id, client_id, pack_type, status').eq('status', 'active'),
+    supabase.from('services').select('id, client_id'),
   ])
 
+  const packsByClient = new Map<string, string[]>()
+  for (const p of packs ?? []) {
+    const list = packsByClient.get(p.client_id) ?? []
+    list.push(p.pack_type)
+    packsByClient.set(p.client_id, list)
+  }
+  const clientsWithServices = new Set((services ?? []).map((s) => s.client_id))
+
+  let clients = (allClients ?? []).filter((c) => c.status !== 'pending')
+
+  if (query) {
+    const q = query.toLowerCase()
+    clients = clients.filter((c) =>
+      c.name.toLowerCase().includes(q) ||
+      (c.company ?? '').toLowerCase().includes(q) ||
+      c.email.toLowerCase().includes(q)
+    )
+  }
+
+  if (category === 'horas') {
+    clients = clients.filter((c) => (packsByClient.get(c.id) ?? []).includes('hours'))
+  } else if (category === 'cerrado') {
+    clients = clients.filter((c) => (packsByClient.get(c.id) ?? []).some((t) => t !== 'hours'))
+  } else if (category === 'servicios') {
+    clients = clients.filter((c) => clientsWithServices.has(c.id))
+  }
+
   return {
-    clients: clients ?? [],
+    clients,
     editingClient,
     summaries: summaries ?? [],
     pendingClients: pendingClients ?? [],
+    packsByClient,
+    clientsWithServices,
   }
 })
 

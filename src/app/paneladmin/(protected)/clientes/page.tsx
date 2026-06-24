@@ -10,19 +10,31 @@ import { getAdminClientsPageData } from '@/lib/data/admin'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
 import { formatDate, formatDuration } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
+
+const CATEGORY_TABS = [
+  { key: '', label: 'Todos' },
+  { key: 'horas', label: 'Bono horas' },
+  { key: 'cerrado', label: 'Pack cerrado' },
+  { key: 'servicios', label: 'Servicios' },
+]
 
 export default async function AdminClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; edit?: string }>
+  searchParams: Promise<{ q?: string; edit?: string; new?: string; cat?: string }>
 }) {
   const identity = await requireAdmin()
   const params = await searchParams
-  const data = await getAdminClientsPageData(params.q ?? '', params.edit)
+  const showNew = params.new === '1' || !!params.edit
+  const activeCategory = params.cat ?? ''
+  const data = await getAdminClientsPageData(params.q ?? '', params.edit, activeCategory)
   const summaryMap = new Map(data.summaries.map((item) => [item.client_id, item]))
   const locale = await getLocale()
+
+  const catParam = activeCategory ? `&cat=${activeCategory}` : ''
 
   return (
     <AdminShell
@@ -32,6 +44,7 @@ export default async function AdminClientsPage({
       userEmail={identity.email}
       locale={locale}
     >
+      {/* Pending clients */}
       {data.pendingClients.length > 0 && (
         <Card className="mb-6 overflow-hidden border-amber-200">
           <div className="border-b border-amber-200 bg-amber-50 px-6 py-4">
@@ -60,78 +73,129 @@ export default async function AdminClientsPage({
           </div>
         </Card>
       )}
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <ClientForm editingClient={data.editingClient} locale={locale} />
 
-        <Card className="overflow-hidden">
-          <div className="border-b border-line px-6 py-5">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-foreground">{t(locale, 'clients.list.title')}</h2>
-                <p className="text-sm text-muted">{t(locale, 'clients.list.description')}</p>
-              </div>
-              <form className="flex gap-2" action="/paneladmin/clientes">
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={params.q ?? ''}
-                  placeholder={t(locale, 'clients.list.searchPlaceholder')}
-                  className="min-h-11 rounded-full border border-line bg-white px-4 text-sm text-foreground outline-none focus:border-brand"
-                />
-                <button className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">{t(locale, 'clients.list.searchBtn')}</button>
-              </form>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
-                <tr>
-                  <th className="px-6 py-4">{t(locale, 'clients.list.col.client')}</th>
-                  <th className="px-6 py-4">{t(locale, 'clients.list.col.status')}</th>
-                  <th className="px-6 py-4">{t(locale, 'clients.list.col.remaining')}</th>
-                  <th className="px-6 py-4">{t(locale, 'clients.list.col.created')}</th>
-                  <th className="px-6 py-4">{t(locale, 'clients.list.col.actions')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {data.clients.map((client) => {
-                  const summary = summaryMap.get(client.id)
-
-                  return (
-                    <tr key={client.id}>
-                      <td className="px-6 py-4">
-                        <Link href={`/paneladmin/clientes/${client.id}`} className="font-semibold text-foreground hover:text-brand hover:underline">
-                          {client.name}
-                        </Link>
-                        <p className="text-slate-500">{client.company || client.email}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge className={client.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}>{client.status}</Badge>
-                      </td>
-                      <td className="px-6 py-4 font-medium text-foreground">{formatDuration(summary?.remaining_minutes ?? 0)}</td>
-                      <td className="px-6 py-4 text-slate-500">{formatDate(client.created_at)}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          <Link href={`/paneladmin/clientes?edit=${client.id}`} className="rounded-full bg-slate-100 px-3 py-2 font-semibold text-slate-700">
-                            {t(locale, 'clients.list.edit')}
-                          </Link>
-                          {client.status === 'active' ? (
-                            <form action={deactivateClientAction}>
-                              <input type="hidden" name="id" value={client.id} />
-                              <button className="rounded-full bg-rose-50 px-3 py-2 font-semibold text-rose-700">{t(locale, 'clients.list.deactivate')}</button>
-                            </form>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            {data.clients.length === 0 ? <p className="px-6 py-8 text-sm text-muted">{t(locale, 'clients.list.empty')}</p> : null}
-          </div>
-        </Card>
+      {/* Filter tabs + search + new button */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-1.5 overflow-x-auto">
+          {CATEGORY_TABS.map((tab) => (
+            <Link
+              key={tab.key}
+              href={tab.key ? `/paneladmin/clientes?cat=${tab.key}` : '/paneladmin/clientes'}
+              className={cn(
+                'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition',
+                activeCategory === tab.key
+                  ? 'bg-brand text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+              )}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <form className="flex gap-2" action="/paneladmin/clientes">
+            {activeCategory && <input type="hidden" name="cat" value={activeCategory} />}
+            <input
+              type="search"
+              name="q"
+              defaultValue={params.q ?? ''}
+              placeholder="Buscar cliente…"
+              className="h-8 rounded-full border border-line bg-white px-3 text-xs text-foreground outline-none focus:border-brand"
+            />
+          </form>
+          <Link
+            href={`/paneladmin/clientes?new=1${catParam}`}
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition"
+          >
+            <span className="text-base leading-none">+</span> Nuevo cliente
+          </Link>
+        </div>
       </div>
+
+      {/* New/edit form panel */}
+      {showNew && (
+        <div className="mb-6 rounded-xl border border-line bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-foreground">
+              {params.edit ? 'Editar cliente' : 'Nuevo cliente'}
+            </h2>
+            <Link
+              href={`/paneladmin/clientes${activeCategory ? `?cat=${activeCategory}` : ''}`}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition text-lg leading-none"
+            >
+              ×
+            </Link>
+          </div>
+          <ClientForm editingClient={data.editingClient} locale={locale} />
+        </div>
+      )}
+
+      {/* Clients table */}
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
+              <tr>
+                <th className="px-6 py-4">{t(locale, 'clients.list.col.client')}</th>
+                <th className="px-6 py-4">Categorías</th>
+                <th className="px-6 py-4">{t(locale, 'clients.list.col.status')}</th>
+                <th className="px-6 py-4">{t(locale, 'clients.list.col.remaining')}</th>
+                <th className="px-6 py-4">{t(locale, 'clients.list.col.actions')}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {data.clients.map((client) => {
+                const summary = summaryMap.get(client.id)
+                const packTypes = data.packsByClient.get(client.id) ?? []
+                const hasHours = packTypes.includes('hours')
+                const hasCerrado = packTypes.some((t) => t !== 'hours')
+                const hasServices = data.clientsWithServices.has(client.id)
+
+                return (
+                  <tr key={client.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <Link href={`/paneladmin/clientes/${client.id}`} className="font-semibold text-foreground hover:text-brand hover:underline">
+                        {client.name}
+                      </Link>
+                      <p className="text-xs text-slate-400">{client.company || client.email}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {hasHours && <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">Horas</span>}
+                        {hasCerrado && <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700">Pack</span>}
+                        {hasServices && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">Servicios</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge className={client.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}>{client.status}</Badge>
+                    </td>
+                    <td className="px-6 py-4 font-medium text-foreground">{formatDuration(summary?.remaining_minutes ?? 0)}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-2">
+                        <Link href={`/paneladmin/clientes/${client.id}`} className="rounded-full bg-brand/10 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/20 transition">
+                          Ver
+                        </Link>
+                        <Link href={`/paneladmin/clientes?edit=${client.id}${catParam}`} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition">
+                          {t(locale, 'clients.list.edit')}
+                        </Link>
+                        {client.status === 'active' && (
+                          <form action={deactivateClientAction}>
+                            <input type="hidden" name="id" value={client.id} />
+                            <button className="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition">{t(locale, 'clients.list.deactivate')}</button>
+                          </form>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          {data.clients.length === 0 && (
+            <p className="px-6 py-10 text-sm text-muted">{t(locale, 'clients.list.empty')}</p>
+          )}
+        </div>
+      </Card>
     </AdminShell>
   )
 }
