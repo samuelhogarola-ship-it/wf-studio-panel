@@ -1,6 +1,5 @@
 import { requireClientAccess } from '@/lib/auth'
 import { getClientMessages } from '@/lib/data/client'
-import { ClientShell } from '@/components/layout/client-shell'
 import { MessageComposer } from '@/components/client/message-composer'
 import { formatDate } from '@/lib/utils'
 
@@ -34,7 +33,7 @@ export default async function MensajeriaPage({
   ]
 
   return (
-    <ClientShell clientName={identity.client.name} clientEmail={identity.email}>
+    <>
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-black tracking-tight text-foreground">Mensajería</h1>
         <a
@@ -123,6 +122,6 @@ export default async function MensajeriaPage({
           </div>
         )}
       </div>
-    </ClientShell>
+    </>
   )
 }

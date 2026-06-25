@@ -1,6 +1,5 @@
 import { requireClientAccess } from '@/lib/auth'
 import { getClientDashboardData } from '@/lib/data/client'
-import { ClientShell } from '@/components/layout/client-shell'
 import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -21,7 +20,7 @@ export default async function ClientDashboardPage() {
   const data = await getClientDashboardData(identity.client.id)
 
   return (
-    <ClientShell clientName={identity.client.name} clientEmail={identity.email}>
+    <>
       <div className="mb-8">
         <h1 className="text-2xl font-black tracking-tight text-foreground">
           Hola, {identity.client.name} 👋
@@ -145,6 +144,6 @@ export default async function ClientDashboardPage() {
           </div>
         </section>
       )}
-    </ClientShell>
+    </>
   )
 }

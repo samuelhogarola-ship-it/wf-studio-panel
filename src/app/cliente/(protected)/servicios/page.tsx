@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { requireClientAccess } from '@/lib/auth'
 import { getClientServicesData } from '@/lib/data/client'
-import { ClientShell } from '@/components/layout/client-shell'
 import { RequestForm } from '@/components/client/request-form'
 import { formatDate, formatDuration } from '@/lib/utils'
 
@@ -46,7 +45,7 @@ export default async function ClientServiciosPage({
   const { packs } = await getClientServicesData(identity.client.id)
 
   return (
-    <ClientShell clientName={identity.client.name} clientEmail={identity.email}>
+    <>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-foreground">Mis servicios</h1>
@@ -210,6 +209,6 @@ export default async function ClientServiciosPage({
           })}
         </div>
       )}
-    </ClientShell>
+    </>
   )
 }

@@ -280,6 +280,17 @@ export const translations = {
     'print.payment.card': 'Tarjeta',
     'print.payment.transfer': 'Transferencia bancaria',
 
+    // Client shell nav
+    'clientNav.dashboard': 'Resumen',
+    'clientNav.servicios': 'Servicios',
+    'clientNav.bonos': 'Bonos',
+    'clientNav.packs': 'Packs',
+    'clientNav.facturas': 'Facturas',
+    'clientNav.historial': 'Historial',
+    'clientNav.mensajeria': 'Mensajería',
+    'clientNav.signOut': 'Cerrar sesión',
+    'clientNav.signOutShort': 'Salir',
+
     // Client dashboard page
     'clientDashboard.eyebrow': 'Portal cliente',
     'clientDashboard.greeting': 'Hola,',
@@ -578,6 +589,17 @@ export const translations = {
     'print.payment.transfer': 'Bank transfer',
 
     // Client dashboard page
+    // Client shell nav
+    'clientNav.dashboard': 'Overview',
+    'clientNav.servicios': 'Services',
+    'clientNav.bonos': 'Hours',
+    'clientNav.packs': 'Packs',
+    'clientNav.facturas': 'Invoices',
+    'clientNav.historial': 'History',
+    'clientNav.mensajeria': 'Messages',
+    'clientNav.signOut': 'Sign out',
+    'clientNav.signOutShort': 'Sign out',
+
     'clientDashboard.eyebrow': 'Client portal',
     'clientDashboard.greeting': 'Hello,',
     'clientDashboard.summary': 'Here is your updated summary of contracted minutes, usage, and recorded work.',
