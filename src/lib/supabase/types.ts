@@ -41,9 +41,9 @@ export type Database = {
         Relationships: [{ foreignKeyName: "notifications_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
       packs: {
-        Row: { client_id: string; created_at: string; id: string; invoice_number: string | null; minutes_total: number; name: string; notes: string | null; pack_type: string; price: number | null; purchase_date: string; renewal_date: string | null; status: string; updated_at: string }
-        Insert: { client_id: string; created_at?: string; id?: string; invoice_number?: string | null; minutes_total: number; name: string; notes?: string | null; pack_type?: string; price?: number | null; purchase_date?: string; renewal_date?: string | null; status?: string; updated_at?: string }
-        Update: { client_id?: string; created_at?: string; id?: string; invoice_number?: string | null; minutes_total?: number; name?: string; notes?: string | null; pack_type?: string; price?: number | null; purchase_date?: string; renewal_date?: string | null; status?: string; updated_at?: string }
+        Row: { billing_cycle: string; client_id: string; created_at: string; id: string; invoice_number: string | null; minutes_total: number; name: string; notes: string | null; pack_type: string; paid: boolean; price: number | null; purchase_date: string; renewal_date: string | null; status: string; updated_at: string }
+        Insert: { billing_cycle?: string; client_id: string; created_at?: string; id?: string; invoice_number?: string | null; minutes_total: number; name: string; notes?: string | null; pack_type?: string; paid?: boolean; price?: number | null; purchase_date?: string; renewal_date?: string | null; status?: string; updated_at?: string }
+        Update: { billing_cycle?: string; client_id?: string; created_at?: string; id?: string; invoice_number?: string | null; minutes_total?: number; name?: string; notes?: string | null; pack_type?: string; paid?: boolean; price?: number | null; purchase_date?: string; renewal_date?: string | null; status?: string; updated_at?: string }
         Relationships: [{ foreignKeyName: "packs_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
       profiles: {

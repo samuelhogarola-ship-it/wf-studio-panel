@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 import { requireAdmin } from '@/lib/auth'
 import { ACTIVITY_TYPES } from '@/lib/activity-types'
-import { sendActivityNotificationEmail } from '@/lib/email'
+import { sendActivityNotificationEmail, sendPackDepletedEmail } from '@/lib/email'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -289,6 +289,36 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
     }
   }
 
+  // Auto-envío de historial cuando el pack se agota
+  if (pack.pack_type === 'hours' && pack.clients?.email) {
+    const { data: packSummary } = await supabase
+      .from('pack_summary')
+      .select('remaining_minutes')
+      .eq('pack_id', payload.pack_id)
+      .maybeSingle()
+
+    if (packSummary && Number(packSummary.remaining_minutes) <= 0) {
+      const { data: packActivities } = await supabase
+        .from('activities')
+        .select('title, activity_type, minutes_used, work_date')
+        .eq('pack_id', payload.pack_id)
+        .order('work_date', { ascending: false })
+
+      if (packActivities?.length) {
+        try {
+          await sendPackDepletedEmail({
+            clientEmail: pack.clients.email,
+            clientName: pack.clients.name ?? 'cliente',
+            packName: pack.name,
+            activities: packActivities,
+          })
+        } catch {
+          // fallo silencioso — el email se enviará cuando DNS esté configurado
+        }
+      }
+    }
+  }
+
   revalidatePath('/paneladmin/actividades')
   revalidatePath('/paneladmin/dashboard')
   revalidatePath('/cliente/dashboard')
@@ -386,4 +416,25 @@ export async function upsertServiceAction(_prevState: AdminFormState, formData: 
 
   revalidatePath('/paneladmin/servicios')
   return { success: id ? 'Servicio actualizado.' : 'Servicio registrado correctamente.' }
+}
+
+export async function togglePackPaidAction(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const supabase = await createSupabaseServerClient()
+  const packId = String(formData.get('pack_id'))
+  const currentPaid = formData.get('paid') === 'true'
+  const clientId = String(formData.get('client_id'))
+  await supabase.from('packs').update({ paid: !currentPaid }).eq('id', packId)
+  revalidatePath(`/paneladmin/clientes/${clientId}`)
+}
+
+export async function togglePackStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const supabase = await createSupabaseServerClient()
+  const packId = String(formData.get('pack_id'))
+  const currentStatus = String(formData.get('status'))
+  const clientId = String(formData.get('client_id'))
+  const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+  await supabase.from('packs').update({ status: newStatus }).eq('id', packId)
+  revalidatePath(`/paneladmin/clientes/${clientId}`)
 }

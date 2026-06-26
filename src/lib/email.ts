@@ -41,6 +41,42 @@ export async function sendAdminRequestEmail({
   })
 }
 
+export async function sendPackDepletedEmail({
+  clientEmail,
+  clientName,
+  packName,
+  activities,
+}: {
+  clientEmail: string
+  clientName: string
+  packName: string
+  activities: { title: string; activity_type: string; minutes_used: number; work_date: string }[]
+}) {
+  const resend = getResend()
+  const total = activities.reduce((sum, a) => sum + a.minutes_used, 0)
+  const lines = activities.map(
+    (a) => `  • ${a.work_date}  ${a.title} (${a.activity_type}) — ${formatDuration(a.minutes_used)}`
+  )
+  return resend.emails.send({
+    from: getRequiredServerEnv('RESEND_FROM_EMAIL'),
+    to: clientEmail,
+    subject: `[WF-Studio] Resumen de actividad — ${packName}`,
+    text: [
+      `Hola ${clientName},`,
+      '',
+      `Tu bono "${packName}" ha sido completado. Aquí tienes el resumen de todo el trabajo realizado:`,
+      '',
+      ...lines,
+      '',
+      `Tiempo total consumido: ${formatDuration(total)}`,
+      '',
+      'Si necesitas renovar el bono o tienes alguna duda, escríbenos.',
+      '',
+      '— WF-Studio',
+    ].join('\n'),
+  })
+}
+
 export async function sendActivityNotificationEmail({
   clientEmail,
   clientName,
