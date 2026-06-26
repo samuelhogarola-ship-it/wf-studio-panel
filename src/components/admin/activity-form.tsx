@@ -97,8 +97,8 @@ export function ActivityForm({ clients, packs, locale }: { clients: ClientOption
         </div>
         {!isTasksPack && (
           <div>
-            <Label htmlFor="hours_used">{t(locale, 'activityForm.hours')}</Label>
-            <Input id="hours_used" name="hours_used" type="number" step="0.5" min="0.5" placeholder="1.5" required={!isTasksPack} />
+            <Label htmlFor="minutes_direct">{t(locale, 'activityForm.minutes')}</Label>
+            <Input id="minutes_direct" name="minutes_direct" type="number" step="1" min="1" placeholder="30" required={!isTasksPack} />
           </div>
         )}
         <div>
