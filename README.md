@@ -39,6 +39,8 @@ npm install
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -94,11 +96,37 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 | `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Clave pública (anon key) |
 | `SUPABASE_SECRET_KEY` | Service role key (solo servidor) |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | Site key pública de Cloudflare Turnstile para `/api/contact/config` |
+| `TURNSTILE_SECRET_KEY` | Secret key privada de Cloudflare Turnstile para validar el token en `/api/contact` |
 | `RESEND_API_KEY` | API key de Resend para emails |
 | `RESEND_FROM_EMAIL` | Email remitente verificado en Resend |
 | `NEXT_PUBLIC_APP_URL` | URL pública de la app (ej. `https://panel.wf-studio.com`) |
 
 > `NEXT_PUBLIC_*` se incrustan en el bundle cliente en build time — deben estar disponibles durante el build en Coolify, no solo en runtime.
+
+> El código mantiene compatibilidad secundaria con `TURNSTILE_SITE_KEY` como fallback legado para `/api/contact/config`, pero la convención principal de producción es `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+
+> `CONTACT_EMAIL` no existe todavía como variable en esta app. El destinatario del formulario público está fijado en `info@webfuengirola.com` dentro de `src/lib/email.ts`.
+
+### Variables usadas por el formulario público
+
+El flujo público depende de estos endpoints:
+
+- `/api/contact/config`
+- `/api/contact`
+
+Variables realmente usadas por ese flujo:
+
+| Variable | Endpoint | Qué pasa si falta |
+|---|---|---|
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `/api/contact/config` | Responde `503 turnstile_not_configured` |
+| `TURNSTILE_SECRET_KEY` | `/api/contact` | La validación server-side de Turnstile falla; con token no vacío puede terminar en `500 server_error` |
+| `RESEND_API_KEY` | `/api/contact` | El envío por Resend falla |
+| `RESEND_FROM_EMAIL` | `/api/contact` | El envío por Resend falla |
+
+Fallback legado aceptado por código:
+
+- `TURNSTILE_SITE_KEY` sigue funcionando solo como respaldo secundario si todavía no se ha migrado a `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
 ### Nota sobre `outputFileTracingRoot`
 

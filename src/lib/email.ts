@@ -106,3 +106,39 @@ export async function sendActivityNotificationEmail({
     ].join('\n'),
   })
 }
+
+export async function sendPublicContactEmail({
+  name,
+  email,
+  company,
+  message,
+  pageUrl,
+}: {
+  name: string
+  email: string
+  company?: string
+  message: string
+  pageUrl?: string
+}) {
+  const resend = getResend()
+
+  return resend.emails.send({
+    from: getRequiredServerEnv('RESEND_FROM_EMAIL'),
+    to: 'info@webfuengirola.com',
+    replyTo: email,
+    subject: `[WF-Studio] Nuevo contacto web: ${name}`,
+    text: [
+      'Nuevo mensaje desde el formulario público de Web Fuengirola.',
+      '',
+      `Nombre: ${name}`,
+      `Email: ${email}`,
+      `Empresa: ${company || 'No indicada'}`,
+      `Página: ${pageUrl || 'No disponible'}`,
+      '',
+      'Mensaje:',
+      message,
+      '',
+      '— Enviado desde webfuengirola.com',
+    ].join('\n'),
+  })
+}
