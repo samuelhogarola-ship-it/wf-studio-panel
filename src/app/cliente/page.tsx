@@ -9,6 +9,10 @@ import { t } from '@/lib/i18n'
 export default async function ClientLoginPage() {
   const identity = await getOptionalIdentity()
 
+  if (identity?.role === 'admin') {
+    redirect('/paneladmin/inicio')
+  }
+
   if (identity?.role === 'client') {
     redirect('/cliente/dashboard')
   }

@@ -47,7 +47,7 @@ export async function requireAdmin() {
   }
 
   if (identity.role !== 'admin') {
-    redirect('/cliente/dashboard')
+    redirect('/paneladmin')
   }
 
   return identity
@@ -61,7 +61,7 @@ export async function requireClientAccess() {
   }
 
   if (identity.role !== 'client') {
-    redirect('/paneladmin/dashboard')
+    redirect('/paneladmin/inicio')
   }
 
   const supabase = await createSupabaseServerClient()
