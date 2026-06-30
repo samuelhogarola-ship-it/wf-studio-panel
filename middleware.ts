@@ -14,14 +14,14 @@ export async function middleware(request: NextRequest) {
   const isKnownHost = host === ADMIN_HOST || host === PORTAL_HOST
 
   if (isKnownHost) {
-    // admin.webfuengirola.com: only /paneladmin/* is allowed
+    // admin.webfuengirola.com: /cliente/* does not exist here
     if (host === ADMIN_HOST && pathname.startsWith('/cliente')) {
-      return NextResponse.redirect(new URL(pathname + request.nextUrl.search, `https://${PORTAL_HOST}`))
+      return new NextResponse(null, { status: 404 })
     }
 
-    // portal.webfuengirola.com: only /cliente/* is allowed
+    // portal.webfuengirola.com: /paneladmin/* does not exist here
     if (host === PORTAL_HOST && pathname.startsWith('/paneladmin')) {
-      return NextResponse.redirect(new URL(pathname + request.nextUrl.search, `https://${ADMIN_HOST}`))
+      return new NextResponse(null, { status: 404 })
     }
 
     // portal root → /cliente login
