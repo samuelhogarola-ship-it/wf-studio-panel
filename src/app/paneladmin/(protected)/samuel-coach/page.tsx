@@ -21,8 +21,8 @@ export default async function SamuelCoachAdminPage() {
 
   return (
     <AdminShell
-      title="Samuel Coach — Ejercicios"
-      description="Gestión de textos y ejercicios de Prüfungsvorbereitung en imKontext"
+      title="Prüfungsvorbereitung"
+      description="Gestión de textos y ejercicios para el examen"
       currentPath="/paneladmin/samuel-coach"
       userEmail={identity.email}
       locale={locale}
