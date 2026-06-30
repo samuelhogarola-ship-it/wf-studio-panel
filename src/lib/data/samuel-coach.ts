@@ -48,3 +48,39 @@ export const getSamuelCoachData = cache(async () => {
 
   return { rows, published: published.length, total: rows.length, byNivel, byType }
 })
+
+type Question = { id: string; enunciado: string; respuesta: boolean; explicacion: string | null; order_index: number }
+type TextWithQuestions = { id: string; nivel: string; titulo: string; is_published: boolean; questions: Question[] }
+
+export const getSamuelCoachEjerciciosData = cache(async () => {
+  const db = createImKontextAdminClient()
+
+  const [{ data: texts }, { data: questions }] = await Promise.all([
+    db
+      .from('samuel_texts')
+      .select('id, nivel, titulo, is_published')
+      .eq('app_key', 'samuel_coach')
+      .order('nivel')
+      .order('titulo'),
+    db
+      .from('samuel_questions')
+      .select('id, text_id, enunciado, respuesta, explicacion, order_index')
+      .order('order_index'),
+  ])
+
+  const questionsByText = new Map<string, Question[]>()
+  for (const q of questions ?? []) {
+    const list = questionsByText.get(q.text_id) ?? []
+    list.push({ id: q.id, enunciado: q.enunciado, respuesta: q.respuesta, explicacion: q.explicacion, order_index: q.order_index })
+    questionsByText.set(q.text_id, list)
+  }
+
+  const byNivel = new Map<string, TextWithQuestions[]>()
+  for (const t of texts ?? []) {
+    const list = byNivel.get(t.nivel) ?? []
+    list.push({ id: t.id, nivel: t.nivel, titulo: t.titulo, is_published: t.is_published, questions: questionsByText.get(t.id) ?? [] })
+    byNivel.set(t.nivel, list)
+  }
+
+  return { byNivel, total: texts?.length ?? 0, totalQuestions: questions?.length ?? 0 }
+})
