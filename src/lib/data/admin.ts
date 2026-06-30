@@ -36,7 +36,7 @@ export const getAdminDashboardData = cache(async () => {
   }
 })
 
-export const getAdminClientsPageData = cache(async (search: string, editingId?: string, category?: string) => {
+export const getAdminClientsPageData = cache(async (search: string, editingId?: string, category?: string, project = 'wf-studio') => {
   const supabase = await createSupabaseServerClient()
   const query = normalizeSearch(search)
 
@@ -44,12 +44,14 @@ export const getAdminClientsPageData = cache(async (search: string, editingId?: 
     .from('clients')
     .select('id, name, email, created_at')
     .eq('status', 'pending')
+    .eq('project', project)
     .order('created_at', { ascending: false })
 
   const [{ data: allClients }, { data: editingClient }, { data: summaries }, { data: pendingClients }, { data: packs }, { data: services }] = await Promise.all([
     supabase
       .from('clients')
       .select('id, name, company, email, phone, status, created_at, updated_at')
+      .eq('project', project)
       .order('name'),
     editingId
       ? supabase.from('clients').select('id, name, company, email, phone, status').eq('id', editingId).maybeSingle()
@@ -230,6 +232,42 @@ export const getPackDetailData = cache(async (packId: string) => {
   ])
 
   return { pack, activities: activities ?? [], summary }
+})
+
+export const getProjectSubscriptionsData = cache(async (project: string) => {
+  const supabase = await createSupabaseServerClient()
+
+  const { data: projectClients } = await supabase
+    .from('clients')
+    .select('id, name, email, status')
+    .eq('project', project)
+    .order('name')
+
+  const clientIds = (projectClients ?? []).map((c) => c.id)
+
+  const [{ data: packs }, { data: allClients }] = await Promise.all([
+    clientIds.length > 0
+      ? supabase
+          .from('packs')
+          .select('id, name, pack_type, client_id, price, billing_cycle, purchase_date, renewal_date, status, paid, notes, clients(name)')
+          .in('client_id', clientIds)
+          .in('pack_type', ['subscription', 'membership', 'hosting', 'domain', 'service'])
+          .order('purchase_date', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    Promise.resolve({ data: projectClients ?? [] }),
+  ])
+
+  const active = (packs ?? []).filter((p) => p.status === 'active')
+  const unpaid = active.filter((p) => !p.paid)
+  const monthlyRevenue = active
+    .filter((p) => p.billing_cycle === 'monthly' && p.price)
+    .reduce((sum, p) => sum + Number(p.price), 0)
+
+  return {
+    clients: allClients,
+    packs: packs ?? [],
+    stats: { total: active.length, unpaid: unpaid.length, monthlyRevenue },
+  }
 })
 
 export const getAdminClientDetailPageData = cache(async (clientId: string) => {

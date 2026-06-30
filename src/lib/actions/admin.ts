@@ -21,13 +21,14 @@ const clientSchema = z.object({
   email: z.string().email('Introduce un email válido.'),
   phone: z.string().optional(),
   status: z.enum(['active', 'inactive']),
+  project: z.enum(['wf-studio', 'vivir-fuengirola', 'conoce-fuengirola']).default('wf-studio'),
 })
 
 const packSchema = z.object({
   id: z.string().uuid().optional().or(z.literal('')),
   client_id: z.string().uuid('Selecciona un cliente.'),
   name: z.string().min(2, 'El nombre del pack es obligatorio.'),
-  pack_type: z.enum(['hours', 'tasks', 'domain', 'hosting', 'service']),
+  pack_type: z.enum(['hours', 'tasks', 'domain', 'hosting', 'service', 'subscription', 'membership']),
   hours_total: z.coerce.number().nonnegative().optional(),
   price: z.union([z.coerce.number(), z.nan()]).optional(),
   invoice_number: z.string().optional(),
@@ -63,6 +64,7 @@ export async function upsertClientAction(_prevState: AdminFormState, formData: F
     email: formData.get('email'),
     phone: formData.get('phone'),
     status: formData.get('status'),
+    project: formData.get('project') || 'wf-studio',
   })
 
   if (!parsed.success) {
@@ -117,6 +119,7 @@ export async function upsertClientAction(_prevState: AdminFormState, formData: F
     email: payload.email.toLowerCase(),
     phone: payload.phone || null,
     status: payload.status,
+    project: payload.project,
   })
 
   if (error) {
@@ -124,6 +127,8 @@ export async function upsertClientAction(_prevState: AdminFormState, formData: F
   }
 
   revalidatePath('/paneladmin/clientes')
+  revalidatePath('/paneladmin/vivir-en-fuengirola/clientes')
+  revalidatePath('/paneladmin/conoce-fuengirola/clientes')
   revalidatePath('/paneladmin/dashboard')
   return { success: 'Cliente creado correctamente.' }
 }

@@ -1,21 +1,5 @@
-import { AdminShell } from '@/components/layout/app-shell'
-import { requireAdmin } from '@/lib/auth'
-import { getLocale } from '@/lib/locale'
+import { redirect } from 'next/navigation'
 
-export default async function Page() {
-  const identity = await requireAdmin()
-  const locale = await getLocale()
-  return (
-    <AdminShell
-      title="Vivir en Fuengirola"
-      description="Gestión de contenido de Vivir en Fuengirola"
-      currentPath="/paneladmin/vivir-en-fuengirola"
-      userEmail={identity.email}
-      locale={locale}
-    >
-      <div className="flex items-center justify-center rounded-xl border border-dashed border-line h-64">
-        <p className="text-sm text-muted">Esta sección está en desarrollo.</p>
-      </div>
-    </AdminShell>
-  )
+export default function Page() {
+  redirect('/paneladmin/vivir-en-fuengirola/clientes')
 }

@@ -14,9 +14,9 @@ export type Database = {
         ]
       }
       clients: {
-        Row: { company: string | null; created_at: string; email: string; id: string; name: string; phone: string | null; status: string; updated_at: string }
-        Insert: { company?: string | null; created_at?: string; email: string; id?: string; name: string; phone?: string | null; status?: string; updated_at?: string }
-        Update: { company?: string | null; created_at?: string; email?: string; id?: string; name?: string; phone?: string | null; status?: string; updated_at?: string }
+        Row: { company: string | null; created_at: string; email: string; id: string; name: string; phone: string | null; project: string; status: string; updated_at: string }
+        Insert: { company?: string | null; created_at?: string; email: string; id?: string; name: string; phone?: string | null; project?: string; status?: string; updated_at?: string }
+        Update: { company?: string | null; created_at?: string; email?: string; id?: string; name?: string; phone?: string | null; project?: string; status?: string; updated_at?: string }
         Relationships: []
       }
       invoices: {

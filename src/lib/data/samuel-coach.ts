@@ -1,6 +1,6 @@
 import { cache } from 'react'
 
-import { createImKontextAdminClient } from '@/lib/supabase/server'
+import { createAppsUsersAdminClient, createImKontextAdminClient } from '@/lib/supabase/server'
 
 export const getSamuelCoachData = cache(async () => {
   const db = createImKontextAdminClient()
@@ -83,4 +83,38 @@ export const getSamuelCoachEjerciciosData = cache(async () => {
   }
 
   return { byNivel, total: texts?.length ?? 0, totalQuestions: questions?.length ?? 0 }
+})
+
+export const getAlumnosData = cache(async (q = '') => {
+  const db = createAppsUsersAdminClient()
+
+  const profilesQuery = db
+    .from('profiles')
+    .select('id, email, full_name, locale, created_at')
+    .order('created_at', { ascending: false })
+
+  if (q) profilesQuery.or(`email.ilike.%${q}%,full_name.ilike.%${q}%`)
+
+  const [{ data: profiles }, { data: memberships }] = await Promise.all([
+    profilesQuery,
+    db.from('app_memberships').select('user_id, app_key, status, created_at'),
+  ])
+
+  const membershipsByUser = new Map<string, { app_key: string; status: string }[]>()
+  for (const m of memberships ?? []) {
+    const list = membershipsByUser.get(m.user_id) ?? []
+    list.push({ app_key: m.app_key, status: m.status })
+    membershipsByUser.set(m.user_id, list)
+  }
+
+  const alumnos = (profiles ?? []).map((p) => ({
+    ...p,
+    memberships: membershipsByUser.get(p.id) ?? [],
+  }))
+
+  return {
+    alumnos,
+    total: alumnos.length,
+    active: alumnos.filter((a) => a.memberships.some((m) => m.status === 'active')).length,
+  }
 })

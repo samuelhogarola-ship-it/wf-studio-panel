@@ -24,7 +24,7 @@ type EditingClient = {
 
 const initialState: AdminFormState = {}
 
-export function ClientForm({ editingClient, locale }: { editingClient: EditingClient; locale: Locale }) {
+export function ClientForm({ editingClient, locale, project = 'wf-studio' }: { editingClient: EditingClient; locale: Locale; project?: string }) {
   const [state, action, pending] = useActionState(upsertClientAction, initialState)
   const [directState, directAction, directPending] = useActionState(createClientDirectAction, initialState)
   const [showDirect, setShowDirect] = useState(false)
@@ -38,6 +38,7 @@ export function ClientForm({ editingClient, locale }: { editingClient: EditingCl
         </div>
         <form action={action} className="grid gap-4 md:grid-cols-2">
           <input type="hidden" name="id" value={editingClient?.id ?? ''} />
+          <input type="hidden" name="project" value={project} />
           <div>
             <Label htmlFor="name">{t(locale, 'clientForm.name')}</Label>
             <Input id="name" name="name" defaultValue={editingClient?.name ?? ''} required />
