@@ -65,7 +65,7 @@ export type Database = {
     Views: {
       client_summary: { Row: { client_email: string | null; client_id: string | null; client_name: string | null; remaining_minutes: number | null; total_minutes: number | null; used_minutes: number | null }; Relationships: [] }
       pack_summary: {
-        Row: { client_id: string | null; minutes_total: number | null; pack_id: string | null; pack_name: string | null; remaining_minutes: number | null; used_minutes: number | null }
+        Row: { client_id: string | null; minutes_total: number | null; pack_id: string | null; pack_name: string | null; pack_type: 'hours' | 'tasks' | null; remaining_minutes: number | null; used_minutes: number | null }
         Relationships: [{ foreignKeyName: "packs_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
     }
