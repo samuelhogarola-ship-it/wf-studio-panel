@@ -5,6 +5,13 @@ import { cookies } from 'next/headers'
 import { getPublicEnv } from '@/lib/env'
 import type { Database } from '@/lib/supabase/types'
 
+export function createImKontextAdminClient() {
+  const url = process.env.IMKONTEXT_URL
+  const serviceKey = process.env.IMKONTEXT_SERVICE_KEY
+  if (!url || !serviceKey) throw new Error('Missing IMKONTEXT_URL or IMKONTEXT_SERVICE_KEY env vars')
+  return createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+}
+
 export function createSupabaseAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SECRET_KEY
