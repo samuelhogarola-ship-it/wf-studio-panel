@@ -118,3 +118,59 @@ export const getAlumnosData = cache(async (q = '') => {
     active: alumnos.filter((a) => a.memberships.some((m) => m.status === 'active')).length,
   }
 })
+
+export const getProgresoData = cache(async () => {
+  const db = createAppsUsersAdminClient()
+
+  const [{ data: progress }, { data: attempts }] = await Promise.all([
+    db
+      .from('samuel_user_progress')
+      .select('nivel, exercise_type, completed_activities, average_score, user_id')
+      .order('nivel')
+      .order('exercise_type'),
+    db
+      .from('samuel_attempts')
+      .select('user_id, score, max_score, completed_at, exercise_type')
+      .order('completed_at', { ascending: false })
+      .limit(30),
+  ])
+
+  // Aggregate progress by nivel+exercise_type
+  type ProgressRow = { nivel: string; exercise_type: string; user_count: number; completed_activities: number; average_score: number | null }
+  const grouped = new Map<string, ProgressRow>()
+  for (const row of progress ?? []) {
+    const key = `${row.nivel}:${row.exercise_type}`
+    const existing = grouped.get(key)
+    if (existing) {
+      existing.user_count++
+      existing.completed_activities += row.completed_activities ?? 0
+      if (row.average_score !== null) {
+        existing.average_score = existing.average_score !== null
+          ? (existing.average_score + row.average_score) / 2
+          : row.average_score
+      }
+    } else {
+      grouped.set(key, {
+        nivel: row.nivel,
+        exercise_type: row.exercise_type,
+        user_count: 1,
+        completed_activities: row.completed_activities ?? 0,
+        average_score: row.average_score ?? null,
+      })
+    }
+  }
+
+  const allAttempts = attempts ?? []
+  const totalAttempts = allAttempts.length
+  const activeUsers = new Set(allAttempts.map((a) => a.user_id)).size
+  const scored = allAttempts.filter((a) => a.max_score > 0)
+  const avgScore = scored.length > 0
+    ? Math.round(scored.reduce((s, a) => s + (a.score / a.max_score) * 100, 0) / scored.length)
+    : null
+
+  return {
+    progress: Array.from(grouped.values()),
+    recentAttempts: allAttempts,
+    stats: { totalAttempts, activeUsers, avgScore },
+  }
+})
