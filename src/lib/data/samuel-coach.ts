@@ -5,7 +5,7 @@ import { createImKontextAdminClient } from '@/lib/supabase/server'
 export const getSamuelCoachData = cache(async () => {
   const db = createImKontextAdminClient()
 
-  const [{ data: texts }, { data: exercises }] = await Promise.all([
+  const [{ data: texts }, { data: exercises }, { data: questions }] = await Promise.all([
     db
       .from('samuel_texts')
       .select('id, slug, nivel, titulo, descripcion, is_published, content_lang')
@@ -15,6 +15,9 @@ export const getSamuelCoachData = cache(async () => {
     db
       .from('samuel_exercises')
       .select('id, text_id, exercise_type, gap_count'),
+    db
+      .from('samuel_questions')
+      .select('text_id'),
   ])
 
   const exerciseMap = new Map<string, { exercise_type: string; gap_count: number }>()
@@ -22,9 +25,15 @@ export const getSamuelCoachData = cache(async () => {
     exerciseMap.set(ex.text_id, { exercise_type: ex.exercise_type, gap_count: ex.gap_count ?? 0 })
   }
 
+  const questionCountMap = new Map<string, number>()
+  for (const q of questions ?? []) {
+    questionCountMap.set(q.text_id, (questionCountMap.get(q.text_id) ?? 0) + 1)
+  }
+
   const rows = (texts ?? []).map((t) => ({
     ...t,
     exercise: exerciseMap.get(t.id) ?? null,
+    questionCount: questionCountMap.get(t.id) ?? 0,
   }))
 
   const published = rows.filter((r) => r.is_published)

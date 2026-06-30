@@ -75,12 +75,12 @@ export default async function SamuelCoachAdminPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  {row.exercise && (
-                    <span className="hidden sm:inline text-xs text-muted">
-                      {TYPE_LABELS[row.exercise.exercise_type] ?? row.exercise.exercise_type}
-                      {row.exercise.gap_count > 0 ? ` · ${row.exercise.gap_count} huecos` : ''}
-                    </span>
-                  )}
+                  <span className="hidden sm:inline text-xs text-muted">
+                    {row.exercise
+                      ? `${TYPE_LABELS[row.exercise.exercise_type] ?? row.exercise.exercise_type}${row.exercise.gap_count > 0 ? ` · ${row.exercise.gap_count} huecos` : ''}`
+                      : '—'}
+                    {row.questionCount > 0 ? ` · ${row.questionCount} preguntas` : ''}
+                  </span>
                   <Badge className={row.is_published ? 'bg-green-100 text-green-700 border-green-200' : 'bg-slate-100 text-slate-500 border-slate-200'}>
                     {row.is_published ? 'Publicado' : 'Borrador'}
                   </Badge>
