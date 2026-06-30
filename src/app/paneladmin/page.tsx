@@ -9,7 +9,7 @@ export default async function AdminLoginPage() {
   const identity = await getOptionalIdentity()
 
   if (identity?.role === 'admin') {
-    redirect('/paneladmin/dashboard')
+    redirect('/paneladmin/inicio')
   }
 
   const locale = await getLocale()
