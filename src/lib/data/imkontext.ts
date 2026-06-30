@@ -2,6 +2,31 @@ import { cache } from 'react'
 
 import { createImKontextAdminClient } from '@/lib/supabase/server'
 
+export const getDerDieDasData = cache(async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = createImKontextAdminClient() as any
+
+  const { data: lemmas } = await db
+    .from('vocabulary_lemmas')
+    .select('id, german, article, plural, is_active')
+    .eq('word_type', 'noun')
+    .not('article', 'is', null)
+    .in('article', ['der', 'die', 'das'])
+    .eq('is_active', true)
+    .order('german')
+
+  const byArticle: Record<string, number> = { der: 0, die: 0, das: 0 }
+  for (const l of lemmas ?? []) {
+    if (l.article in byArticle) byArticle[l.article]++
+  }
+
+  return {
+    lemmas: (lemmas ?? []) as { id: number; german: string; article: string; plural: string | null; is_active: boolean }[],
+    byArticle,
+    total: (lemmas ?? []).length,
+  }
+})
+
 export const getVokabelLabData = cache(async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createImKontextAdminClient() as any
