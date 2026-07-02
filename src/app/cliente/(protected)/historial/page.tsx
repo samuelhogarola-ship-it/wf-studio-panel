@@ -3,7 +3,7 @@ import { requireClientAccess } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 export default async function ClientPage() {
-  const identity = await requireClientAccess()
+  await requireClientAccess()
 
   return (
     <>

@@ -1,8 +1,11 @@
 'use server'
 
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
+import { getAppOrigin } from '@/lib/env'
+import { registerPendingClient } from '@/lib/auth/register.mjs'
+import { buildCanonicalAppUrl } from '@/lib/security/redirects.mjs'
+import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type AuthFormState = {
@@ -44,15 +47,21 @@ export async function clientPasswordLoginAction(_prevState: AuthFormState, formD
 export async function clientMagicLinkAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get('email') ?? '').trim()
   const supabase = await createSupabaseServerClient()
-  const headersList = await headers()
-  const host = headersList.get('x-forwarded-host') ?? headersList.get('host') ?? 'localhost:3000'
-  const proto = headersList.get('x-forwarded-proto') ?? 'https'
-  const baseUrl = `${proto}://${host}`
+  let emailRedirectTo: string
+
+  try {
+    emailRedirectTo = buildCanonicalAppUrl(
+      getAppOrigin(),
+      '/auth/callback?next=%2Fcliente%2Fdashboard',
+    ).toString()
+  } catch {
+    return { error: 'Falta la URL canónica de la app. Configura APP_URL o NEXT_PUBLIC_APP_URL.' }
+  }
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${baseUrl}/auth/callback?next=/cliente/dashboard`,
+      emailRedirectTo,
     },
   })
 
@@ -76,29 +85,33 @@ export async function clientRegisterAction(_prevState: AuthFormState, formData: 
   }
 
   const supabase = await createSupabaseServerClient()
+  const adminClient = getSupabaseAdminClient()
 
-  const { error: signUpError } = await supabase.auth.signUp({ email, password })
-  if (signUpError) {
-    if (signUpError.message.includes('already registered')) {
-      return { error: 'Ya existe una cuenta con ese email.' }
-    }
-    return { error: 'No se pudo crear la cuenta. Inténtalo de nuevo.' }
-  }
-
-  const { error: clientError } = await supabase.from('clients').insert({
+  return registerPendingClient({
     name,
-    email: email.toLowerCase(),
-    status: 'pending',
+    email,
+    password,
+    signUp: async ({ email: signUpEmail, password: signUpPassword }) => {
+      const { data, error } = await supabase.auth.signUp({
+        email: signUpEmail,
+        password: signUpPassword,
+      })
+
+      return {
+        userId: data.user?.id ?? null,
+        error: error ? { message: error.message } : null,
+      }
+    },
+    insertClient: async (client) => {
+      const { error } = await supabase.from('clients').insert(client)
+      return {
+        error: error ? { message: error.message } : null,
+      }
+    },
+    deleteUser: async (userId) => {
+      await adminClient.auth.admin.deleteUser(userId)
+    },
   })
-
-  if (clientError) {
-    if (clientError.message.includes('lower')) {
-      return { error: 'Ya existe un cliente con ese email.' }
-    }
-    return { error: 'No se pudo completar el registro.' }
-  }
-
-  return { success: 'Solicitud enviada. El equipo revisará tu acceso y te avisaremos.' }
 }
 
 export async function signOutAction() {

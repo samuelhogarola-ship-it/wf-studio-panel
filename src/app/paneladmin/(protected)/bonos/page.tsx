@@ -19,6 +19,8 @@ const TYPE_LABELS: Record<string, string> = {
   domain: 'Dominio',
   hosting: 'Hosting',
   service: 'Servicio',
+  subscription: 'Suscripción',
+  membership: 'Membresía',
 }
 
 export default async function AdminPacksPage({

@@ -12,6 +12,16 @@ export function getPublicEnv() {
   return publicEnv
 }
 
+export function getAppOrigin() {
+  const value = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL
+
+  if (!value) {
+    throw new Error('Missing environment variable: APP_URL or NEXT_PUBLIC_APP_URL')
+  }
+
+  return new URL(value).origin
+}
+
 export function getRequiredServerEnv(name: keyof NodeJS.ProcessEnv) {
   const value = process.env[name]
 

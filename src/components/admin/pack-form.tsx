@@ -26,6 +26,8 @@ type EditingPack = {
   client_id: string
   name: string
   pack_type: string
+  billing_cycle: string
+  paid: boolean
   minutes_total: number
   price: number | null
   invoice_number: string | null
@@ -42,7 +44,9 @@ export function PackForm({ clients, editingPack, locale }: { clients: ClientOpti
   const [packType, setPackType] = useState(editingPack?.pack_type ?? 'hours')
 
   const showHours = packType === 'hours'
-  const showRenewal = packType === 'domain' || packType === 'hosting' || packType === 'service'
+  const showRenewal = ['domain', 'hosting', 'service', 'subscription', 'membership'].includes(packType)
+  const showBillingCycle = ['subscription', 'membership', 'hosting', 'domain', 'service'].includes(packType)
+  const showPaid = packType !== 'hours' && packType !== 'tasks'
 
   return (
     <Card className="p-6">
@@ -76,6 +80,8 @@ export function PackForm({ clients, editingPack, locale }: { clients: ClientOpti
             <option value="domain">{t(locale, 'packForm.packType.domain')}</option>
             <option value="hosting">{t(locale, 'packForm.packType.hosting')}</option>
             <option value="service">{t(locale, 'packForm.packType.service')}</option>
+            <option value="subscription">{t(locale, 'packForm.packType.subscription')}</option>
+            <option value="membership">{t(locale, 'packForm.packType.membership')}</option>
           </Select>
         </div>
         <div>
@@ -115,6 +121,15 @@ export function PackForm({ clients, editingPack, locale }: { clients: ClientOpti
             <Input id="renewal_date" name="renewal_date" type="date" defaultValue={editingPack?.renewal_date ?? ''} />
           </div>
         )}
+        {showBillingCycle && (
+          <div>
+            <Label htmlFor="billing_cycle">{t(locale, 'packForm.billingCycle')}</Label>
+            <Select id="billing_cycle" name="billing_cycle" defaultValue={editingPack?.billing_cycle ?? 'one_time'}>
+              <option value="one_time">{t(locale, 'packForm.billingCycle.oneTime')}</option>
+              <option value="monthly">{t(locale, 'packForm.billingCycle.monthly')}</option>
+            </Select>
+          </div>
+        )}
         <div>
           <Label htmlFor="status">{t(locale, 'packForm.status')}</Label>
           <Select id="status" name="status" defaultValue={editingPack?.status ?? 'active'}>
@@ -122,6 +137,15 @@ export function PackForm({ clients, editingPack, locale }: { clients: ClientOpti
             <option value="inactive">{t(locale, 'packForm.status.inactive')}</option>
           </Select>
         </div>
+        {showPaid && (
+          <div>
+            <Label htmlFor="paid">{t(locale, 'packForm.paymentStatus')}</Label>
+            <Select id="paid" name="paid" defaultValue={editingPack?.paid ? 'true' : 'false'}>
+              <option value="false">{t(locale, 'packForm.paymentStatus.pending')}</option>
+              <option value="true">{t(locale, 'packForm.paymentStatus.paid')}</option>
+            </Select>
+          </div>
+        )}
         <div className="md:col-span-2">
           <Label htmlFor="notes">{t(locale, 'packForm.notes')}</Label>
           <Textarea id="notes" name="notes" defaultValue={editingPack?.notes ?? ''} placeholder={t(locale, 'packForm.notes.placeholder')} />

@@ -104,10 +104,10 @@ export const getAdminPacksPageData = cache(async (editingId?: string, typeFilter
 
   let packsQuery = supabase
     .from('packs')
-    .select('id, name, pack_type, client_id, minutes_total, price, invoice_number, purchase_date, renewal_date, status, notes, clients(name)')
+    .select('id, name, pack_type, client_id, minutes_total, price, invoice_number, purchase_date, renewal_date, billing_cycle, paid, status, notes, clients(name)')
     .order('purchase_date', { ascending: false })
 
-  const validTypes = ['hours', 'tasks', 'domain', 'hosting', 'service']
+  const validTypes = ['hours', 'tasks', 'domain', 'hosting', 'service', 'subscription', 'membership']
   if (typeFilter && validTypes.includes(typeFilter)) {
     packsQuery = packsQuery.eq('pack_type', typeFilter)
   }
@@ -119,7 +119,7 @@ export const getAdminPacksPageData = cache(async (editingId?: string, typeFilter
     editingId
       ? supabase
           .from('packs')
-          .select('id, client_id, name, pack_type, minutes_total, price, invoice_number, purchase_date, renewal_date, status, notes')
+          .select('id, client_id, name, pack_type, minutes_total, price, invoice_number, purchase_date, renewal_date, billing_cycle, paid, status, notes')
           .eq('id', editingId)
           .maybeSingle()
       : Promise.resolve({ data: null }),

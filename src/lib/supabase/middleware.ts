@@ -2,10 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
 import { getPublicEnv } from '@/lib/env'
+import { getProtectedArea } from '@/lib/security/redirects.mjs'
 import type { Database } from '@/lib/supabase/types'
-
-const ADMIN_PROTECTED_PREFIXES = ['/paneladmin/dashboard', '/paneladmin/clientes', '/paneladmin/bonos', '/paneladmin/actividades', '/paneladmin/facturas']
-const CLIENT_PROTECTED_PREFIXES = ['/cliente/dashboard']
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({
@@ -38,17 +36,16 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
-  const needsAdminSession = ADMIN_PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))
-  const needsClientSession = CLIENT_PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  const protectedArea = getProtectedArea(pathname)
 
-  if (needsAdminSession && !user) {
+  if (protectedArea === 'admin' && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/paneladmin'
     url.searchParams.set('redirectedFrom', pathname)
     return NextResponse.redirect(url)
   }
 
-  if (needsClientSession && !user) {
+  if (protectedArea === 'client' && !user) {
     const url = request.nextUrl.clone()
     url.pathname = '/cliente'
     url.searchParams.set('redirectedFrom', pathname)

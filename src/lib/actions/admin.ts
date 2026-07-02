@@ -14,6 +14,10 @@ export type AdminFormState = {
   success?: string
 }
 
+const PROJECT_VALUES = ['wf-studio', 'vivir-fuengirola', 'conoce-fuengirola'] as const
+const PACK_TYPE_VALUES = ['hours', 'tasks', 'domain', 'hosting', 'service', 'subscription', 'membership'] as const
+const BILLING_CYCLE_VALUES = ['one_time', 'monthly'] as const
+
 const clientSchema = z.object({
   id: z.string().uuid().optional().or(z.literal('')),
   name: z.string().min(2, 'El nombre es obligatorio.'),
@@ -21,19 +25,21 @@ const clientSchema = z.object({
   email: z.string().email('Introduce un email válido.'),
   phone: z.string().optional(),
   status: z.enum(['active', 'inactive']),
-  project: z.enum(['wf-studio', 'vivir-fuengirola', 'conoce-fuengirola']).default('wf-studio'),
+  project: z.enum(PROJECT_VALUES).default('wf-studio'),
 })
 
 const packSchema = z.object({
   id: z.string().uuid().optional().or(z.literal('')),
   client_id: z.string().uuid('Selecciona un cliente.'),
   name: z.string().min(2, 'El nombre del pack es obligatorio.'),
-  pack_type: z.enum(['hours', 'tasks', 'domain', 'hosting', 'service', 'subscription', 'membership']),
+  pack_type: z.enum(PACK_TYPE_VALUES),
   hours_total: z.coerce.number().nonnegative().optional(),
   price: z.union([z.coerce.number(), z.nan()]).optional(),
   invoice_number: z.string().optional(),
   purchase_date: z.string().min(1, 'La fecha es obligatoria.'),
   renewal_date: z.string().optional(),
+  billing_cycle: z.enum(BILLING_CYCLE_VALUES).default('one_time'),
+  paid: z.enum(['true', 'false']).default('false'),
   status: z.enum(['active', 'inactive']),
   notes: z.string().optional(),
 })
@@ -52,6 +58,32 @@ const activitySchema = z.object({
 
 function toStateError(message: string): AdminFormState {
   return { error: message }
+}
+
+function getClientListPath(project: string) {
+  if (project === 'vivir-fuengirola') return '/paneladmin/vivir-en-fuengirola/clientes'
+  if (project === 'conoce-fuengirola') return '/paneladmin/conoce-fuengirola/clientes'
+  return '/paneladmin/clientes'
+}
+
+function getProjectSubscriptionsPath(project: string) {
+  if (project === 'vivir-fuengirola') return '/paneladmin/vivir-en-fuengirola/suscripciones'
+  if (project === 'conoce-fuengirola') return '/paneladmin/conoce-fuengirola/suscripciones'
+  return null
+}
+
+async function getClientProject(clientId: string) {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase.from('clients').select('project').eq('id', clientId).maybeSingle()
+  return data?.project ?? 'wf-studio'
+}
+
+function revalidateProjectClientViews(project: string) {
+  revalidatePath(getClientListPath(project))
+  const subscriptionsPath = getProjectSubscriptionsPath(project)
+  if (subscriptionsPath) {
+    revalidatePath(subscriptionsPath)
+  }
 }
 
 export async function upsertClientAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
@@ -84,6 +116,7 @@ export async function upsertClientAction(_prevState: AdminFormState, formData: F
         email: payload.email.toLowerCase(),
         phone: payload.phone || null,
         status: payload.status,
+        project: payload.project,
       })
       .eq('id', payload.id)
 
@@ -108,7 +141,7 @@ export async function upsertClientAction(_prevState: AdminFormState, formData: F
       }
     }
 
-    revalidatePath('/paneladmin/clientes')
+    revalidateProjectClientViews(payload.project)
     revalidatePath('/paneladmin/dashboard')
     return { success: 'Cliente actualizado correctamente.' }
   }
@@ -126,9 +159,7 @@ export async function upsertClientAction(_prevState: AdminFormState, formData: F
     return toStateError(error.message.includes('lower') ? 'Ya existe un cliente con ese email.' : 'No se pudo crear el cliente.')
   }
 
-  revalidatePath('/paneladmin/clientes')
-  revalidatePath('/paneladmin/vivir-en-fuengirola/clientes')
-  revalidatePath('/paneladmin/conoce-fuengirola/clientes')
+  revalidateProjectClientViews(payload.project)
   revalidatePath('/paneladmin/dashboard')
   return { success: 'Cliente creado correctamente.' }
 }
@@ -138,8 +169,9 @@ export async function approveClientAction(formData: FormData) {
   const id = String(formData.get('id') ?? '')
   const supabase = await createSupabaseServerClient()
   if (!id) return
+  const project = await getClientProject(id)
   await supabase.from('clients').update({ status: 'active' }).eq('id', id)
-  revalidatePath('/paneladmin/clientes')
+  revalidateProjectClientViews(project)
 }
 
 export async function rejectClientAction(formData: FormData) {
@@ -147,8 +179,9 @@ export async function rejectClientAction(formData: FormData) {
   const id = String(formData.get('id') ?? '')
   const supabase = await createSupabaseServerClient()
   if (!id) return
+  const project = await getClientProject(id)
   await supabase.from('clients').update({ status: 'inactive' }).eq('id', id)
-  revalidatePath('/paneladmin/clientes')
+  revalidateProjectClientViews(project)
 }
 
 export async function deactivateClientAction(formData: FormData) {
@@ -158,8 +191,9 @@ export async function deactivateClientAction(formData: FormData) {
 
   if (!id) return
 
+  const project = await getClientProject(id)
   await supabase.from('clients').update({ status: 'inactive' }).eq('id', id)
-  revalidatePath('/paneladmin/clientes')
+  revalidateProjectClientViews(project)
   revalidatePath('/paneladmin/dashboard')
 }
 
@@ -176,6 +210,8 @@ export async function upsertPackAction(_prevState: AdminFormState, formData: For
     invoice_number: formData.get('invoice_number'),
     purchase_date: formData.get('purchase_date'),
     renewal_date: formData.get('renewal_date'),
+    billing_cycle: formData.get('billing_cycle') || 'one_time',
+    paid: formData.get('paid') || 'false',
     status: formData.get('status'),
     notes: formData.get('notes'),
   })
@@ -191,6 +227,8 @@ export async function upsertPackAction(_prevState: AdminFormState, formData: For
     pack_type: payload.pack_type,
     minutes_total: payload.pack_type === 'hours' ? Math.round((payload.hours_total ?? 0) * 60) : 0,
     renewal_date: payload.renewal_date || null,
+    billing_cycle: payload.billing_cycle,
+    paid: payload.paid === 'true',
     price: Number.isNaN(payload.price) ? null : payload.price,
     invoice_number: payload.invoice_number || null,
     purchase_date: payload.purchase_date,
@@ -205,6 +243,8 @@ export async function upsertPackAction(_prevState: AdminFormState, formData: For
     return toStateError('No se pudo guardar el pack.')
   }
 
+  const project = await getClientProject(payload.client_id)
+  revalidateProjectClientViews(project)
   revalidatePath('/paneladmin/bonos')
   revalidatePath('/paneladmin/dashboard')
   return { success: payload.id ? 'Pack actualizado correctamente.' : 'Pack creado correctamente.' }
@@ -336,6 +376,7 @@ const createClientDirectSchema = z.object({
   name: z.string().min(2, 'El nombre es obligatorio.'),
   email: z.string().email('Email inválido.'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.'),
+  project: z.enum(PROJECT_VALUES).default('wf-studio'),
 })
 
 export async function createClientDirectAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
@@ -347,11 +388,12 @@ export async function createClientDirectAction(_prevState: AdminFormState, formD
     name: formData.get('name'),
     email: formData.get('email'),
     password: formData.get('password'),
+    project: formData.get('project') || 'wf-studio',
   })
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' }
 
-  const { name, email, password } = parsed.data
+  const { name, email, password, project } = parsed.data
 
   const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
     email,
@@ -366,6 +408,7 @@ export async function createClientDirectAction(_prevState: AdminFormState, formD
     name,
     email,
     status: 'active',
+    project,
   })
 
   if (clientError) {
@@ -373,7 +416,7 @@ export async function createClientDirectAction(_prevState: AdminFormState, formD
     return { error: 'No se pudo crear el cliente.' }
   }
 
-  revalidatePath('/paneladmin/clientes')
+  revalidateProjectClientViews(project)
   return { success: `Cliente ${name} creado correctamente. Ya puede acceder con su contraseña.` }
 }
 

@@ -4,7 +4,12 @@ import type { ReactNode } from 'react'
 import '@/app/globals.css'
 import { getLocale } from '@/lib/locale'
 
+const metadataBase = new URL(
+  process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://admin.webfuengirola.com',
+)
+
 export const metadata: Metadata = {
+  metadataBase,
   title: 'Panel de control · WF-Studio',
   description: 'Panel de control para WF-Studio.',
   openGraph: {

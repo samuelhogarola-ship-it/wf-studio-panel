@@ -66,12 +66,14 @@ export const getClientDashboardData = cache(async (clientId: string) => {
     supabase
       .from('packs')
       .select('id, name, minutes_total, status')
+      .eq('client_id', clientId)
       .eq('pack_type', 'hours')
       .eq('status', 'active')
       .order('purchase_date', { ascending: false }),
     supabase
       .from('packs')
       .select('id, name, pack_type, renewal_date, notes, status')
+      .eq('client_id', clientId)
       .neq('pack_type', 'hours')
       .eq('status', 'active')
       .order('purchase_date', { ascending: false }),
@@ -81,11 +83,13 @@ export const getClientDashboardData = cache(async (clientId: string) => {
     supabase
       .from('activities')
       .select('id, title, description, minutes_used, work_date, activity_type, packs(name)')
+      .eq('client_id', clientId)
       .order('work_date', { ascending: false })
       .limit(20),
     supabase
       .from('notifications')
       .select('id, title, body, minutes_delta, remaining_minutes, created_at')
+      .eq('client_id', clientId)
       .order('created_at', { ascending: false })
       .limit(8),
   ])

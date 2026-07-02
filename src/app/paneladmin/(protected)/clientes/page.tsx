@@ -9,7 +9,7 @@ import { requireAdmin } from '@/lib/auth'
 import { getAdminClientsPageData } from '@/lib/data/admin'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
-import { formatDate, formatDuration } from '@/lib/utils'
+import { formatDuration } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'

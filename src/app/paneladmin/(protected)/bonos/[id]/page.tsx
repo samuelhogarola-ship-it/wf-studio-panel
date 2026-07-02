@@ -18,6 +18,8 @@ const TYPE_LABELS: Record<string, string> = {
   domain: 'Dominio',
   hosting: 'Hosting',
   service: 'Servicio',
+  subscription: 'Suscripción',
+  membership: 'Membresía',
 }
 
 const ACTIVITY_TYPE_COLORS: Record<string, string> = {

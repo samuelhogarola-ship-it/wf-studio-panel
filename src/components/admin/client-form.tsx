@@ -94,6 +94,7 @@ export function ClientForm({ editingClient, locale, project = 'wf-studio' }: { e
 
           {showDirect && (
             <form action={directAction} className="mt-5 grid gap-4 md:grid-cols-2">
+              <input type="hidden" name="project" value={project} />
               <div>
                 <Label htmlFor="direct-name">Nombre</Label>
                 <Input id="direct-name" name="name" required />

@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -83,7 +85,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {t.photo_url ? (
-                          <img src={t.photo_url} alt="" className="h-8 w-8 rounded-full object-cover flex-shrink-0" />
+                          <Image
+                            src={t.photo_url}
+                            alt=""
+                            width={32}
+                            height={32}
+                            unoptimized
+                            className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+                          />
                         ) : (
                           <div className="h-8 w-8 rounded-full bg-slate-200 flex-shrink-0" />
                         )}

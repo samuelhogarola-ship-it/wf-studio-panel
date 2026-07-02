@@ -12,6 +12,8 @@ const TYPE_LABELS: Record<string, string> = {
   domain: 'Dominio',
   hosting: 'Hosting',
   service: 'Servicio',
+  subscription: 'Suscripción',
+  membership: 'Membresía',
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -20,6 +22,8 @@ const TYPE_COLORS: Record<string, string> = {
   domain: 'bg-sky-50 text-sky-700',
   hosting: 'bg-emerald-50 text-emerald-700',
   service: 'bg-orange-50 text-orange-700',
+  subscription: 'bg-indigo-50 text-indigo-700',
+  membership: 'bg-pink-50 text-pink-700',
 }
 
 const ACTIVITY_COLORS: Record<string, string> = {

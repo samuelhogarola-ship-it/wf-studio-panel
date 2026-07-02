@@ -12,6 +12,16 @@ import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
+const PACK_TYPE_LABELS: Record<string, string> = {
+  hours: 'Bono de horas',
+  tasks: 'Pack cerrado',
+  domain: 'Dominio',
+  hosting: 'Hosting',
+  service: 'Servicio',
+  subscription: 'Suscripción',
+  membership: 'Membresía',
+}
+
 export default async function AdminClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const identity = await requireAdmin()
   const locale = await getLocale()
@@ -83,7 +93,7 @@ export default async function AdminClientDetailPage({ params }: { params: Promis
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-foreground">{pack.name}</p>
                     <Badge className={pack.pack_type === 'tasks' ? 'bg-amber-50 text-amber-700' : 'bg-sky-50 text-sky-700'}>
-                      {pack.pack_type}
+                      {PACK_TYPE_LABELS[pack.pack_type] ?? pack.pack_type}
                     </Badge>
                   </div>
                   <div className="mt-2 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
