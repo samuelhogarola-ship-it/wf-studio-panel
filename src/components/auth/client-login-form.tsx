@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
 import { useActionState } from 'react'
 
@@ -109,6 +110,11 @@ export function ClientLoginForm({ locale }: { locale: Locale }) {
           <button type="submit" disabled={passPending} className={btnClass}>
             {passPending ? t(locale, 'clientLoginForm.passSubmitting') : t(locale, 'clientLoginForm.passSubmit')}
           </button>
+          <p className="text-center text-xs text-white/30">
+            <Link href="/cliente/recuperar" className="text-white/50 hover:text-white transition-colors underline underline-offset-2">
+              {t(locale, 'clientLoginForm.forgotPassword')}
+            </Link>
+          </p>
         </form>
       )}
     </div>

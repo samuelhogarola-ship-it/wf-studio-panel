@@ -53,6 +53,7 @@ export const translations = {
     'clientLoginForm.passPassword': 'Contraseña',
     'clientLoginForm.passSubmit': 'Entrar',
     'clientLoginForm.passSubmitting': 'Entrando...',
+    'clientLoginForm.forgotPassword': '¿Olvidaste tu contraseña?',
 
     // Client register page
     'clientRegister.eyebrow': 'Portal cliente',
@@ -75,6 +76,26 @@ export const translations = {
     'clientMagicForm.email': 'Email del cliente',
     'clientMagicForm.submit': 'Recibir enlace mágico',
     'clientMagicForm.submitting': 'Enviando...',
+
+    // Reset password page
+    'resetPassword.headline': 'Restablece tu contraseña',
+    'resetPassword.subheadline': 'Te enviaremos un enlace para crear una nueva contraseña.',
+    'resetPassword.backToLogin': '← Volver al inicio de sesión',
+
+    // Reset password form
+    'resetPasswordForm.email': 'Email',
+    'resetPasswordForm.submit': 'Enviar enlace',
+    'resetPasswordForm.submitting': 'Enviando...',
+
+    // Update password page
+    'updatePassword.headline': 'Nueva contraseña',
+    'updatePassword.subheadline': 'Elige una contraseña segura para tu cuenta.',
+
+    // Update password form
+    'updatePasswordForm.password': 'Nueva contraseña',
+    'updatePasswordForm.confirm': 'Confirmar contraseña',
+    'updatePasswordForm.submit': 'Guardar contraseña',
+    'updatePasswordForm.submitting': 'Guardando...',
 
     // App shell (admin nav)
     'shell.brand': 'WF-Studio',
@@ -388,6 +409,7 @@ export const translations = {
     'clientLoginForm.passPassword': 'Password',
     'clientLoginForm.passSubmit': 'Sign in',
     'clientLoginForm.passSubmitting': 'Signing in...',
+    'clientLoginForm.forgotPassword': 'Forgot your password?',
 
     // Client register page
     'clientRegister.eyebrow': 'Client portal',
@@ -410,6 +432,26 @@ export const translations = {
     'clientMagicForm.email': 'Client email',
     'clientMagicForm.submit': 'Get magic link',
     'clientMagicForm.submitting': 'Sending...',
+
+    // Reset password page
+    'resetPassword.headline': 'Reset your password',
+    'resetPassword.subheadline': 'We will send you a link to create a new password.',
+    'resetPassword.backToLogin': '← Back to sign in',
+
+    // Reset password form
+    'resetPasswordForm.email': 'Email',
+    'resetPasswordForm.submit': 'Send link',
+    'resetPasswordForm.submitting': 'Sending...',
+
+    // Update password page
+    'updatePassword.headline': 'New password',
+    'updatePassword.subheadline': 'Choose a secure password for your account.',
+
+    // Update password form
+    'updatePasswordForm.password': 'New password',
+    'updatePasswordForm.confirm': 'Confirm password',
+    'updatePasswordForm.submit': 'Save password',
+    'updatePasswordForm.submitting': 'Saving...',
 
     // App shell (admin nav)
     'shell.brand': 'WF-Studio',

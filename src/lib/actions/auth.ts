@@ -77,7 +77,6 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
     email,
     options: {
       emailRedirectTo,
-      shouldCreateUser: false,
     },
   })
 
@@ -128,6 +127,66 @@ export async function clientRegisterAction(_prevState: AuthFormState, formData: 
       await adminClient.auth.admin.deleteUser(userId)
     },
   })
+}
+
+export async function resetPasswordAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const email = String(formData.get('email') ?? '').trim()
+  const supabase = await createSupabaseServerClient()
+
+  const { data: client } = await supabase
+    .from('clients')
+    .select('id, status')
+    .ilike('email', email)
+    .maybeSingle()
+
+  if (!client) {
+    return { error: 'No tienes cuenta con nosotros. Contacta con el estudio para registrarte.' }
+  }
+
+  if (client.status !== 'active') {
+    return { error: 'Tu cuenta no está activa. Contacta con el estudio.' }
+  }
+
+  let redirectTo: string
+
+  try {
+    redirectTo = buildCanonicalAppUrl(
+      getAppOrigin(),
+      '/auth/callback?next=%2Fauth%2Factualizar-contrasena',
+    ).toString()
+  } catch {
+    return { error: 'Falta la URL canónica de la app. Configura APP_URL o NEXT_PUBLIC_APP_URL.' }
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+
+  if (error) {
+    return { error: 'No se pudo enviar el email. Inténtalo de nuevo.' }
+  }
+
+  return { success: 'Te hemos enviado un enlace para restablecer tu contraseña.' }
+}
+
+export async function updatePasswordAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const password = String(formData.get('password') ?? '')
+  const confirm = String(formData.get('confirm') ?? '')
+
+  if (password.length < 6) {
+    return { error: 'La contraseña debe tener al menos 6 caracteres.' }
+  }
+
+  if (password !== confirm) {
+    return { error: 'Las contraseñas no coinciden.' }
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const { error } = await supabase.auth.updateUser({ password })
+
+  if (error) {
+    return { error: 'No se pudo actualizar la contraseña. El enlace puede haber expirado.' }
+  }
+
+  redirect('/cliente/dashboard')
 }
 
 export async function signOutAction() {
