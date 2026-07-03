@@ -47,6 +47,21 @@ export async function clientPasswordLoginAction(_prevState: AuthFormState, formD
 export async function clientMagicLinkAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get('email') ?? '').trim()
   const supabase = await createSupabaseServerClient()
+
+  const { data: client } = await supabase
+    .from('clients')
+    .select('id, status')
+    .ilike('email', email)
+    .maybeSingle()
+
+  if (!client) {
+    return { error: 'No tienes cuenta con nosotros. Contacta con el estudio para registrarte.' }
+  }
+
+  if (client.status !== 'active') {
+    return { error: 'Tu cuenta no está activa. Contacta con el estudio.' }
+  }
+
   let emailRedirectTo: string
 
   try {
@@ -62,6 +77,7 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
     email,
     options: {
       emailRedirectTo,
+      shouldCreateUser: false,
     },
   })
 
