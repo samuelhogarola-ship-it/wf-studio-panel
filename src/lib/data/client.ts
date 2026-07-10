@@ -8,7 +8,7 @@ export const getClientServicesData = cache(async (clientId: string) => {
   const [{ data: packs }, { data: activities }, { data: summaries }] = await Promise.all([
     supabase
       .from('packs')
-      .select('id, name, pack_type, status, purchase_date, price, notes, minutes_total, renewal_date')
+      .select('id, name, pack_type, status, purchase_date, price, notes, minutes_total, renewal_date, paid, billing_cycle')
       .eq('client_id', clientId)
       .order('purchase_date', { ascending: false }),
     supabase
@@ -102,6 +102,42 @@ export const getClientDashboardData = cache(async (clientId: string) => {
     summaryMap,
     activities: activities ?? [],
     notifications: notifications ?? [],
+  }
+})
+
+export const getClientFacturasData = cache(async (clientId: string) => {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from('invoices')
+    .select('id, number, concept, amount, payment_method, status, notes, issued_at, paid_at, created_at')
+    .eq('client_id', clientId)
+    .order('issued_at', { ascending: false })
+  return data ?? []
+})
+
+export const getClientHistorialData = cache(async (clientId: string, page = 0, pageSize = 30) => {
+  const supabase = await createSupabaseServerClient()
+  const from = page * pageSize
+  const to = from + pageSize - 1
+
+  const [{ data: activities, count }, { data: summaries }] = await Promise.all([
+    supabase
+      .from('activities')
+      .select('id, title, description, minutes_used, work_date, activity_type, pack_id, packs(name)', { count: 'exact' })
+      .eq('client_id', clientId)
+      .order('work_date', { ascending: false })
+      .range(from, to),
+    supabase
+      .from('pack_summary')
+      .select('pack_id, pack_name, remaining_minutes'),
+  ])
+
+  return {
+    activities: activities ?? [],
+    total: count ?? 0,
+    page,
+    pageSize,
+    summaries: summaries ?? [],
   }
 })
 

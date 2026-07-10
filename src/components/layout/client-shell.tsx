@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { type ReactNode } from 'react'
 
+import { signOutAction } from '@/lib/actions/auth'
 import { type Locale, t } from '@/lib/i18n'
 import { LocaleToggle } from '@/components/layout/locale-toggle'
 import { cn } from '@/lib/utils'
@@ -25,24 +26,6 @@ function getNavItems(locale: Locale) {
       icon: (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
-        </svg>
-      ),
-    },
-    {
-      href: '/cliente/bonos',
-      label: t(locale, 'clientNav.bonos'),
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-        </svg>
-      ),
-    },
-    {
-      href: '/cliente/packs',
-      label: t(locale, 'clientNav.packs'),
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
         </svg>
       ),
     },
@@ -120,7 +103,7 @@ export function ClientShell({
             <p className="text-xs text-muted truncate">{clientEmail}</p>
             <LocaleToggle locale={locale} />
           </div>
-          <form action="/auth/sign-out" method="post">
+          <form action={signOutAction}>
             <input type="hidden" name="redirect" value="client" />
             <button className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 text-left transition hover:bg-slate-100">
               {t(locale, 'clientNav.signOut')}
@@ -139,7 +122,7 @@ export function ClientShell({
           </div>
           <div className="flex items-center gap-2">
             <LocaleToggle locale={locale} />
-            <form action="/auth/sign-out" method="post">
+            <form action={signOutAction}>
               <input type="hidden" name="redirect" value="client" />
               <button className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
                 {t(locale, 'clientNav.signOutShort')}
