@@ -47,8 +47,9 @@ export async function clientPasswordLoginAction(_prevState: AuthFormState, formD
 export async function clientMagicLinkAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get('email') ?? '').trim()
   const supabase = await createSupabaseServerClient()
+  const adminClient = getSupabaseAdminClient()
 
-  const { data: client } = await supabase
+  const { data: client } = await adminClient
     .from('clients')
     .select('id, status')
     .ilike('email', email)
@@ -132,8 +133,9 @@ export async function clientRegisterAction(_prevState: AuthFormState, formData: 
 export async function resetPasswordAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get('email') ?? '').trim()
   const supabase = await createSupabaseServerClient()
+  const adminClient = getSupabaseAdminClient()
 
-  const { data: client } = await supabase
+  const { data: client } = await adminClient
     .from('clients')
     .select('id, status')
     .ilike('email', email)
