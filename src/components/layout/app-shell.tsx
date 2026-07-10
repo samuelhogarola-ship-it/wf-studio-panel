@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { type ReactNode } from 'react'
 
-import { signOutAction } from '@/lib/actions/auth'
 import { type Locale, t } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -283,7 +282,7 @@ export function AdminShell({
         </nav>
         <div className="px-3 py-4 border-t border-line flex flex-col gap-2">
           <div className="px-3 py-2 text-xs text-muted truncate">{userEmail}</div>
-          <form action={signOutAction}>
+          <form action="/auth/sign-out" method="post">
             <input type="hidden" name="redirect" value="admin" />
             <button className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 text-left transition hover:bg-slate-100">
               {t(locale, 'shell.signOut')}
@@ -298,7 +297,7 @@ export function AdminShell({
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">{t(locale, 'shell.brand')}</p>
           <div className="flex items-center gap-2">
             <div className="text-xs text-muted">{userEmail}</div>
-            <form action={signOutAction}>
+            <form action="/auth/sign-out" method="post">
               <input type="hidden" name="redirect" value="admin" />
               <button className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
                 {t(locale, 'shell.signOut')}
