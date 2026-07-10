@@ -27,6 +27,7 @@ export function ResetPasswordForm({ locale }: { locale: Locale }) {
 
   return (
     <form action={action} className="grid gap-4">
+      <input type="hidden" name="origin" defaultValue="" ref={(el) => { if (el) el.value = window.location.origin }} />
       <div className="grid gap-1.5">
         <label htmlFor="email" className="text-sm text-white/60">
           {t(locale, 'resetPasswordForm.email')}

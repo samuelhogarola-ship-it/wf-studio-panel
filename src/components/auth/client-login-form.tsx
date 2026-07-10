@@ -51,6 +51,7 @@ export function ClientLoginForm({ locale }: { locale: Locale }) {
 
       {tab === 'magic' && (
         <form action={magicAction} className="grid gap-4">
+          <input type="hidden" name="origin" defaultValue="" ref={(el) => { if (el) el.value = window.location.origin }} />
           <div className="grid gap-1.5">
             <label htmlFor="magic-email" className="text-sm text-white/60">
               {t(locale, 'clientLoginForm.magicEmail')}

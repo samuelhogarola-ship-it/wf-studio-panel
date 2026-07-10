@@ -1,34 +1,10 @@
 'use server'
 
-import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { registerPendingClient } from '@/lib/auth/register.mjs'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-
-async function getRequestOrigin(): Promise<string> {
-  const h = await headers()
-
-  const origin = h.get('origin')
-  if (origin) return new URL(origin).origin
-
-  const referer = h.get('referer')
-  if (referer) return new URL(referer).origin
-
-  const forwardedHost = h.get('x-forwarded-host')
-  if (forwardedHost) {
-    const proto = h.get('x-forwarded-proto') ?? 'https'
-    return `${proto}://${forwardedHost}`
-  }
-
-  const host = h.get('host')
-  if (host && !host.startsWith('localhost') && !host.startsWith('127.')) {
-    return `https://${host}`
-  }
-
-  throw new Error('Could not determine request origin')
-}
 
 export type AuthFormState = {
   error?: string
@@ -85,14 +61,12 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
     return { error: 'Tu cuenta no está activa. Contacta con el estudio.' }
   }
 
-  let emailRedirectTo: string
-
-  try {
-    const origin = await getRequestOrigin()
-    emailRedirectTo = new URL('/auth/callback?next=%2Fcliente%2Fdashboard', origin).toString()
-  } catch {
+  const origin = String(formData.get('origin') ?? '').trim()
+  if (!origin) {
     return { error: 'No se pudo determinar la URL de la app.' }
   }
+
+  const emailRedirectTo = new URL('/auth/callback?next=%2Fcliente%2Fdashboard', origin).toString()
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -169,14 +143,12 @@ export async function resetPasswordAction(_prevState: AuthFormState, formData: F
     return { error: 'Tu cuenta no está activa. Contacta con el estudio.' }
   }
 
-  let redirectTo: string
-
-  try {
-    const origin = await getRequestOrigin()
-    redirectTo = new URL('/auth/callback?next=%2Fauth%2Factualizar-contrasena', origin).toString()
-  } catch {
+  const origin = String(formData.get('origin') ?? '').trim()
+  if (!origin) {
     return { error: 'No se pudo determinar la URL de la app.' }
   }
+
+  const redirectTo = new URL('/auth/callback?next=%2Fauth%2Factualizar-contrasena', origin).toString()
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
 
