@@ -9,11 +9,23 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 async function getRequestOrigin(): Promise<string> {
   const h = await headers()
+
   const origin = h.get('origin')
   if (origin) return new URL(origin).origin
 
   const referer = h.get('referer')
   if (referer) return new URL(referer).origin
+
+  const forwardedHost = h.get('x-forwarded-host')
+  if (forwardedHost) {
+    const proto = h.get('x-forwarded-proto') ?? 'https'
+    return `${proto}://${forwardedHost}`
+  }
+
+  const host = h.get('host')
+  if (host && !host.startsWith('localhost') && !host.startsWith('127.')) {
+    return `https://${host}`
+  }
 
   throw new Error('Could not determine request origin')
 }
