@@ -1,5 +1,14 @@
 const DUPLICATE_AUTH_FRAGMENT = "already registered";
-const DUPLICATE_CLIENT_FRAGMENT = "lower";
+
+function isDuplicateClientError(message) {
+  if (typeof message !== "string") return false;
+
+  return (
+    message.includes("duplicate key value") ||
+    message.includes("clients_email_lower_unique_idx") ||
+    message.includes("clients_project_email_lower_unique_idx")
+  );
+}
 
 export async function registerPendingClient({
   name,
@@ -40,7 +49,7 @@ export async function registerPendingClient({
       }
     }
 
-    if (clientError.message.includes(DUPLICATE_CLIENT_FRAGMENT)) {
+    if (isDuplicateClientError(clientError.message)) {
       return { error: "Ya existe un cliente con ese email." };
     }
 

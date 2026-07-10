@@ -43,3 +43,18 @@ test("client_summary aggregates packs and activities in separate subqueries", as
     /left join public\.packs p on p\.client_id = c\.id\s+left join public\.activities a on a\.client_id = c\.id/s,
   );
 });
+
+test("latest migration scopes client email uniqueness by project", async () => {
+  const scopedUniqueSql = await readMigration(
+    "202607100001_clients_unique_per_project.sql",
+  );
+
+  assert.match(
+    scopedUniqueSql,
+    /drop index if exists public\.clients_email_lower_unique_idx;/,
+  );
+  assert.match(
+    scopedUniqueSql,
+    /create unique index if not exists clients_project_email_lower_unique_idx\s+on public\.clients \(project, lower\(email\)\);/s,
+  );
+});
