@@ -284,6 +284,7 @@ export function AdminShell({
         <div className="px-3 py-4 border-t border-line flex flex-col gap-2">
           <div className="px-3 py-2 text-xs text-muted truncate">{userEmail}</div>
           <form action={signOutAction}>
+            <input type="hidden" name="redirect" value="admin" />
             <button className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 text-left transition hover:bg-slate-100">
               {t(locale, 'shell.signOut')}
             </button>
@@ -298,6 +299,7 @@ export function AdminShell({
           <div className="flex items-center gap-2">
             <div className="text-xs text-muted">{userEmail}</div>
             <form action={signOutAction}>
+              <input type="hidden" name="redirect" value="admin" />
               <button className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
                 {t(locale, 'shell.signOut')}
               </button>

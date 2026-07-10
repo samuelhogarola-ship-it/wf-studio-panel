@@ -191,8 +191,9 @@ export async function updatePasswordAction(_prevState: AuthFormState, formData: 
   redirect('/cliente/dashboard')
 }
 
-export async function signOutAction() {
+export async function signOutAction(formData: FormData) {
   const supabase = await createSupabaseServerClient()
   await supabase.auth.signOut()
-  redirect('/paneladmin')
+  const destination = formData.get('redirect') === 'admin' ? '/paneladmin' : '/cliente'
+  redirect(destination)
 }
