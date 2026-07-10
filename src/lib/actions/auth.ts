@@ -1,12 +1,22 @@
 'use server'
 
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-import { getAppOrigin } from '@/lib/env'
 import { registerPendingClient } from '@/lib/auth/register.mjs'
-import { buildCanonicalAppUrl } from '@/lib/security/redirects.mjs'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+
+async function getRequestOrigin(): Promise<string> {
+  const h = await headers()
+  const origin = h.get('origin')
+  if (origin) return new URL(origin).origin
+
+  const referer = h.get('referer')
+  if (referer) return new URL(referer).origin
+
+  throw new Error('Could not determine request origin')
+}
 
 export type AuthFormState = {
   error?: string
@@ -66,12 +76,10 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
   let emailRedirectTo: string
 
   try {
-    emailRedirectTo = buildCanonicalAppUrl(
-      getAppOrigin(),
-      '/auth/callback?next=%2Fcliente%2Fdashboard',
-    ).toString()
+    const origin = await getRequestOrigin()
+    emailRedirectTo = new URL('/auth/callback?next=%2Fcliente%2Fdashboard', origin).toString()
   } catch {
-    return { error: 'Falta la URL canónica de la app. Configura APP_URL o NEXT_PUBLIC_APP_URL.' }
+    return { error: 'No se pudo determinar la URL de la app.' }
   }
 
   const { error } = await supabase.auth.signInWithOtp({
@@ -152,12 +160,10 @@ export async function resetPasswordAction(_prevState: AuthFormState, formData: F
   let redirectTo: string
 
   try {
-    redirectTo = buildCanonicalAppUrl(
-      getAppOrigin(),
-      '/auth/callback?next=%2Fauth%2Factualizar-contrasena',
-    ).toString()
+    const origin = await getRequestOrigin()
+    redirectTo = new URL('/auth/callback?next=%2Fauth%2Factualizar-contrasena', origin).toString()
   } catch {
-    return { error: 'Falta la URL canónica de la app. Configura APP_URL o NEXT_PUBLIC_APP_URL.' }
+    return { error: 'No se pudo determinar la URL de la app.' }
   }
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
