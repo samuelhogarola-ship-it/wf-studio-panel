@@ -18,6 +18,7 @@ export function ClientMagicLinkForm({ locale }: { locale: Locale }) {
   return (
     <Card className="p-6 lg:p-8">
       <form action={action} className="grid gap-5">
+        <input type="hidden" name="origin" defaultValue="" ref={(el) => { if (el) el.value = window.location.origin }} />
         <div>
           <Label htmlFor="email">{t(locale, 'clientMagicForm.email')}</Label>
           <Input id="email" name="email" type="email" placeholder="cliente@empresa.com" required />
