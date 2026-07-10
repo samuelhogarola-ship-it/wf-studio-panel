@@ -1,11 +1,23 @@
 import Link from 'next/link'
 
+import { FormMessage } from '@/components/ui/form-message'
 import { ResetPasswordForm } from '@/components/auth/reset-password-form'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
 
-export default async function ResetPasswordPage() {
+type ResetPasswordPageProps = {
+  searchParams?: Promise<{
+    error?: string
+  }>
+}
+
+export default async function ResetPasswordPage({ searchParams }: ResetPasswordPageProps) {
   const locale = await getLocale()
+  const params = searchParams ? await searchParams : undefined
+  const error =
+    params?.error === 'callback_exchange_failed'
+      ? 'El enlace no es valido o ha expirado. Solicita uno nuevo.'
+      : undefined
 
   return (
     <div className="relative min-h-dvh flex items-center justify-center overflow-auto bg-black px-4">
@@ -22,6 +34,12 @@ export default async function ResetPasswordPage() {
             {t(locale, 'resetPassword.subheadline')}
           </p>
         </div>
+
+        {error ? (
+          <div className="mb-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4">
+            <FormMessage error={error} />
+          </div>
+        ) : null}
 
         <ResetPasswordForm locale={locale} />
 

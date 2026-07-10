@@ -9,6 +9,8 @@ type AuthIdentity = {
   role: string
 }
 
+const CLIENT_PROJECT = 'wf-studio'
+
 async function getProfileIdentity() {
   const supabase = await createSupabaseServerClient()
   const {
@@ -70,6 +72,7 @@ export async function requireClientAccess() {
   const { data: client } = await adminClient
     .from('clients')
     .select('id, email, status, name')
+    .eq('project', CLIENT_PROJECT)
     .ilike('email', normalizedEmail)
     .maybeSingle()
 

@@ -11,6 +11,8 @@ export type AuthFormState = {
   success?: string
 }
 
+const CLIENT_PROJECT = 'wf-studio'
+
 export async function adminLoginAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get('email') ?? '').trim()
   const password = String(formData.get('password') ?? '')
@@ -43,13 +45,14 @@ export async function clientPasswordLoginAction(_prevState: AuthFormState, formD
 }
 
 export async function clientMagicLinkAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const email = String(formData.get('email') ?? '').trim()
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const supabase = await createSupabaseServerClient()
   const adminClient = getSupabaseAdminClient()
 
   const { data: client } = await adminClient
     .from('clients')
     .select('id, status')
+    .eq('project', CLIENT_PROJECT)
     .ilike('email', email)
     .maybeSingle()
 
@@ -113,7 +116,7 @@ export async function clientRegisterAction(_prevState: AuthFormState, formData: 
       }
     },
     insertClient: async (client) => {
-      const { error } = await supabase.from('clients').insert(client)
+      const { error } = await adminClient.from('clients').insert(client)
       return {
         error: error ? { message: error.message } : null,
       }
@@ -125,13 +128,14 @@ export async function clientRegisterAction(_prevState: AuthFormState, formData: 
 }
 
 export async function resetPasswordAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const email = String(formData.get('email') ?? '').trim()
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const supabase = await createSupabaseServerClient()
   const adminClient = getSupabaseAdminClient()
 
   const { data: client } = await adminClient
     .from('clients')
     .select('id, status')
+    .eq('project', CLIENT_PROJECT)
     .ilike('email', email)
     .maybeSingle()
 

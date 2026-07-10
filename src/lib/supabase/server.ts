@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import type { NextRequest, NextResponse } from 'next/server'
 
 import { getPublicEnv } from '@/lib/env'
 import type { Database } from '@/lib/supabase/types'
@@ -52,6 +53,26 @@ export async function createSupabaseServerClient() {
         } catch {
           // Server Component context — middleware handles the refresh
         }
+      },
+    },
+  })
+}
+
+export function createSupabaseRouteClient(request: NextRequest, response: NextResponse) {
+  const env = getPublicEnv()
+
+  if (!env.supabaseUrl || !env.supabaseKey) {
+    throw new Error('Missing Supabase public environment variables')
+  }
+
+  return createServerClient<Database>(env.supabaseUrl, env.supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
       },
     },
   })

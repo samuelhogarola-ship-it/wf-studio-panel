@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseRouteClient } from '@/lib/supabase/server'
 import { sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
 
 function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
@@ -25,10 +25,12 @@ export async function GET(request: NextRequest) {
     fallback: '/cliente/dashboard',
   })
   const appUrl = getAppBaseUrl(request, requestUrl)
+  const successUrl = new URL(next, appUrl)
+  const successResponse = NextResponse.redirect(successUrl)
 
   try {
     if (code) {
-      const supabase = await createSupabaseServerClient()
+      const supabase = createSupabaseRouteClient(request, successResponse)
       await supabase.auth.exchangeCodeForSession(code)
     }
   } catch {
@@ -37,5 +39,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errorUrl)
   }
 
-  return NextResponse.redirect(new URL(next, appUrl))
+  return successResponse
 }
