@@ -2,14 +2,25 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
+function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
+  if (process.env.APP_URL) {
+    return process.env.APP_URL
+  }
+
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`
+  }
+
+  return requestUrl.origin
+}
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  const appUrl = process.env.APP_URL
-
-  if (!appUrl) {
-    throw new Error('Missing APP_URL')
-  }
+  const appUrl = getAppBaseUrl(request, requestUrl)
 
   if (code) {
     const supabase = await createSupabaseServerClient()
