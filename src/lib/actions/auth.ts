@@ -54,6 +54,11 @@ export async function clientPasswordLoginAction(_prevState: AuthFormState, formD
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
+    console.warn('[auth/client/password] signInWithPassword failed', {
+      email,
+      project: CLIENT_PROJECT,
+      message: error.message,
+    })
     return { error: 'Email o contraseña incorrectos.' }
   }
 
@@ -95,6 +100,12 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
   })
 
   if (error) {
+    console.warn('[auth/client/magic-link] signInWithOtp failed', {
+      email,
+      project: CLIENT_PROJECT,
+      origin,
+      message: error.message,
+    })
     return { error: 'No se pudo enviar el magic link. Comprueba el email e inténtalo de nuevo.' }
   }
 
@@ -126,6 +137,14 @@ export async function clientRegisterAction(_prevState: AuthFormState, formData: 
         password: signUpPassword,
       })
 
+      if (error) {
+        console.warn('[auth/client/register] signUp failed', {
+          email: signUpEmail,
+          project: CLIENT_PROJECT,
+          message: error.message,
+        })
+      }
+
       return {
         userId: data.user?.id ?? null,
         error: error ? { message: error.message } : null,
@@ -133,6 +152,16 @@ export async function clientRegisterAction(_prevState: AuthFormState, formData: 
     },
     insertClient: async (client) => {
       const { error } = await adminClient.from('clients').insert(client)
+
+      if (error) {
+        console.warn('[auth/client/register] insert client failed', {
+          email: client.email,
+          project: client.project,
+          status: client.status,
+          message: error.message,
+        })
+      }
+
       return {
         error: error ? { message: error.message } : null,
       }
@@ -173,6 +202,12 @@ export async function resetPasswordAction(_prevState: AuthFormState, formData: F
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
 
   if (error) {
+    console.warn('[auth/client/reset] resetPasswordForEmail failed', {
+      email,
+      project: CLIENT_PROJECT,
+      origin,
+      message: error.message,
+    })
     return { error: 'No se pudo enviar el email. Inténtalo de nuevo.' }
   }
 
@@ -195,6 +230,9 @@ export async function updatePasswordAction(_prevState: AuthFormState, formData: 
   const { error } = await supabase.auth.updateUser({ password })
 
   if (error) {
+    console.warn('[auth/client/update-password] updateUser failed', {
+      message: error.message,
+    })
     return { error: 'No se pudo actualizar la contraseña. El enlace puede haber expirado.' }
   }
 

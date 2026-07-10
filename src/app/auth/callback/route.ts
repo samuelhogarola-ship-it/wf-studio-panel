@@ -27,7 +27,13 @@ export async function GET(request: NextRequest) {
       const supabase = createSupabaseRouteClient(request, successResponse)
       await supabase.auth.exchangeCodeForSession(code)
     }
-  } catch {
+  } catch (error) {
+    console.error('[auth/callback] exchangeCodeForSession failed', {
+      appUrl,
+      next,
+      hasCode: Boolean(code),
+      message: error instanceof Error ? error.message : 'unknown_error',
+    })
     const errorUrl = new URL(next, appUrl)
     errorUrl.searchParams.set('error', 'callback_exchange_failed')
     return NextResponse.redirect(errorUrl)

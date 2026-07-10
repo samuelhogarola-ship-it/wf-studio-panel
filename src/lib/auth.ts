@@ -60,10 +60,15 @@ export async function requireClientAccess() {
   const identity = await getProfileIdentity()
 
   if (!identity) {
+    console.warn('[auth/client] missing identity')
     redirect('/cliente')
   }
 
   if (identity.role !== 'client') {
+    console.warn('[auth/client] non-client role blocked', {
+      userId: identity.userId,
+      role: identity.role,
+    })
     redirect('/paneladmin/inicio')
   }
 
@@ -77,6 +82,12 @@ export async function requireClientAccess() {
     .maybeSingle()
 
   if (!client || client.status !== 'active') {
+    console.warn('[auth/client] access denied', {
+      email: normalizedEmail,
+      project: CLIENT_PROJECT,
+      foundClient: Boolean(client),
+      status: client?.status ?? null,
+    })
     redirect('/cliente?error=inactive')
   }
 
