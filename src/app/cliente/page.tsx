@@ -2,11 +2,35 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { ClientLoginForm } from '@/components/auth/client-login-form'
+import { FormMessage } from '@/components/ui/form-message'
 import { getOptionalIdentity } from '@/lib/auth'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
 
-export default async function ClientLoginPage() {
+type ClientLoginPageProps = {
+  searchParams?: Promise<{
+    error?: string
+    redirectedFrom?: string
+  }>
+}
+
+function getLoginErrorMessage(error?: string, redirectedFrom?: string) {
+  if (error === 'inactive') {
+    return 'Tu cuenta no esta activa para este portal. Contacta con WF-Studio.'
+  }
+
+  if (error === 'callback_exchange_failed') {
+    return 'El enlace de acceso no es valido o ha expirado. Solicita uno nuevo.'
+  }
+
+  if (redirectedFrom) {
+    return 'Tu sesion ha expirado o necesitas iniciar sesion para continuar.'
+  }
+
+  return undefined
+}
+
+export default async function ClientLoginPage({ searchParams }: ClientLoginPageProps) {
   const identity = await getOptionalIdentity()
 
   if (identity?.role === 'admin') {
@@ -18,6 +42,8 @@ export default async function ClientLoginPage() {
   }
 
   const locale = await getLocale()
+  const params = searchParams ? await searchParams : undefined
+  const loginError = getLoginErrorMessage(params?.error, params?.redirectedFrom)
 
   return (
     <div className="relative min-h-dvh flex items-center justify-center overflow-auto bg-black px-4">
@@ -44,6 +70,12 @@ export default async function ClientLoginPage() {
         </div>
 
         <ClientLoginForm locale={locale} />
+
+        {loginError ? (
+          <div className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4">
+            <FormMessage error={loginError} />
+          </div>
+        ) : null}
 
         <p className="mt-6 text-center text-xs text-white/30">
           {t(locale, 'clientLogin.noAccount')}{' '}
