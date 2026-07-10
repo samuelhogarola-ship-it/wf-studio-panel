@@ -11,5 +11,12 @@ declare module '@/lib/security/redirects.mjs' {
 
   export function buildCanonicalAppUrl(appUrl: string, path?: string): URL
 
+  export function resolveRequestOrigin(input: {
+    forwardedHost?: string | null
+    forwardedProto?: string | null
+    requestOrigin: string
+    fallbackOrigin?: string | null
+  }): string
+
   export function getProtectedArea(pathname: string): ProtectedArea
 }

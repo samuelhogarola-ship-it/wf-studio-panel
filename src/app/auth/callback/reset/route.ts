@@ -1,20 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { createSupabaseRouteClient } from '@/lib/supabase/server'
+import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
 
 function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
-  if (process.env.APP_URL) {
-    return process.env.APP_URL
-  }
-
-  const forwardedHost = request.headers.get('x-forwarded-host')
-  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
-
-  if (forwardedHost) {
-    return `${forwardedProto}://${forwardedHost}`
-  }
-
-  return requestUrl.origin
+  return resolveRequestOrigin({
+    forwardedHost: request.headers.get('x-forwarded-host'),
+    forwardedProto: request.headers.get('x-forwarded-proto'),
+    requestOrigin: requestUrl.origin,
+    fallbackOrigin: process.env.APP_URL,
+  })
 }
 
 export async function GET(request: NextRequest) {

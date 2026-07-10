@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildCanonicalAppUrl,
   getProtectedArea,
+  resolveRequestOrigin,
   sanitizeInternalRedirect,
 } from "../src/lib/security/redirects.mjs";
 
@@ -32,6 +33,30 @@ test("buildCanonicalAppUrl always uses configured origin", () => {
       "/auth/callback?next=%2Fcliente%2Fdashboard",
     ).toString(),
     "https://admin.webfuengirola.com/auth/callback?next=%2Fcliente%2Fdashboard",
+  );
+});
+
+test("resolveRequestOrigin prefers forwarded host over fallback origin", () => {
+  assert.equal(
+    resolveRequestOrigin({
+      forwardedHost: "portal.webfuengirola.com",
+      forwardedProto: "https",
+      requestOrigin: "http://localhost:3000",
+      fallbackOrigin: "https://admin.webfuengirola.com",
+    }),
+    "https://portal.webfuengirola.com",
+  );
+});
+
+test("resolveRequestOrigin falls back to configured origin when proxy headers are missing", () => {
+  assert.equal(
+    resolveRequestOrigin({
+      forwardedHost: null,
+      forwardedProto: null,
+      requestOrigin: "http://localhost:3000",
+      fallbackOrigin: "https://portal.webfuengirola.com",
+    }),
+    "https://portal.webfuengirola.com",
   );
 });
 

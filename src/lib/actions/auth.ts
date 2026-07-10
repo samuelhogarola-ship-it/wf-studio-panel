@@ -31,9 +31,25 @@ export async function adminLoginAction(_prevState: AuthFormState, formData: Form
 }
 
 export async function clientPasswordLoginAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const email = String(formData.get('email') ?? '').trim()
+  const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
   const supabase = await createSupabaseServerClient()
+  const adminClient = getSupabaseAdminClient()
+
+  const { data: client } = await adminClient
+    .from('clients')
+    .select('id, status')
+    .eq('project', CLIENT_PROJECT)
+    .ilike('email', email)
+    .maybeSingle()
+
+  if (!client) {
+    return { error: 'No tienes cuenta con nosotros. Contacta con el estudio para registrarte.' }
+  }
+
+  if (client.status !== 'active') {
+    return { error: 'Tu cuenta no está activa. Contacta con el estudio.' }
+  }
 
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 

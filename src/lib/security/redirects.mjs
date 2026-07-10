@@ -45,6 +45,32 @@ export function buildCanonicalAppUrl(appUrl, path = "/") {
   return new URL(normalizedPath, base);
 }
 
+export function resolveRequestOrigin({
+  forwardedHost,
+  forwardedProto,
+  requestOrigin,
+  fallbackOrigin,
+}) {
+  const normalizedHost =
+    typeof forwardedHost === "string"
+      ? forwardedHost.split(",")[0]?.trim()
+      : "";
+  const normalizedProto =
+    typeof forwardedProto === "string"
+      ? forwardedProto.split(",")[0]?.trim()
+      : "";
+
+  if (normalizedHost) {
+    return `${normalizedProto || "https"}://${normalizedHost}`;
+  }
+
+  if (typeof fallbackOrigin === "string" && fallbackOrigin.trim().length > 0) {
+    return fallbackOrigin;
+  }
+
+  return requestOrigin;
+}
+
 export function getProtectedArea(pathname) {
   if (typeof pathname !== "string" || pathname.length === 0) {
     return null;
