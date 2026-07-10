@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 
+import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 type AuthIdentity = {
@@ -64,11 +65,12 @@ export async function requireClientAccess() {
     redirect('/paneladmin/inicio')
   }
 
-  const supabase = await createSupabaseServerClient()
-  const { data: client } = await supabase
+  const normalizedEmail = identity.email.trim().toLowerCase()
+  const adminClient = getSupabaseAdminClient()
+  const { data: client } = await adminClient
     .from('clients')
     .select('id, email, status, name')
-    .ilike('email', identity.email)
+    .ilike('email', normalizedEmail)
     .maybeSingle()
 
   if (!client || client.status !== 'active') {
