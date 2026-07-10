@@ -66,7 +66,7 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
     return { error: 'No se pudo determinar la URL de la app.' }
   }
 
-  const emailRedirectTo = new URL('/auth/callback?next=%2Fcliente%2Fdashboard', origin).toString()
+  const emailRedirectTo = new URL('/auth/callback', origin).toString()
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -148,7 +148,7 @@ export async function resetPasswordAction(_prevState: AuthFormState, formData: F
     return { error: 'No se pudo determinar la URL de la app.' }
   }
 
-  const redirectTo = new URL('/auth/callback?next=%2Fauth%2Factualizar-contrasena', origin).toString()
+  const redirectTo = new URL('/auth/callback/reset', origin).toString()
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
 

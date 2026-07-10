@@ -5,7 +5,7 @@ import '@/app/globals.css'
 import { getLocale } from '@/lib/locale'
 
 const metadataBase = new URL(
-  process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://admin.webfuengirola.com',
+  process.env.APP_URL ?? 'https://admin.webfuengirola.com',
 )
 
 export const metadata: Metadata = {
