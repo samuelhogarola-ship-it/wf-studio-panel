@@ -15,9 +15,15 @@ export async function GET(request: NextRequest) {
     throw new Error('Missing APP_URL')
   }
 
-  if (code) {
-    const supabase = await createSupabaseServerClient()
-    await supabase.auth.exchangeCodeForSession(code)
+  try {
+    if (code) {
+      const supabase = await createSupabaseServerClient()
+      await supabase.auth.exchangeCodeForSession(code)
+    }
+  } catch {
+    const errorUrl = new URL(next, appUrl)
+    errorUrl.searchParams.set('error', 'callback_exchange_failed')
+    return NextResponse.redirect(errorUrl)
   }
 
   return NextResponse.redirect(new URL(next, appUrl))
