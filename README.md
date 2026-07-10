@@ -144,3 +144,9 @@ Fallback legado aceptado por código:
 - `remaining_minutes` nunca se persiste: sale de `packs - activities`.
 - No se permiten actividades sobre packs inactivos.
 - Si el email del cliente cambia desde el panel y existe usuario Auth asociado, la app intenta sincronizarlo con `auth.users`.
+
+## Auth Runbook
+
+Para la configuración operativa completa de auth, dominios, migraciones y claves necesarias para reutilizar este patrón en otras apps, ver:
+
+- [`AUTH_SETUP.md`](/Users/sam/Desktop/webs/web%20fuengirola/apps/studio-panel/AUTH_SETUP.md)
