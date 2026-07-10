@@ -9,11 +9,16 @@ export async function GET(request: NextRequest) {
   const next = sanitizeInternalRedirect(requestUrl.searchParams.get('next'), {
     fallback: '/cliente/dashboard',
   })
+  const appUrl = process.env.APP_URL
+
+  if (!appUrl) {
+    throw new Error('Missing APP_URL')
+  }
 
   if (code) {
     const supabase = await createSupabaseServerClient()
     await supabase.auth.exchangeCodeForSession(code)
   }
 
-  return NextResponse.redirect(new URL(next, requestUrl.origin))
+  return NextResponse.redirect(new URL(next, appUrl))
 }
