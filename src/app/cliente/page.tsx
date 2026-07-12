@@ -64,7 +64,7 @@ export default async function ClientLoginPage({ searchParams }: ClientLoginPageP
           <h1 className="text-[28px] font-semibold leading-[34px] tracking-tight text-white">
             {t(locale, 'clientLogin.headline')}
           </h1>
-          <p className="mt-2 text-sm text-white/50">
+          <p className="mt-2 text-sm text-white/70">
             {t(locale, 'clientLogin.subheadline')}
           </p>
         </div>
@@ -77,9 +77,9 @@ export default async function ClientLoginPage({ searchParams }: ClientLoginPageP
           </div>
         ) : null}
 
-        <p className="mt-6 text-center text-xs text-white/30">
+        <p className="mt-6 text-center text-xs text-white/55">
           {t(locale, 'clientLogin.noAccount')}{' '}
-          <Link href="/cliente/registro" className="text-white/50 font-semibold hover:text-white transition-colors underline underline-offset-2">
+          <Link href="/cliente/registro" className="font-semibold text-white/80 transition-colors underline underline-offset-2 hover:text-white">
             {t(locale, 'clientLogin.requestAccess')}
           </Link>
         </p>

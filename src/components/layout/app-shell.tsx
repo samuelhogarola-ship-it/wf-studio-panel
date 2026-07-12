@@ -249,8 +249,6 @@ export function AdminShell({
     },
   ]
 
-  const allItems = navGroups.flatMap((g) => g.items)
-
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar */}
@@ -306,20 +304,27 @@ export function AdminShell({
           </div>
         </header>
         {/* Mobile nav */}
-        <div className="lg:hidden flex gap-2 overflow-x-auto px-4 py-3 border-b border-line bg-white">
-          {allItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition',
-                currentPath === item.href || currentPath.startsWith(item.href + '/')
-                  ? 'bg-brand text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-              )}
-            >
-              {item.label}
-            </Link>
+        <div className="lg:hidden space-y-3 border-b border-line bg-white px-4 py-3">
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">{group.label}</p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {group.items.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      'whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition',
+                      currentPath === item.href || currentPath.startsWith(item.href + '/')
+                        ? 'bg-brand text-white'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
 
