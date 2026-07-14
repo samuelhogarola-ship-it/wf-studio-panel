@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 import { requireAdmin } from '@/lib/auth'
 import { ACTIVITY_TYPES } from '@/lib/activity-types'
-import { sendActivityNotificationEmail, sendPackDepletedEmail } from '@/lib/email'
+import { sendActivityNotificationEmail, sendPackDepletedEmail, sendPendingItemCreatedEmail } from '@/lib/email'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -40,7 +40,7 @@ const packSchema = z.object({
   renewal_date: z.string().optional(),
   billing_cycle: z.enum(BILLING_CYCLE_VALUES).default('one_time'),
   paid: z.enum(['true', 'false']).default('false'),
-  status: z.enum(['active', 'inactive']),
+  status: z.enum(['active', 'inactive', 'completed']),
   notes: z.string().optional(),
 })
 
@@ -432,6 +432,14 @@ const serviceSchema = z.object({
   notes: z.string().optional(),
 })
 
+const pendingItemSchema = z.object({
+  client_id: z.string().uuid('Cliente inválido.'),
+  title: z.string().min(2, 'Añade el dato pendiente.').max(200, 'El texto es demasiado largo.'),
+  description: z.string().max(2000, 'La nota es demasiado larga.').optional(),
+  reminder_frequency: z.enum(['none', 'daily', 'custom']).default('none'),
+  reminder_interval_days: z.coerce.number().int().optional(),
+})
+
 export async function upsertServiceAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
   await requireAdmin()
   const supabase = await createSupabaseServerClient()
@@ -466,6 +474,129 @@ export async function upsertServiceAction(_prevState: AdminFormState, formData: 
   return { success: id ? 'Servicio actualizado.' : 'Servicio registrado correctamente.' }
 }
 
+export async function createPendingItemAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
+  await requireAdmin()
+  const supabase = await createSupabaseServerClient()
+
+  const parsed = pendingItemSchema.safeParse({
+    client_id: formData.get('client_id'),
+    title: formData.get('title'),
+    description: formData.get('description') || undefined,
+    reminder_frequency: formData.get('reminder_frequency') || 'none',
+    reminder_interval_days: formData.get('reminder_interval_days') || undefined,
+  })
+
+  if (!parsed.success) {
+    return toStateError(parsed.error.issues[0]?.message ?? 'No se pudo crear el pendiente.')
+  }
+
+  const { client_id, title, description, reminder_frequency, reminder_interval_days } = parsed.data
+  const reminderDays =
+    reminder_frequency === 'daily'
+      ? 1
+      : reminder_frequency === 'custom'
+        ? reminder_interval_days
+        : null
+
+  if (reminder_frequency === 'custom' && (!reminderDays || reminderDays < 1)) {
+    return toStateError('Indica cada cuántos días quieres enviar el recordatorio.')
+  }
+
+  const { data: currentLast } = await supabase
+    .from('pending_items')
+    .select('sort_order')
+    .eq('client_id', client_id)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const { data: client } = await supabase
+    .from('clients')
+    .select('name, email')
+    .eq('id', client_id)
+    .maybeSingle()
+
+  const today = new Date().toISOString().slice(0, 10)
+  const nextReminderAt = reminderDays
+    ? new Date(Date.now() + reminderDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+    : null
+
+  const { error } = await supabase.from('pending_items').insert({
+    client_id,
+    title,
+    description: description || null,
+    reminder_interval_days: reminderDays,
+    next_reminder_at: nextReminderAt,
+    sort_order: Number(currentLast?.sort_order ?? -1) + 1,
+  })
+
+  if (error) {
+    return toStateError('No se pudo crear el pendiente.')
+  }
+
+  if (client?.email) {
+    await sendPendingItemCreatedEmail({
+      clientEmail: client.email,
+      clientName: client.name ?? 'cliente',
+      title,
+      description: description || null,
+      reminderIntervalDays: reminderDays,
+    }).catch(() => null)
+  }
+
+  revalidatePath(`/paneladmin/clientes/${client_id}`)
+  revalidatePath('/cliente/pendientes')
+  revalidatePath('/cliente/dashboard')
+  return { success: reminderDays ? `Pendiente creado y recordatorio configurado desde ${today}.` : 'Pendiente creado correctamente.' }
+}
+
+export async function togglePendingItemStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const supabase = await createSupabaseServerClient()
+  const itemId = String(formData.get('item_id') ?? '')
+  const clientId = String(formData.get('client_id') ?? '')
+  const currentStatus = String(formData.get('status') ?? 'pending')
+
+  if (!itemId || !clientId) return
+
+  const nextStatus = currentStatus === 'pending' ? 'received' : 'pending'
+  const { data: currentItem } = await supabase
+    .from('pending_items')
+    .select('reminder_interval_days')
+    .eq('id', itemId)
+    .maybeSingle()
+
+  const nextReminderAt =
+    nextStatus === 'pending' && currentItem?.reminder_interval_days
+      ? new Date(Date.now() + currentItem.reminder_interval_days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      : null
+
+  await supabase.from('pending_items').update({
+    status: nextStatus,
+    received_at: nextStatus === 'received' ? new Date().toISOString().slice(0, 10) : null,
+    next_reminder_at: nextReminderAt,
+  }).eq('id', itemId)
+
+  revalidatePath(`/paneladmin/clientes/${clientId}`)
+  revalidatePath('/cliente/pendientes')
+  revalidatePath('/cliente/dashboard')
+}
+
+export async function deletePendingItemAction(formData: FormData): Promise<void> {
+  await requireAdmin()
+  const supabase = await createSupabaseServerClient()
+  const itemId = String(formData.get('item_id') ?? '')
+  const clientId = String(formData.get('client_id') ?? '')
+
+  if (!itemId || !clientId) return
+
+  await supabase.from('pending_items').delete().eq('id', itemId)
+
+  revalidatePath(`/paneladmin/clientes/${clientId}`)
+  revalidatePath('/cliente/pendientes')
+  revalidatePath('/cliente/dashboard')
+}
+
 export async function togglePackPaidAction(formData: FormData): Promise<void> {
   await requireAdmin()
   const supabase = await createSupabaseServerClient()
@@ -482,7 +613,7 @@ export async function togglePackStatusAction(formData: FormData): Promise<void> 
   const packId = String(formData.get('pack_id'))
   const currentStatus = String(formData.get('status'))
   const clientId = String(formData.get('client_id'))
-  const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
+  const newStatus = currentStatus === 'active' ? 'completed' : 'active'
   await supabase.from('packs').update({ status: newStatus }).eq('id', packId)
   revalidatePath(`/paneladmin/clientes/${clientId}`)
 }

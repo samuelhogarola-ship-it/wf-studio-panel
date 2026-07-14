@@ -135,6 +135,7 @@ export function PackForm({ clients, editingPack, locale }: { clients: ClientOpti
           <Select id="status" name="status" defaultValue={editingPack?.status ?? 'active'}>
             <option value="active">{t(locale, 'packForm.status.active')}</option>
             <option value="inactive">{t(locale, 'packForm.status.inactive')}</option>
+            <option value="completed">{t(locale, 'packForm.status.completed')}</option>
           </Select>
         </div>
         {showPaid && (

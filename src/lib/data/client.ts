@@ -62,6 +62,7 @@ export const getClientDashboardData = cache(async (clientId: string) => {
     { data: packSummaries },
     { data: activities },
     { data: notifications },
+    { data: pendingItems },
   ] = await Promise.all([
     supabase
       .from('packs')
@@ -92,6 +93,12 @@ export const getClientDashboardData = cache(async (clientId: string) => {
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
       .limit(8),
+    supabase
+      .from('pending_items')
+      .select('id, title, status')
+      .eq('client_id', clientId)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true }),
   ])
 
   const summaryMap = new Map((packSummaries ?? []).map((s) => [s.pack_id, s]))
@@ -102,7 +109,20 @@ export const getClientDashboardData = cache(async (clientId: string) => {
     summaryMap,
     activities: activities ?? [],
     notifications: notifications ?? [],
+    pendingItems: pendingItems ?? [],
   }
+})
+
+export const getClientPendingItems = cache(async (clientId: string) => {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from('pending_items')
+    .select('id, title, description, status, requested_at, received_at, reminder_interval_days, next_reminder_at, sort_order')
+    .eq('client_id', clientId)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  return data ?? []
 })
 
 export const getClientFacturasData = cache(async (clientId: string) => {

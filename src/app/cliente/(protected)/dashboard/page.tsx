@@ -31,6 +31,7 @@ export default async function ClientDashboardPage() {
   const pendingInvoices = invoices.filter((i) => i.status === 'pending')
   const pendingTotal = pendingInvoices.reduce((sum, i) => sum + Number(i.amount ?? 0), 0)
   const expiredPacks = data.closedPacks.filter((p) => isExpired(p.renewal_date))
+  const pendingItems = data.pendingItems.filter((item) => item.status === 'pending')
 
   return (
     <>
@@ -42,8 +43,26 @@ export default async function ClientDashboardPage() {
       </div>
 
       {/* Alerts */}
-      {(pendingInvoices.length > 0 || expiredPacks.length > 0) && (
+      {(pendingInvoices.length > 0 || expiredPacks.length > 0 || pendingItems.length > 0) && (
         <div className="mb-6 grid gap-3">
+          {pendingItems.length > 0 && (
+            <Link
+              href="/cliente/pendientes"
+              className="flex items-center gap-4 rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 hover:bg-sky-100 transition"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-100">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-sky-700">
+                  <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-sky-900">
+                  {pendingItems.length === 1 ? 'Tienes 1 dato pendiente por enviar' : `Tienes ${pendingItems.length} datos pendientes por enviar`}
+                </p>
+                <p className="text-sm text-sky-700">Ver checklist →</p>
+              </div>
+            </Link>
+          )}
           {pendingInvoices.length > 0 && (
             <Link
               href="/cliente/facturas"

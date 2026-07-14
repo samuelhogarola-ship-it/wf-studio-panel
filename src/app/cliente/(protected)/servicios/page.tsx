@@ -44,7 +44,21 @@ function isExpired(renewalDate: string | null) {
   return new Date(renewalDate) < new Date()
 }
 
-function StatusBadge({ status, renewalDate }: { status: string; renewalDate: string | null; paid?: boolean | null }) {
+function StatusBadge({
+  status,
+  renewalDate,
+  packType,
+  remainingMinutes,
+}: {
+  status: string
+  renewalDate: string | null
+  paid?: boolean | null
+  packType?: string
+  remainingMinutes?: number
+}) {
+  if (status === 'completed' || (status === 'inactive' && packType === 'hours' && (remainingMinutes ?? 1) <= 0)) {
+    return <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">Completado</span>
+  }
   if (status !== 'active') {
     return <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">Inactivo</span>
   }
@@ -97,7 +111,13 @@ function PackCard({ pack, openId }: {
             <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${TYPE_COLORS[pack.pack_type] ?? 'bg-slate-100 text-slate-600'}`}>
               {TYPE_LABELS[pack.pack_type] ?? pack.pack_type}
             </span>
-            <StatusBadge status={pack.status} renewalDate={pack.renewal_date} paid={pack.paid ?? null} />
+            <StatusBadge
+              status={pack.status}
+              renewalDate={pack.renewal_date}
+              paid={pack.paid ?? null}
+              packType={pack.pack_type}
+              remainingMinutes={remaining}
+            />
             <PaidBadge paid={pack.paid ?? null} />
           </div>
           <p className="font-bold text-foreground">{pack.name}</p>

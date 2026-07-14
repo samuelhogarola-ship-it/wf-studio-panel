@@ -40,6 +40,12 @@ export type Database = {
         Update: { activity_id?: string | null; body?: string | null; client_id?: string; created_at?: string; id?: string; minutes_delta?: number | null; remaining_minutes?: number | null; title?: string }
         Relationships: [{ foreignKeyName: "notifications_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
+      pending_items: {
+        Row: { client_id: string; created_at: string; description: string | null; id: string; last_reminder_sent_at: string | null; next_reminder_at: string | null; received_at: string | null; reminder_interval_days: number | null; requested_at: string; sort_order: number; status: string; title: string; updated_at: string }
+        Insert: { client_id: string; created_at?: string; description?: string | null; id?: string; last_reminder_sent_at?: string | null; next_reminder_at?: string | null; received_at?: string | null; reminder_interval_days?: number | null; requested_at?: string; sort_order?: number; status?: string; title: string; updated_at?: string }
+        Update: { client_id?: string; created_at?: string; description?: string | null; id?: string; last_reminder_sent_at?: string | null; next_reminder_at?: string | null; received_at?: string | null; reminder_interval_days?: number | null; requested_at?: string; sort_order?: number; status?: string; title?: string; updated_at?: string }
+        Relationships: [{ foreignKeyName: "pending_items_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
+      }
       packs: {
         Row: { billing_cycle: string; client_id: string; created_at: string; id: string; invoice_number: string | null; minutes_total: number; name: string; notes: string | null; pack_type: string; paid: boolean; price: number | null; purchase_date: string; renewal_date: string | null; status: string; updated_at: string }
         Insert: { billing_cycle?: string; client_id: string; created_at?: string; id?: string; invoice_number?: string | null; minutes_total: number; name: string; notes?: string | null; pack_type?: string; paid?: boolean; price?: number | null; purchase_date?: string; renewal_date?: string | null; status?: string; updated_at?: string }

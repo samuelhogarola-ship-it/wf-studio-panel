@@ -13,6 +13,16 @@ import { cn } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
+function getPackStatusMeta(status: string, packType: string, remaining: number) {
+  if (status === 'active') {
+    return { label: 'Activo', className: 'bg-emerald-50 text-emerald-700' }
+  }
+  if (status === 'completed' || (status === 'inactive' && packType === 'hours' && remaining <= 0)) {
+    return { label: 'Completado', className: 'bg-blue-50 text-blue-700' }
+  }
+  return { label: 'Inactivo', className: 'bg-slate-100 text-slate-500' }
+}
+
 const TYPE_LABELS: Record<string, string> = {
   hours: 'Horas',
   tasks: 'Tareas',
@@ -130,6 +140,7 @@ export default async function AdminPacksPage({
                 const remaining = Number(summary?.remaining_minutes ?? 0)
                 const total = Number(summary?.minutes_total ?? pack.minutes_total)
                 const pct = total > 0 ? Math.min(100, Math.round(((total - remaining) / total) * 100)) : 0
+                const statusMeta = getPackStatusMeta(pack.status, pack.pack_type, remaining)
 
                 return (
                   <tr key={pack.id} className="hover:bg-slate-50 transition-colors">
@@ -169,8 +180,8 @@ export default async function AdminPacksPage({
                       </td>
                     )}
                     <td className="px-6 py-4">
-                      <Badge className={pack.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}>
-                        {pack.status === 'active' ? 'Activo' : 'Inactivo'}
+                      <Badge className={statusMeta.className}>
+                        {statusMeta.label}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-slate-500">

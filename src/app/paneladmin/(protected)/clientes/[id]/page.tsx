@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
+import { deletePendingItemAction, togglePendingItemStatusAction } from '@/lib/actions/admin'
+import { PendingItemForm } from '@/components/admin/pending-item-form'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -22,6 +24,14 @@ const PACK_TYPE_LABELS: Record<string, string> = {
   membership: 'Membresía',
 }
 
+function getPendingStatusMeta(status: string) {
+  if (status === 'received') {
+    return { label: 'Recibido', className: 'bg-emerald-50 text-emerald-700' }
+  }
+
+  return { label: 'Pendiente', className: 'bg-amber-50 text-amber-700' }
+}
+
 export default async function AdminClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const identity = await requireAdmin()
   const locale = await getLocale()
@@ -32,9 +42,11 @@ export default async function AdminClientDetailPage({ params }: { params: Promis
     notFound()
   }
 
+  const client = data.client
+
   return (
     <AdminShell
-      title={data.client.name}
+      title={client.name}
       description={t(locale, 'clientDetail.description')}
       currentPath="/paneladmin/clientes"
       userEmail={identity.email}
@@ -44,8 +56,8 @@ export default async function AdminClientDetailPage({ params }: { params: Promis
         <Link href="/paneladmin/clientes" className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
           {t(locale, 'clientDetail.back')}
         </Link>
-        <Badge className={data.client.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
-          {data.client.status}
+        <Badge className={client.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
+          {client.status}
         </Badge>
       </div>
 
@@ -53,12 +65,12 @@ export default async function AdminClientDetailPage({ params }: { params: Promis
         <div className="space-y-6">
           <Card className="p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{t(locale, 'clientDetail.profile')}</p>
-            <h2 className="mt-2 text-xl font-bold text-foreground">{data.client.name}</h2>
+            <h2 className="mt-2 text-xl font-bold text-foreground">{client.name}</h2>
             <div className="mt-4 grid gap-3 text-sm text-slate-600">
-              <p><span className="font-semibold text-foreground">{t(locale, 'clientDetail.email')}</span> {data.client.email}</p>
-              <p><span className="font-semibold text-foreground">{t(locale, 'clientDetail.company')}</span> {data.client.company || '—'}</p>
-              <p><span className="font-semibold text-foreground">{t(locale, 'clientDetail.phone')}</span> {data.client.phone || '—'}</p>
-              <p><span className="font-semibold text-foreground">{t(locale, 'clientDetail.created')}</span> {formatDate(data.client.created_at)}</p>
+              <p><span className="font-semibold text-foreground">{t(locale, 'clientDetail.email')}</span> {client.email}</p>
+              <p><span className="font-semibold text-foreground">{t(locale, 'clientDetail.company')}</span> {client.company || '—'}</p>
+              <p><span className="font-semibold text-foreground">{t(locale, 'clientDetail.phone')}</span> {client.phone || '—'}</p>
+              <p><span className="font-semibold text-foreground">{t(locale, 'clientDetail.created')}</span> {formatDate(client.created_at)}</p>
             </div>
           </Card>
 
@@ -77,6 +89,74 @@ export default async function AdminClientDetailPage({ params }: { params: Promis
                 <p className="text-xs uppercase tracking-[0.12em] text-slate-500">{t(locale, 'clientDetail.remaining')}</p>
                 <p className="mt-2 text-xl font-bold text-foreground">{formatDuration(data.summary?.remaining_minutes ?? 0)}</p>
               </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Checklist cliente</p>
+                <h2 className="mt-2 text-xl font-bold text-foreground">Pendientes por recibir</h2>
+                <p className="mt-1 text-sm text-slate-500">Datos, accesos o materiales que el cliente todavía tiene que enviarte.</p>
+              </div>
+              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                {data.pendingItems.filter((item) => item.status === 'pending').length} pendientes
+              </div>
+            </div>
+
+            <PendingItemForm clientId={client.id} />
+
+            <div className="mt-5 space-y-3">
+              {data.pendingItems.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-400">
+                  Todavía no has añadido pendientes para este cliente.
+                </p>
+              ) : (
+                data.pendingItems.map((item) => {
+                  const statusMeta = getPendingStatusMeta(item.status)
+
+                  return (
+                    <div key={item.id} className="rounded-2xl border border-line bg-white p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-foreground">{item.title}</p>
+                            <Badge className={statusMeta.className}>{statusMeta.label}</Badge>
+                          </div>
+                          <p className="mt-1 text-xs text-slate-400">
+                            Solicitado el {formatDate(item.requested_at)}
+                            {item.received_at ? ` · recibido el ${formatDate(item.received_at)}` : ''}
+                          </p>
+                          {item.reminder_interval_days ? (
+                            <p className="mt-1 text-xs text-slate-500">
+                              Recordatorio cada {item.reminder_interval_days === 1 ? 'día' : `${item.reminder_interval_days} días`}
+                              {item.next_reminder_at ? ` · próximo envío ${formatDate(item.next_reminder_at)}` : ''}
+                            </p>
+                          ) : null}
+                          {item.description ? <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.description}</p> : null}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <form action={togglePendingItemStatusAction}>
+                            <input type="hidden" name="item_id" value={item.id} />
+                            <input type="hidden" name="client_id" value={client.id} />
+                            <input type="hidden" name="status" value={item.status} />
+                            <button className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition">
+                              {item.status === 'pending' ? 'Marcar recibido' : 'Reabrir'}
+                            </button>
+                          </form>
+                          <form action={deletePendingItemAction}>
+                            <input type="hidden" name="item_id" value={item.id} />
+                            <input type="hidden" name="client_id" value={client.id} />
+                            <button className="rounded-full bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition">
+                              Borrar
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </div>
           </Card>
         </div>

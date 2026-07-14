@@ -6,6 +6,16 @@ import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
+function getPackStatusMeta(status: string, remaining: number) {
+  if (status === 'active') {
+    return { label: 'Activo', className: 'bg-emerald-50 text-emerald-700' }
+  }
+  if (status === 'completed' || (status === 'inactive' && remaining <= 0)) {
+    return { label: 'Completado', className: 'bg-blue-50 text-blue-700' }
+  }
+  return { label: 'Inactivo', className: 'bg-slate-100 text-slate-500' }
+}
+
 export default async function ClientBonosPage({
   searchParams,
 }: {
@@ -61,6 +71,7 @@ export default async function ClientBonosPage({
             const used = Number(summary?.used_minutes ?? 0)
             const remaining = Math.max(0, total - used)
             const pct = total > 0 ? Math.min(100, Math.round((used / total) * 100)) : 0
+            const statusMeta = getPackStatusMeta(pack.status, remaining)
 
             return (
               <div key={pack.id} className="rounded-2xl border border-slate-200 bg-white p-6">
@@ -69,8 +80,8 @@ export default async function ClientBonosPage({
                     <p className="font-bold text-foreground">{pack.name}</p>
                     <p className="text-xs text-slate-400 mt-0.5">Comprado el {formatDate(pack.purchase_date)}</p>
                   </div>
-                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${pack.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                    {pack.status === 'active' ? 'Activo' : pack.status}
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusMeta.className}`}>
+                    {statusMeta.label}
                   </span>
                 </div>
                 <div>

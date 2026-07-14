@@ -107,6 +107,77 @@ export async function sendActivityNotificationEmail({
   })
 }
 
+export async function sendPendingItemCreatedEmail({
+  clientEmail,
+  clientName,
+  title,
+  description,
+  reminderIntervalDays,
+}: {
+  clientEmail: string
+  clientName: string
+  title: string
+  description?: string | null
+  reminderIntervalDays?: number | null
+}) {
+  const resend = getResend()
+
+  return resend.emails.send({
+    from: getRequiredServerEnv('RESEND_FROM_EMAIL'),
+    to: clientEmail,
+    subject: `[WF-Studio] Nuevo pendiente: ${title}`,
+    text: [
+      `Hola ${clientName},`,
+      '',
+      'Hemos añadido un nuevo dato o tarea pendiente en tu panel:',
+      '',
+      `Pendiente: ${title}`,
+      ...(description ? ['', 'Detalle:', description] : []),
+      '',
+      reminderIntervalDays
+        ? `Te enviaremos un recordatorio por email cada ${reminderIntervalDays === 1 ? 'día' : `${reminderIntervalDays} días`} hasta recibirlo.`
+        : 'Puedes revisarlo en el apartado "Pendientes" de tu panel.',
+      '',
+      '— WF-Studio',
+    ].join('\n'),
+  })
+}
+
+export async function sendPendingItemReminderEmail({
+  clientEmail,
+  clientName,
+  title,
+  description,
+  requestedAt,
+}: {
+  clientEmail: string
+  clientName: string
+  title: string
+  description?: string | null
+  requestedAt: string
+}) {
+  const resend = getResend()
+
+  return resend.emails.send({
+    from: getRequiredServerEnv('RESEND_FROM_EMAIL'),
+    to: clientEmail,
+    subject: `[WF-Studio] Recordatorio pendiente: ${title}`,
+    text: [
+      `Hola ${clientName},`,
+      '',
+      'Seguimos pendientes de recibir este dato o material para continuar:',
+      '',
+      `Pendiente: ${title}`,
+      `Solicitado el: ${requestedAt}`,
+      ...(description ? ['', 'Detalle:', description] : []),
+      '',
+      'Cuando lo tengas, envíanoslo y lo marcaremos como recibido en tu panel.',
+      '',
+      '— WF-Studio',
+    ].join('\n'),
+  })
+}
+
 export async function sendPublicContactEmail({
   name,
   email,

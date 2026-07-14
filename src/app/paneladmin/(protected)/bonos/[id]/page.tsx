@@ -33,6 +33,16 @@ const ACTIVITY_TYPE_COLORS: Record<string, string> = {
   otro: 'bg-slate-100 text-slate-500',
 }
 
+function getPackStatusMeta(status: string, packType: string, remainingMinutes: number) {
+  if (status === 'active') {
+    return { label: 'Activo', className: 'bg-emerald-50 text-emerald-700' }
+  }
+  if (status === 'completed' || (status === 'inactive' && packType === 'hours' && remainingMinutes <= 0)) {
+    return { label: 'Completado', className: 'bg-blue-50 text-blue-700' }
+  }
+  return { label: 'Inactivo', className: 'bg-slate-100 text-slate-500' }
+}
+
 export default async function PackDetailPage({
   params,
   searchParams,
@@ -51,10 +61,10 @@ export default async function PackDetailPage({
 
   const isHoursPack = pack.pack_type === 'hours'
   const client = !Array.isArray(pack.clients) ? pack.clients : null
-
   const usedMinutes = Number(summary?.used_minutes ?? 0)
   const totalMinutes = Number(pack.minutes_total)
   const remainingMinutes = totalMinutes - usedMinutes
+  const statusMeta = getPackStatusMeta(pack.status, pack.pack_type, remainingMinutes)
   const pct = totalMinutes > 0 ? Math.min(100, Math.round((usedMinutes / totalMinutes) * 100)) : 0
 
   return (
@@ -86,8 +96,8 @@ export default async function PackDetailPage({
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                 {TYPE_LABELS[pack.pack_type] ?? pack.pack_type}
               </span>
-              <Badge className={pack.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}>
-                {pack.status === 'active' ? 'Activo' : 'Inactivo'}
+              <Badge className={statusMeta.className}>
+                {statusMeta.label}
               </Badge>
             </div>
             <h2 className="text-2xl font-black text-foreground">{pack.name}</h2>
