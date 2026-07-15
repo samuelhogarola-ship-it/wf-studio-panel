@@ -39,9 +39,19 @@ type EditingPack = {
 
 const initialState: AdminFormState = {}
 
-export function PackForm({ clients, editingPack, locale }: { clients: ClientOption[]; editingPack: EditingPack; locale: Locale }) {
+export function PackForm({
+  clients,
+  editingPack,
+  locale,
+  defaultPackType = 'hours',
+}: {
+  clients: ClientOption[]
+  editingPack: EditingPack
+  locale: Locale
+  defaultPackType?: string
+}) {
   const [state, action, pending] = useActionState(upsertPackAction, initialState)
-  const [packType, setPackType] = useState(editingPack?.pack_type ?? 'hours')
+  const [packType, setPackType] = useState(editingPack?.pack_type ?? defaultPackType)
 
   const showHours = packType === 'hours'
   const showRenewal = ['domain', 'hosting', 'service', 'subscription', 'membership'].includes(packType)

@@ -273,14 +273,12 @@ export const getProjectSubscriptionsData = cache(async (project: string) => {
 export const getAdminClientDetailPageData = cache(async (clientId: string) => {
   const supabase = await createSupabaseServerClient()
 
-  const [{ data: client }, { data: summary }, { data: activePacks }, { data: recentActivities }, { data: pendingItems }] = await Promise.all([
+  const [{ data: client }, { data: packs }, { data: recentActivities }, { data: pendingItems }] = await Promise.all([
     supabase.from('clients').select('id, name, company, email, phone, status, created_at').eq('id', clientId).maybeSingle(),
-    supabase.from('client_summary').select('*').eq('client_id', clientId).maybeSingle(),
     supabase
       .from('packs')
-      .select('id, name, pack_type, minutes_total, price, invoice_number, purchase_date, status, notes')
+      .select('id, name, pack_type, minutes_total, price, invoice_number, purchase_date, renewal_date, billing_cycle, paid, status, notes')
       .eq('client_id', clientId)
-      .eq('status', 'active')
       .order('purchase_date', { ascending: false }),
     supabase
       .from('activities')
@@ -298,8 +296,8 @@ export const getAdminClientDetailPageData = cache(async (clientId: string) => {
 
   return {
     client,
-    summary,
-    activePacks: activePacks ?? [],
+    packs: packs ?? [],
+    activePacks: (packs ?? []).filter((pack) => pack.status === 'active'),
     recentActivities: recentActivities ?? [],
     pendingItems: pendingItems ?? [],
   }

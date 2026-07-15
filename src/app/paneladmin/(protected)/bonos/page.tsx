@@ -40,22 +40,24 @@ export default async function AdminPacksPage({
 }) {
   const identity = await requireAdmin()
   const params = await searchParams
-  const tab = params.tab === 'cerrados' ? 'cerrados' : 'horas'
+  const tab = ['dominios', 'hosting', 'packs'].includes(params.tab ?? '') ? params.tab! : 'horas'
   const showNew = params.new === '1' || !!params.edit
 
-  // Filter by tab
-  const typeFilter = tab === 'horas' ? 'hours' : undefined
+  const typeFilter = tab === 'horas' ? 'hours' : tab === 'dominios' ? 'domain' : tab === 'hosting' ? 'hosting' : undefined
   const data = await getAdminPacksPageData(params.edit, typeFilter)
 
-  // For closed packs tab, filter client-side from all non-hours packs
-  const packs = tab === 'cerrados'
-    ? data.packs.filter((p) => p.pack_type !== 'hours')
+  const packs = tab === 'packs'
+    ? data.packs.filter((p) => !['hours', 'domain', 'hosting'].includes(p.pack_type))
     : data.packs
 
   const summaryMap = new Map(data.packSummaries.map((item) => [item.pack_id, item]))
   const locale = await getLocale()
 
-  const tabParam = tab === 'cerrados' ? '&tab=cerrados' : ''
+  const tabParam = tab === 'horas' ? '' : `&tab=${tab}`
+  const tabQuery = tab === 'horas' ? '' : `?tab=${tab}`
+  const newLabel = tab === 'horas' ? 'Nuevo bono' : tab === 'dominios' ? 'Nuevo dominio' : tab === 'hosting' ? 'Nuevo hosting' : 'Nuevo pack'
+  const formTitle = params.edit ? 'Editar' : tab === 'horas' ? 'Nuevo bono de horas' : tab === 'dominios' ? 'Nuevo dominio' : tab === 'hosting' ? 'Nuevo hosting' : 'Nuevo pack o servicio'
+  const defaultPackType = tab === 'dominios' ? 'domain' : tab === 'hosting' ? 'hosting' : tab === 'packs' ? 'tasks' : 'hours'
 
   return (
     <AdminShell
@@ -67,31 +69,30 @@ export default async function AdminPacksPage({
     >
       {/* Tabs + new button */}
       <div className="mb-6 flex items-center justify-between gap-4">
-        <div className="flex gap-1.5">
-          <Link
-            href="/paneladmin/bonos"
-            className={cn(
-              'whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition',
-              tab === 'horas' ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-            )}
-          >
-            Bonos de horas
-          </Link>
-          <Link
-            href="/paneladmin/bonos?tab=cerrados"
-            className={cn(
-              'whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition',
-              tab === 'cerrados' ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
-            )}
-          >
-            Packs cerrados
-          </Link>
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { key: 'horas', label: 'Bonos de horas', href: '/paneladmin/bonos' },
+            { key: 'dominios', label: 'Dominios', href: '/paneladmin/bonos?tab=dominios' },
+            { key: 'hosting', label: 'Hosting', href: '/paneladmin/bonos?tab=hosting' },
+            { key: 'packs', label: 'Packs y servicios', href: '/paneladmin/bonos?tab=packs' },
+          ].map((item) => (
+            <Link
+              key={item.key}
+              href={item.href}
+              className={cn(
+                'whitespace-nowrap rounded-full px-4 py-1.5 text-xs font-semibold transition',
+                tab === item.key ? 'bg-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200',
+              )}
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
         <Link
           href={`/paneladmin/bonos?new=1${tabParam}`}
           className="flex shrink-0 items-center gap-1.5 rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-white hover:opacity-90 transition"
         >
-          <span className="text-base leading-none">+</span> {tab === 'horas' ? 'Nuevo bono' : 'Nuevo pack'}
+          <span className="text-base leading-none">+</span> {newLabel}
         </Link>
       </div>
 
@@ -100,16 +101,16 @@ export default async function AdminPacksPage({
         <div className="mb-6 rounded-xl border border-line bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold text-foreground">
-              {params.edit ? 'Editar' : tab === 'horas' ? 'Nuevo bono de horas' : 'Nuevo pack cerrado'}
+              {formTitle}
             </h2>
             <Link
-              href={`/paneladmin/bonos${tab === 'cerrados' ? '?tab=cerrados' : ''}`}
+              href={`/paneladmin/bonos${tabQuery}`}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition text-lg leading-none"
             >
               ×
             </Link>
           </div>
-          <PackForm clients={data.clients} editingPack={data.editingPack} locale={locale} />
+          <PackForm clients={data.clients} editingPack={data.editingPack} locale={locale} defaultPackType={defaultPackType} />
         </div>
       )}
 
@@ -130,7 +131,7 @@ export default async function AdminPacksPage({
                   <th className="px-6 py-4">Tipo</th>
                 )}
                 <th className="px-6 py-4">Estado</th>
-                <th className="px-6 py-4">{tab === 'cerrados' ? 'Renovación' : 'Compra'}</th>
+                <th className="px-6 py-4">{tab !== 'horas' ? 'Renovación' : 'Compra'}</th>
                 <th className="px-6 py-4"></th>
               </tr>
             </thead>
@@ -208,7 +209,7 @@ export default async function AdminPacksPage({
           </table>
           {packs.length === 0 && (
             <p className="px-6 py-10 text-sm text-muted">
-              {tab === 'horas' ? 'No hay bonos de horas.' : 'No hay packs cerrados.'}
+              {tab === 'horas' ? 'No hay bonos de horas.' : tab === 'dominios' ? 'No hay dominios.' : tab === 'hosting' ? 'No hay hosting.' : 'No hay packs o servicios.'}
             </p>
           )}
         </div>
