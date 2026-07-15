@@ -1,6 +1,7 @@
 import { requireClientAccess } from '@/lib/auth'
 import { getClientPendingItems } from '@/lib/data/client'
 import { formatDate } from '@/lib/utils'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,6 +67,16 @@ export default async function ClientPendingItemsPage() {
                   ) : null}
                   <p className="mt-3 text-sm text-slate-500">{statusMeta.description}</p>
                   {item.description ? <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.description}</p> : null}
+                  {item.status === 'pending' ? (
+                    <div className="mt-5">
+                      <Link
+                        href={`/cliente/mensajeria?new=1&pending=${item.id}`}
+                        className="inline-flex rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition"
+                      >
+                        Enviar este dato
+                      </Link>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             )

@@ -10,11 +10,18 @@ function getCronSecret() {
   return process.env.PENDING_REMINDERS_CRON_SECRET || process.env.CRON_SECRET
 }
 
-export async function POST(request: Request) {
+function isAuthorizedCronRequest(request: Request) {
   const configuredSecret = getCronSecret()
+  if (!configuredSecret) return true
+
+  const authHeader = request.headers.get('authorization')
   const providedSecret = request.headers.get('x-cron-secret') || new URL(request.url).searchParams.get('secret')
 
-  if (configuredSecret && providedSecret !== configuredSecret) {
+  return authHeader === `Bearer ${configuredSecret}` || providedSecret === configuredSecret
+}
+
+async function runPendingReminders(request: Request) {
+  if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -65,4 +72,12 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ ok: true, processed: dueItems?.length ?? 0, sent, appUrl: getRequiredServerEnv('NEXT_PUBLIC_APP_URL') })
+}
+
+export async function GET(request: Request) {
+  return runPendingReminders(request)
+}
+
+export async function POST(request: Request) {
+  return runPendingReminders(request)
 }

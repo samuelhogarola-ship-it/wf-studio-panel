@@ -1,5 +1,5 @@
 import { requireClientAccess } from '@/lib/auth'
-import { getClientMessages } from '@/lib/data/client'
+import { getClientMessages, getClientPendingItems, markClientInboundMessagesRead } from '@/lib/data/client'
 import { MessageComposer } from '@/components/client/message-composer'
 import { formatDate } from '@/lib/utils'
 
@@ -10,21 +10,33 @@ type Tab = 'recibidos' | 'enviados' | 'recordatorios'
 export default async function MensajeriaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; reply?: string; new?: string }>
+  searchParams: Promise<{ tab?: string; reply?: string; new?: string; pending?: string }>
 }) {
   const identity = await requireClientAccess()
   const params = await searchParams
   const tab = (params.tab ?? 'recibidos') as Tab
-  const messages = await getClientMessages(identity.client.id)
+  const [messages, pendingItems] = await Promise.all([
+    getClientMessages(identity.client.id),
+    params.pending ? getClientPendingItems(identity.client.id) : Promise.resolve([]),
+  ])
 
   const recibidos = messages.filter((m) => m.direction === 'inbound' && m.type === 'message')
+  const readAt = tab === 'recibidos'
+    ? await markClientInboundMessagesRead(identity.client.id, recibidos.filter((m) => !m.read_at).map((m) => m.id))
+    : null
+  const recibidosActualizados = readAt ? recibidos.map((m) => (m.read_at ? m : { ...m, read_at: readAt })) : recibidos
   const enviados = messages.filter((m) => m.direction === 'outbound')
   const recordatorios = messages.filter((m) => m.type === 'reminder')
 
-  const current = tab === 'enviados' ? enviados : tab === 'recordatorios' ? recordatorios : recibidos
-  const unread = recibidos.filter((m) => !m.read_at).length
+  const current = tab === 'enviados' ? enviados : tab === 'recordatorios' ? recordatorios : recibidosActualizados
+  const unread = recibidosActualizados.filter((m) => !m.read_at).length
   const replyTo = params.reply ? messages.find((m) => m.id === params.reply) : null
+  const pendingItem = params.pending ? pendingItems.find((item) => item.id === params.pending) : null
   const showCompose = params.new === '1' || !!replyTo
+  const defaultSubject = replyTo ? `Re: ${replyTo.subject}` : pendingItem ? `Pendiente: ${pendingItem.title}` : ''
+  const defaultBody = pendingItem
+    ? `Hola, os envío el dato pendiente: ${pendingItem.title}\n\n`
+    : ''
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: 'recibidos', label: 'Recibidos', count: unread || undefined },
@@ -78,7 +90,13 @@ export default async function MensajeriaPage({
               <p className="line-clamp-2">{replyTo.body}</p>
             </div>
           )}
-          <MessageComposer replyToId={replyTo?.id} defaultSubject={replyTo ? `Re: ${replyTo.subject}` : ''} />
+          {pendingItem && (
+            <div className="mb-4 rounded-lg border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <p className="font-semibold">Respondiendo pendiente: {pendingItem.title}</p>
+              {pendingItem.description ? <p className="mt-1 text-amber-700">{pendingItem.description}</p> : null}
+            </div>
+          )}
+          <MessageComposer replyToId={replyTo?.id} defaultSubject={defaultSubject} defaultBody={defaultBody} />
         </div>
       )}
 

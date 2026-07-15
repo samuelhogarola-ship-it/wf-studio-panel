@@ -22,6 +22,11 @@ export function AdminShell({
   locale: Locale
   children: ReactNode
 }) {
+  const panelIcon = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
+    </svg>
+  )
   const navGroups: NavGroup[] = [
     {
       label: 'General',
@@ -106,144 +111,32 @@ export function AdminShell({
       ],
     },
     {
-      label: 'Vivir en Fuengirola',
+      label: 'Otros paneles',
       items: [
         {
-          href: '/paneladmin/vivir-en-fuengirola/clientes',
-          label: 'Clientes',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          ),
+          href: '/paneladmin/vivir-en-fuengirola',
+          label: 'Vivir en Fuengirola',
+          icon: panelIcon,
         },
         {
-          href: '/paneladmin/vivir-en-fuengirola/suscripciones',
-          label: 'Suscripciones',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-            </svg>
-          ),
+          href: '/paneladmin/conoce-fuengirola',
+          label: 'Conoce Fuengirola',
+          icon: panelIcon,
         },
-      ],
-    },
-    {
-      label: 'Conoce Fuengirola',
-      items: [
-        {
-          href: '/paneladmin/conoce-fuengirola/clientes',
-          label: 'Clientes',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
-          ),
-        },
-        {
-          href: '/paneladmin/conoce-fuengirola/suscripciones',
-          label: 'Suscripciones',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-            </svg>
-          ),
-        },
-      ],
-    },
-    {
-      label: 'Samuel Coach',
-      items: [
         {
           href: '/paneladmin/samuel-coach',
-          label: 'Prüfungsvorbereitung',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-            </svg>
-          ),
+          label: 'Samuel Coach',
+          icon: panelIcon,
         },
         {
-          href: '/paneladmin/samuel-coach/alumnos',
-          label: 'Alumnos',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-            </svg>
-          ),
+          href: '/paneladmin/vokabel-world',
+          label: 'Vokabel-World',
+          icon: panelIcon,
         },
-        {
-          href: '/paneladmin/samuel-coach/ejercicios',
-          label: 'Ejercicios',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-            </svg>
-          ),
-        },
-        {
-          href: '/paneladmin/samuel-coach/progreso',
-          label: 'Progreso',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
-            </svg>
-          ),
-        },
-      ],
-    },
-    {
-      label: 'Vokabel-World',
-      items: [
-        {
-          href: '/paneladmin/vokabel-world/vokabel-lab',
-          label: 'Vokabel-Lab',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />
-            </svg>
-          ),
-        },
-        {
-          href: '/paneladmin/vokabel-world/imkontext',
-          label: 'imKontext',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />
-            </svg>
-          ),
-        },
-        {
-          href: '/paneladmin/vokabel-world/derdiedas',
-          label: 'Der Die Das',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" />
-            </svg>
-          ),
-        },
-      ],
-    },
-    {
-      label: 'Superentrenador',
-      items: [
         {
           href: '/paneladmin/superentrenador/pt',
-          label: 'Panel PT',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-            </svg>
-          ),
-        },
-        {
-          href: '/paneladmin/superentrenador/usuarios',
-          label: 'Usuarios',
-          icon: (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-            </svg>
-          ),
+          label: 'Superentrenador',
+          icon: panelIcon,
         },
       ],
     },

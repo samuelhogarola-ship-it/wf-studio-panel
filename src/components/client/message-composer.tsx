@@ -9,9 +9,11 @@ const initial: MessageFormState = {}
 export function MessageComposer({
   replyToId,
   defaultSubject,
+  defaultBody,
 }: {
   replyToId?: string
   defaultSubject?: string
+  defaultBody?: string
 }) {
   const [state, action, pending] = useActionState(sendMessageAction, initial)
 
@@ -34,6 +36,7 @@ export function MessageComposer({
           name="body"
           required
           rows={5}
+          defaultValue={defaultBody}
           className="rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:bg-white resize-none"
           placeholder="Escribe tu mensaje aquí..."
         />
