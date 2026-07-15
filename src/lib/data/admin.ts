@@ -273,7 +273,7 @@ export const getProjectSubscriptionsData = cache(async (project: string) => {
 export const getAdminClientDetailPageData = cache(async (clientId: string) => {
   const supabase = await createSupabaseServerClient()
 
-  const [{ data: client }, { data: packs }, { data: recentActivities }, { data: pendingItems }] = await Promise.all([
+  const [{ data: client }, { data: packs }, { data: recentActivities }, { data: pendingItems }, { data: messages }] = await Promise.all([
     supabase.from('clients').select('id, name, company, email, phone, status, created_at').eq('id', clientId).maybeSingle(),
     supabase
       .from('packs')
@@ -292,6 +292,12 @@ export const getAdminClientDetailPageData = cache(async (clientId: string) => {
       .eq('client_id', clientId)
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true }),
+    supabase
+      .from('messages')
+      .select('id, subject, body, direction, type, read_at, reply_to_id, created_at')
+      .eq('client_id', clientId)
+      .order('created_at', { ascending: false })
+      .limit(12),
   ])
 
   return {
@@ -300,5 +306,6 @@ export const getAdminClientDetailPageData = cache(async (clientId: string) => {
     activePacks: (packs ?? []).filter((pack) => pack.status === 'active'),
     recentActivities: recentActivities ?? [],
     pendingItems: pendingItems ?? [],
+    messages: messages ?? [],
   }
 })

@@ -440,6 +440,13 @@ const pendingItemSchema = z.object({
   reminder_interval_days: z.coerce.number().int().optional(),
 })
 
+const adminClientMessageSchema = z.object({
+  client_id: z.string().uuid('Cliente inválido.'),
+  subject: z.string().min(1, 'Añade un asunto.').max(200, 'El asunto es demasiado largo.'),
+  body: z.string().min(1, 'Escribe el mensaje.').max(5000, 'El mensaje es demasiado largo.'),
+  reply_to_id: z.string().uuid().optional(),
+})
+
 export async function upsertServiceAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
   await requireAdmin()
   const supabase = await createSupabaseServerClient()
@@ -531,7 +538,11 @@ export async function createPendingItemAction(_prevState: AdminFormState, formDa
   })
 
   if (error) {
-    return toStateError('No se pudo crear el pendiente.')
+    if (error.code === 'PGRST205' || error.message.includes('pending_items')) {
+      return toStateError('No se pudo crear el pendiente porque falta aplicar la migración de tareas pendientes en Supabase.')
+    }
+
+    return toStateError(`No se pudo crear el pendiente: ${error.message}`)
   }
 
   if (client?.email) {
@@ -548,6 +559,41 @@ export async function createPendingItemAction(_prevState: AdminFormState, formDa
   revalidatePath('/cliente/pendientes')
   revalidatePath('/cliente/dashboard')
   return { success: reminderDays ? `Pendiente creado y recordatorio configurado desde ${today}.` : 'Pendiente creado correctamente.' }
+}
+
+export async function sendAdminClientMessageAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
+  await requireAdmin()
+  const supabase = await createSupabaseServerClient()
+
+  const parsed = adminClientMessageSchema.safeParse({
+    client_id: formData.get('client_id'),
+    subject: formData.get('subject'),
+    body: formData.get('body'),
+    reply_to_id: formData.get('reply_to_id') || undefined,
+  })
+
+  if (!parsed.success) {
+    return toStateError(parsed.error.issues[0]?.message ?? 'No se pudo enviar el mensaje.')
+  }
+
+  const { client_id, subject, body, reply_to_id } = parsed.data
+  const { error } = await supabase.from('messages').insert({
+    client_id,
+    direction: 'inbound',
+    type: 'message',
+    subject,
+    body,
+    reply_to_id: reply_to_id ?? null,
+  })
+
+  if (error) {
+    return toStateError(`No se pudo enviar el mensaje: ${error.message}`)
+  }
+
+  revalidatePath(`/paneladmin/clientes/${client_id}`)
+  revalidatePath('/cliente/mensajeria')
+  revalidatePath('/cliente/dashboard')
+  return { success: 'Mensaje enviado al portal del cliente.' }
 }
 
 export async function togglePendingItemStatusAction(formData: FormData): Promise<void> {

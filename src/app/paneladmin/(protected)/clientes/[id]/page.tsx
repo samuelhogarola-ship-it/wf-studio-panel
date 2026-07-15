@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { deletePendingItemAction, togglePendingItemStatusAction } from '@/lib/actions/admin'
+import { ClientMessageForm } from '@/components/admin/client-message-form'
 import { PendingItemForm } from '@/components/admin/pending-item-form'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
@@ -58,7 +59,6 @@ export default async function AdminClientDetailPage({ params }: { params: Promis
   const domainPacks = activePacks.filter((pack) => pack.pack_type === 'domain')
   const hostingPacks = activePacks.filter((pack) => pack.pack_type === 'hosting')
   const servicePacks = activePacks.filter((pack) => !['hours', 'domain', 'hosting'].includes(pack.pack_type))
-
   const contractSections = [
     { id: 'bonos-horas', label: 'Bonos de horas', count: hourPacks.length },
     { id: 'dominios', label: 'Dominios', count: domainPacks.length },
@@ -165,6 +165,51 @@ export default async function AdminClientDetailPage({ params }: { params: Promis
                   <span className="rounded-full bg-white px-2.5 py-1 text-xs text-slate-500">{section.count}</span>
                 </a>
               ))}
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Comunicación</p>
+                <h2 className="mt-2 text-xl font-bold text-foreground">Mensajes con el cliente</h2>
+                <p className="mt-1 text-sm text-slate-500">Mensajes visibles en el portal del cliente.</p>
+              </div>
+              <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                {data.messages.length} mensajes
+              </div>
+            </div>
+
+            <ClientMessageForm clientId={client.id} />
+
+            <div className="mt-5 space-y-3">
+              {data.messages.length === 0 ? (
+                <p className="rounded-2xl border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-400">
+                  Todavía no hay mensajes con este cliente.
+                </p>
+              ) : (
+                data.messages.map((message) => {
+                  const isFromClient = message.direction === 'outbound'
+
+                  return (
+                    <div key={message.id} className={`rounded-2xl border p-4 ${isFromClient ? 'border-amber-100 bg-amber-50/60' : 'border-line bg-white'}`}>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-foreground">{message.subject}</p>
+                            <Badge className={isFromClient ? 'bg-amber-100 text-amber-700' : 'bg-sky-50 text-sky-700'}>
+                              {isFromClient ? 'Cliente' : 'Studio'}
+                            </Badge>
+                            {message.type !== 'message' ? <Badge className="bg-slate-100 text-slate-600">{message.type}</Badge> : null}
+                          </div>
+                          <p className="mt-1 text-xs text-slate-400">{formatDate(message.created_at)}</p>
+                          <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-slate-600">{message.body}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </div>
           </Card>
 
