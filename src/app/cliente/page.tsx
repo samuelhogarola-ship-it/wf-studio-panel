@@ -53,6 +53,15 @@ export default async function ClientLoginPage({ searchParams }: ClientLoginPageP
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_20%_90%,rgba(20,80,100,0.08),rgba(0,0,0,0))]" />
       </div>
 
+      <Link
+        href="https://webfuengirola.com/"
+        className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-2 text-sm font-semibold text-white/80 shadow-2xl shadow-black/20 backdrop-blur transition-colors hover:border-white/20 hover:bg-white/[0.1] hover:text-white sm:left-6 sm:top-6"
+        aria-label="Volver a la web principal de Web Fuengirola"
+      >
+        <span aria-hidden="true">←</span>
+        Volver a Web Fuengirola
+      </Link>
+
       <main className="relative z-10 w-full max-w-md py-12">
         {/* Logo + heading */}
         <div className="mb-8 text-center">
