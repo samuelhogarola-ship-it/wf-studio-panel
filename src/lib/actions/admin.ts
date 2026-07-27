@@ -478,6 +478,10 @@ export async function upsertServiceAction(_prevState: AdminFormState, formData: 
   }
 
   revalidatePath('/paneladmin/servicios')
+  revalidatePath('/paneladmin/informes')
+  revalidatePath(`/paneladmin/clientes/${payload.client_id}`)
+  revalidatePath(`/paneladmin/clientes/${payload.client_id}/print/servicios`)
+  revalidatePath(`/paneladmin/clientes/${payload.client_id}/print/historial`)
   return { success: id ? 'Servicio actualizado.' : 'Servicio registrado correctamente.' }
 }
 

@@ -136,13 +136,18 @@ export const getAdminPacksPageData = cache(async (editingId?: string, typeFilter
 export const getClientDetailPageData = cache(async (clientId: string) => {
   const supabase = await createSupabaseServerClient()
 
-  const [{ data: client }, { data: packs }, { data: packSummaries }, { data: recentActivities }] = await Promise.all([
+  const [{ data: client }, { data: packs }, { data: services }, { data: packSummaries }, { data: recentActivities }] = await Promise.all([
     supabase.from('clients').select('id, name, company, email, phone, status, created_at').eq('id', clientId).maybeSingle(),
     supabase
       .from('packs')
       .select('id, name, pack_type, minutes_total, price, purchase_date, renewal_date, status, notes, billing_cycle, paid')
       .eq('client_id', clientId)
       .order('purchase_date', { ascending: false }),
+    supabase
+      .from('services')
+      .select('id, name, service_type, price, service_date, status, notes, pack_id')
+      .eq('client_id', clientId)
+      .order('service_date', { ascending: false }),
     supabase.from('pack_summary').select('*').eq('client_id', clientId),
     supabase
       .from('activities')
@@ -155,6 +160,7 @@ export const getClientDetailPageData = cache(async (clientId: string) => {
   return {
     client,
     packs: packs ?? [],
+    services: services ?? [],
     packSummaries: packSummaries ?? [],
     recentActivities: recentActivities ?? [],
   }

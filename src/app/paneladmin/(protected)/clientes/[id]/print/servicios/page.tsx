@@ -15,6 +15,20 @@ const PACK_TYPE_LABEL: Record<string, string> = {
   service: 'Servicios',
 }
 
+const SERVICE_TYPE_LABEL: Record<string, string> = {
+  bono_horas: 'Bono de horas',
+  pack_cerrado: 'Pack cerrado',
+  diseño: 'Diseño',
+  desarrollo: 'Desarrollo web',
+  seo: 'SEO',
+  marketing: 'Marketing',
+  dominio: 'Dominio',
+  hosting: 'Hosting',
+  mantenimiento: 'Mantenimiento',
+  consultoria: 'Consultoría',
+  otro: 'Otro',
+}
+
 const PACK_TYPE_ORDER = ['hours', 'tasks', 'domain', 'hosting', 'service'] as const
 
 export default async function ClientServiciosReportPage({ params }: { params: Promise<{ id: string }> }) {
@@ -24,9 +38,10 @@ export default async function ClientServiciosReportPage({ params }: { params: Pr
 
   if (!data.client) notFound()
 
-  const { client, packs, packSummaries } = data
+  const { client, packs, services, packSummaries } = data
   const summaryMap = new Map(packSummaries.map((s) => [s.pack_id, s]))
   const activePacks = packs.filter((p) => p.status === 'active')
+  const activeServices = services.filter((service) => service.status === 'active')
   const today = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
 
   const BRAND = '#1a1a2e'
@@ -168,7 +183,39 @@ export default async function ClientServiciosReportPage({ params }: { params: Pr
             )
           })}
 
-          {activePacks.length === 0 && (
+          {activeServices.length > 0 && (
+            <div style={{ marginBottom: '32px' }}>
+              <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, margin: '0 0 14px' }}>
+                Servicios registrados
+              </p>
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {activeServices.map((service) => (
+                  <div key={service.id} style={{ background: '#f8f8fb', border: '1px solid rgba(79,70,229,0.08)', borderRadius: '14px', padding: '18px 22px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+                      <div>
+                        <p style={{ fontWeight: 700, fontSize: '15px', margin: '0 0 5px', color: BRAND }}>{service.name}</p>
+                        <p style={{ fontSize: '13px', color: '#767690', margin: 0 }}>
+                          {SERVICE_TYPE_LABEL[service.service_type] ?? service.service_type} · {formatDate(service.service_date)}
+                        </p>
+                      </div>
+                      {service.price != null && (
+                        <p style={{ fontSize: '14px', fontWeight: 700, color: BRAND, margin: 0, flexShrink: 0 }}>
+                          {Number(service.price).toFixed(2)} €
+                        </p>
+                      )}
+                    </div>
+                    {service.notes && (
+                      <p style={{ fontSize: '13px', color: '#767690', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(0,0,0,0.06)', margin: '10px 0 0' }}>
+                        {service.notes}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activePacks.length === 0 && activeServices.length === 0 && (
             <p style={{ fontSize: '14px', color: '#767690' }}>Sin servicios activos.</p>
           )}
         </div>

@@ -10,6 +10,20 @@ export const dynamic = 'force-dynamic'
 const BRAND = '#1a1a2e'
 const ACCENT = '#4f46e5'
 
+const SERVICE_TYPE_LABEL: Record<string, string> = {
+  bono_horas: 'Bono de horas',
+  pack_cerrado: 'Pack cerrado',
+  diseño: 'Diseño',
+  desarrollo: 'Desarrollo web',
+  seo: 'SEO',
+  marketing: 'Marketing',
+  dominio: 'Dominio',
+  hosting: 'Hosting',
+  mantenimiento: 'Mantenimiento',
+  consultoria: 'Consultoría',
+  otro: 'Otro',
+}
+
 export default async function ClientHistorialReportPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin()
   const { id } = await params
@@ -20,7 +34,7 @@ export default async function ClientHistorialReportPage({ params }: { params: Pr
 
   if (!data.client) notFound()
 
-  const { client, packs } = data
+  const { client, packs, services } = data
   const packMap = new Map(packs.map((p) => [p.id, p]))
   const today = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })
 
@@ -89,6 +103,40 @@ export default async function ClientHistorialReportPage({ params }: { params: Pr
 
           {activities.length === 0 && (
             <p style={{ fontSize: '14px', color: '#767690' }}>Sin actividades registradas.</p>
+          )}
+
+          {services.length > 0 && (
+            <div style={{ marginBottom: '36px' }}>
+              <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, margin: '0 0 14px' }}>Servicios contratados</p>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#f8f8fb' }}>
+                    {['Servicio', 'Tipo', 'Precio', 'Fecha'].map((h) => (
+                      <th key={h} style={{ textAlign: 'left', padding: '8px 12px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: ACCENT }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {services.map((service, i) => (
+                    <>
+                      <tr key={service.id} style={{ background: i % 2 === 0 ? '#fff' : '#fafafa', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                        <td style={{ padding: '10px 12px', fontWeight: 600, color: BRAND }}>{service.name}</td>
+                        <td style={{ padding: '10px 12px', color: '#767690' }}>{SERVICE_TYPE_LABEL[service.service_type] ?? service.service_type}</td>
+                        <td style={{ padding: '10px 12px', color: '#767690', fontWeight: 600 }}>{service.price != null ? `${Number(service.price).toFixed(2)} €` : '—'}</td>
+                        <td style={{ padding: '10px 12px', color: '#767690', whiteSpace: 'nowrap' }}>{formatDate(service.service_date)}</td>
+                      </tr>
+                      {service.notes && (
+                        <tr key={`${service.id}-notes`} style={{ background: i % 2 === 0 ? '#fff' : '#fafafa', borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                          <td colSpan={4} style={{ padding: '0 12px 12px 12px', color: '#9999b0', fontSize: '12px', fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}>
+                            {service.notes}
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
 
           {/* Activities by pack */}
