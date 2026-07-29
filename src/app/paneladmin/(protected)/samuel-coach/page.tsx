@@ -42,6 +42,28 @@ export default async function SamuelCoachAdminPage() {
         ))}
       </section>
 
+      <section className="mb-8">
+        <a
+          href="https://www.samuelcoachdealeman.com/informes-profesor/"
+          target="_blank"
+          rel="noreferrer"
+          className="block rounded-lg border border-line bg-white p-6 transition hover:border-brand/40 hover:shadow-sm"
+        >
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-brand">Mini classroom</p>
+              <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground">Informes de alumnos</h2>
+              <p className="mt-2 max-w-2xl text-sm text-muted">
+                Acceso rápido al generador de informes con alumnos, borradores y seguimiento guardado.
+              </p>
+            </div>
+            <span className="inline-flex w-fit items-center rounded px-4 py-2 text-sm font-bold text-white bg-brand">
+              Abrir herramienta
+            </span>
+          </div>
+        </a>
+      </section>
+
       {/* By nivel */}
       <section className="mb-8">
         <h2 className="text-sm font-semibold uppercase tracking-widest text-muted mb-3">Por nivel</h2>
