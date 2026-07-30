@@ -106,7 +106,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
               ))}
             </div>
           ) : null}
-          {invoice.clients?.email ? (
+          {!invoice.clients?.company && invoice.clients?.email ? (
             <p style={{ fontSize: '14px', color: '#767676', marginTop: '4px' }}>{invoice.clients.email}</p>
           ) : null}
         </div>

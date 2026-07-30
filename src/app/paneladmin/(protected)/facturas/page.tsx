@@ -13,6 +13,11 @@ import { formatDate } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
 
+function getBillingEmail(company: string | null | undefined, fallbackEmail: string | null | undefined) {
+  const fiscalEmail = company?.match(/[^\s@]+@[^\s@]+\.[^\s@]+/)?.[0]
+  return fiscalEmail ?? fallbackEmail ?? ''
+}
+
 export default async function AdminFacturasPage() {
   const identity = await requireAdmin()
   const data = await getInvoicesPageData()
@@ -60,7 +65,7 @@ export default async function AdminFacturasPage() {
                     <td className="px-6 py-4 font-mono text-sm font-semibold text-foreground">{invoice.number}</td>
                     <td className="px-6 py-4">
                       <p className="font-semibold text-foreground">{invoice.clients?.company?.split('\n')[0] ?? invoice.clients?.name ?? '—'}</p>
-                      <p className="text-slate-500">{invoice.clients?.email ?? ''}</p>
+                      <p className="text-slate-500">{getBillingEmail(invoice.clients?.company, invoice.clients?.email)}</p>
                     </td>
                     <td className="max-w-[200px] px-6 py-4 text-slate-600">
                       <p className="line-clamp-2">{invoice.concept}</p>
