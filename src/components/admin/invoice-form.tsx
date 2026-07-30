@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea'
 type ClientOption = {
   id: string
   name: string
+  company: string | null
   email: string
   status: string
 }
@@ -37,7 +38,7 @@ export function InvoiceForm({ clients, locale }: { clients: ClientOption[]; loca
             <option value="">{t(locale, 'invoiceForm.client.placeholder')}</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
-                {client.name} · {client.email}
+                {client.company ? `${client.company.split('\n')[0]} · ` : ''}{client.name} · {client.email}
               </option>
             ))}
           </Select>

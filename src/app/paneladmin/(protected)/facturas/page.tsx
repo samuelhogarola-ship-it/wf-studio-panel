@@ -59,7 +59,7 @@ export default async function AdminFacturasPage() {
                   <tr key={invoice.id}>
                     <td className="px-6 py-4 font-mono text-sm font-semibold text-foreground">{invoice.number}</td>
                     <td className="px-6 py-4">
-                      <p className="font-semibold text-foreground">{invoice.clients?.name ?? '—'}</p>
+                      <p className="font-semibold text-foreground">{invoice.clients?.company?.split('\n')[0] ?? invoice.clients?.name ?? '—'}</p>
                       <p className="text-slate-500">{invoice.clients?.email ?? ''}</p>
                     </td>
                     <td className="max-w-[200px] px-6 py-4 text-slate-600">
