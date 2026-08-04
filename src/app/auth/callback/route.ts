@@ -15,8 +15,10 @@ function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
+  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? ''
+  const isAdminHost = host.startsWith('admin.')
   const next = sanitizeInternalRedirect(requestUrl.searchParams.get('next'), {
-    fallback: '/cliente/dashboard',
+    fallback: isAdminHost ? '/paneladmin/inicio' : '/cliente/dashboard',
   })
   const appUrl = getAppBaseUrl(request, requestUrl)
   const successUrl = new URL(next, appUrl)

@@ -6,7 +6,10 @@ import { getLocale } from '@/lib/locale'
 
 export const dynamic = 'force-dynamic'
 
-type SubLink = { label: string; href: string }
+const SUPERENTRENADOR_URL = process.env.NEXT_PUBLIC_SUPERENTRENADOR_URL ?? 'https://superentrenador.com'
+const COACH_STUDIO_URL = process.env.NEXT_PUBLIC_COACH_STUDIO_URL ?? 'https://coach.superentrenador.com'
+
+type SubLink = { label: string; href: string; external?: boolean }
 type Panel = {
   title: string
   description: string
@@ -111,6 +114,26 @@ const PANELS: Panel[] = [
     links: [
       { label: 'Panel PT', href: '/paneladmin/superentrenador/pt' },
       { label: 'Usuarios', href: '/paneladmin/superentrenador/usuarios' },
+      { label: 'Admin marketplace (aprobar anuncios)', href: `${SUPERENTRENADOR_URL}/admin/entrenadores`, external: true },
+      { label: 'Mi panel de entrenador (marketplace)', href: `${SUPERENTRENADOR_URL}/dashboard`, external: true },
+      { label: 'Mis anuncios (marketplace)', href: `${SUPERENTRENADOR_URL}/mis-anuncios`, external: true },
+      { label: 'Mi panel de entrenador (Coach Studio)', href: `${COACH_STUDIO_URL}/app/pt`, external: true },
+      { label: 'Vista alumno (Coach Studio)', href: `${COACH_STUDIO_URL}/app/client`, external: true },
+    ],
+  },
+  {
+    title: 'Agama Marketplace',
+    description: 'Empresas, anuncios y usuarios de la plataforma de reciclado.',
+    color: 'from-emerald-600 to-emerald-900',
+    href: '/paneladmin/todoplastico',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="1 4 1 10 7 10" /><polyline points="23 20 23 14 17 14" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+      </svg>
+    ),
+    links: [
+      { label: 'Empresas', href: '/paneladmin/todoplastico?view=empresas' },
+      { label: 'Anuncios', href: '/paneladmin/todoplastico?view=anuncios' },
     ],
   },
 ]
@@ -149,13 +172,28 @@ export default async function LauncherPage() {
               <ul className="space-y-1">
                 {panel.links.map((link) => (
                   <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                    >
-                      <span className="h-1 w-1 rounded-full bg-slate-300 flex-shrink-0" />
-                      {link.label}
-                    </Link>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                      >
+                        <span className="h-1 w-1 rounded-full bg-slate-300 flex-shrink-0" />
+                        {link.label}
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-slate-400">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                      >
+                        <span className="h-1 w-1 rounded-full bg-slate-300 flex-shrink-0" />
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
