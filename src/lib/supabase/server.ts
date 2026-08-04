@@ -41,15 +41,16 @@ export function createSupabaseAdminClient() {
   return createClient<Database>(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-export async function createSupabaseServerClient() {
+export async function createSupabaseServerClient(options: { supabaseKey?: string } = {}) {
   const cookieStore = await cookies()
   const env = getPublicEnv()
+  const supabaseKey = options.supabaseKey ?? env.supabaseKey
 
-  if (!env.supabaseUrl || !env.supabaseKey) {
+  if (!env.supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase public environment variables')
   }
 
-  return createServerClient<Database>(env.supabaseUrl, env.supabaseKey, {
+  return createServerClient<Database>(env.supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll()

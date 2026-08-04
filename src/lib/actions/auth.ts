@@ -18,10 +18,21 @@ export async function adminLoginAction(_prevState: AuthFormState, formData: Form
   const password = String(formData.get('password') ?? '')
   const supabase = await createSupabaseServerClient()
 
-  const { error } = await supabase.auth.signInWithPassword({
+  let { error } = await supabase.auth.signInWithPassword({
     email,
     password,
   })
+
+  if (error && process.env.SUPABASE_SECRET_KEY) {
+    const serverAuth = await createSupabaseServerClient({
+      supabaseKey: process.env.SUPABASE_SECRET_KEY,
+    })
+    const result = await serverAuth.auth.signInWithPassword({
+      email,
+      password,
+    })
+    error = result.error
+  }
 
   if (error) {
     return { error: 'No se pudo iniciar sesión. Revisa el email y la contraseña.' }
