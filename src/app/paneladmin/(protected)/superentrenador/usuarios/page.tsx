@@ -11,7 +11,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
   const identity = await requireAdmin()
   const locale = await getLocale()
   const { q } = await searchParams
-  const { users, stats } = await getSuperEntrenadorUsuariosData(q ?? '')
+  let data: Awaited<ReturnType<typeof getSuperEntrenadorUsuariosData>> | null = null
+  let error: string | null = null
+
+  try {
+    data = await getSuperEntrenadorUsuariosData(q ?? '')
+  } catch (cause) {
+    error = cause instanceof Error ? cause.message : 'No se pudo conectar con los usuarios de Superentrenador.'
+  }
+
+  const users = data?.users ?? []
+  const stats = data?.stats ?? { total: 0, confirmed: 0, unconfirmed: 0 }
 
   return (
     <AdminShell
@@ -21,6 +31,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
       userEmail={identity.email}
       locale={locale}
     >
+      {error ? (
+        <Card className="mb-8 border-amber-200 bg-amber-50 p-5">
+          <p className="font-semibold text-amber-900">Conexión de usuarios pendiente</p>
+          <p className="mt-1 text-sm text-amber-800">
+            Revisa <code>SUPERENTRENADOR_URL</code> y <code>SUPERENTRENADOR_SERVICE_KEY</code> en Coolify.
+          </p>
+          <p className="mt-2 text-xs text-amber-700">{error}</p>
+        </Card>
+      ) : null}
+
       <section className="grid gap-4 md:grid-cols-3 mb-8">
         <Card className="p-5">
           <p className="text-sm text-muted">Total registrados</p>
