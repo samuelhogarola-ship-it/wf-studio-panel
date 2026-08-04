@@ -6,7 +6,10 @@ import { getLocale } from '@/lib/locale'
 
 export const dynamic = 'force-dynamic'
 
-type SubLink = { label: string; href: string }
+const MARKETPLACE_URL = process.env.NEXT_PUBLIC_SUPERENTRENADOR_URL ?? 'https://superentrenador.com'
+const COACH_STUDIO_URL = process.env.NEXT_PUBLIC_COACH_STUDIO_URL ?? 'https://coach.superentrenador.com'
+
+type SubLink = { label: string; href: string; external?: boolean }
 type Panel = {
   title: string
   description: string
@@ -111,6 +114,11 @@ const PANELS: Panel[] = [
     links: [
       { label: 'Panel PT', href: '/paneladmin/superentrenador/pt' },
       { label: 'Usuarios', href: '/paneladmin/superentrenador/usuarios' },
+      { label: 'Admin marketplace (aprobar anuncios)', href: `${MARKETPLACE_URL}/admin/entrenadores`, external: true },
+      { label: 'Mi panel de entrenador (marketplace)', href: `${MARKETPLACE_URL}/dashboard`, external: true },
+      { label: 'Mis anuncios (marketplace)', href: `${MARKETPLACE_URL}/mis-anuncios`, external: true },
+      { label: 'Mi panel de entrenador (Coach Studio)', href: `${COACH_STUDIO_URL}/app/pt`, external: true },
+      { label: 'Vista alumno (Coach Studio)', href: `${COACH_STUDIO_URL}/app/client`, external: true },
     ],
   },
 ]
@@ -149,13 +157,28 @@ export default async function LauncherPage() {
               <ul className="space-y-1">
                 {panel.links.map((link) => (
                   <li key={link.href}>
-                    <Link
-                      href={link.href}
-                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                    >
-                      <span className="h-1 w-1 rounded-full bg-slate-300 flex-shrink-0" />
-                      {link.label}
-                    </Link>
+                    {link.external ? (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                      >
+                        <span className="h-1 w-1 rounded-full bg-slate-300 flex-shrink-0" />
+                        {link.label}
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 text-slate-400">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                      </a>
+                    ) : (
+                      <Link
+                        href={link.href}
+                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
+                      >
+                        <span className="h-1 w-1 rounded-full bg-slate-300 flex-shrink-0" />
+                        {link.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
