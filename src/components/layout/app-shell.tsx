@@ -138,6 +138,11 @@ export function AdminShell({
           label: 'Superentrenador',
           icon: panelIcon,
         },
+        {
+          href: '/paneladmin/todoplastico',
+          label: 'TodoPlástico',
+          icon: panelIcon,
+        },
       ],
     },
   ]
