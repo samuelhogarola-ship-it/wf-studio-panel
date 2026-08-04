@@ -27,13 +27,6 @@ export function createImKontextAdminClient() {
   return createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-export function createTodoPlasticoAdminClient() {
-  const url = process.env.TODO_PLASTICO_URL
-  const serviceKey = process.env.TODO_PLASTICO_SERVICE_KEY
-  if (!url || !serviceKey) throw new Error('Missing TODO_PLASTICO_URL or TODO_PLASTICO_SERVICE_KEY env vars')
-  return createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
-}
-
 export function createSupabaseAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SECRET_KEY
@@ -41,16 +34,15 @@ export function createSupabaseAdminClient() {
   return createClient<Database>(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-export async function createSupabaseServerClient(options: { supabaseKey?: string } = {}) {
+export async function createSupabaseServerClient() {
   const cookieStore = await cookies()
   const env = getPublicEnv()
-  const supabaseKey = options.supabaseKey ?? env.supabaseKey
 
-  if (!env.supabaseUrl || !supabaseKey) {
+  if (!env.supabaseUrl || !env.supabaseKey) {
     throw new Error('Missing Supabase public environment variables')
   }
 
-  return createServerClient<Database>(env.supabaseUrl, supabaseKey, {
+  return createServerClient<Database>(env.supabaseUrl, env.supabaseKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll()

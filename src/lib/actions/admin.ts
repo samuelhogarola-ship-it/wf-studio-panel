@@ -60,11 +60,6 @@ function toStateError(message: string): AdminFormState {
   return { error: message }
 }
 
-function formString(formData: FormData, name: string, fallback = '') {
-  const value = formData.get(name)
-  return typeof value === 'string' ? value : fallback
-}
-
 function getClientListPath(project: string) {
   if (project === 'vivir-fuengirola') return '/paneladmin/vivir-en-fuengirola/clientes'
   if (project === 'conoce-fuengirola') return '/paneladmin/conoce-fuengirola/clientes'
@@ -206,19 +201,19 @@ export async function upsertPackAction(_prevState: AdminFormState, formData: For
   await requireAdmin()
   const supabase = await createSupabaseServerClient()
   const parsed = packSchema.safeParse({
-    id: formString(formData, 'id'),
-    client_id: formString(formData, 'client_id'),
-    name: formString(formData, 'name'),
-    pack_type: formString(formData, 'pack_type'),
-    hours_total: formString(formData, 'hours_total') || 0,
-    price: formString(formData, 'price') || Number.NaN,
-    invoice_number: formString(formData, 'invoice_number'),
-    purchase_date: formString(formData, 'purchase_date'),
-    renewal_date: formString(formData, 'renewal_date'),
-    billing_cycle: formString(formData, 'billing_cycle', 'one_time') || 'one_time',
-    paid: formString(formData, 'paid', 'false') || 'false',
-    status: formString(formData, 'status'),
-    notes: formString(formData, 'notes'),
+    id: formData.get('id'),
+    client_id: formData.get('client_id'),
+    name: formData.get('name'),
+    pack_type: formData.get('pack_type'),
+    hours_total: formData.get('hours_total') || 0,
+    price: formData.get('price') || Number.NaN,
+    invoice_number: formData.get('invoice_number'),
+    purchase_date: formData.get('purchase_date'),
+    renewal_date: formData.get('renewal_date'),
+    billing_cycle: formData.get('billing_cycle') || 'one_time',
+    paid: formData.get('paid') || 'false',
+    status: formData.get('status'),
+    notes: formData.get('notes'),
   })
 
   if (!parsed.success) {
