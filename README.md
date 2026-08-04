@@ -21,10 +21,10 @@ Subapp independiente para WF-Studio con:
 
 ## Instalación
 
-1. Entra en la carpeta:
+1. Clona el repo:
 
 ```bash
-cd apps/studio-panel
+git clone https://github.com/samuelhogarola-ship-it/wf-studio-panel.git
 ```
 
 2. Instala dependencias:
@@ -82,7 +82,7 @@ where email = 'tu-admin@dominio.com';
 
 ## CI
 
-El workflow `.github/workflows/studio-panel-ci.yml` se ejecuta automáticamente en push/PR a `main` cuando cambian archivos bajo `apps/studio-panel/` o `supabase/migrations/`.
+El workflow `.github/workflows/ci.yml` se ejecuta automáticamente en push/PR a `main`.
 
 Pasos: `npm ci` → `npm run lint` → `npm run typecheck` → `npm test` → `npm run build`.
 
@@ -134,7 +134,7 @@ Fallback legado aceptado por código:
 
 ### Nota sobre `outputFileTracingRoot`
 
-`next.config.ts` define `outputFileTracingRoot` apuntando a la raíz del repo (`../../` desde `apps/studio-panel/`). Esto es relevante solo si se activa `output: 'standalone'` en el futuro. Con el build por defecto no tiene efecto.
+`next.config.ts` define `outputFileTracingRoot` apuntando a la raíz del repo (`__dirname`). Esto es relevante solo si se activa `output: 'standalone'` en el futuro. Con el build por defecto no tiene efecto.
 
 ## Notas de funcionamiento
 
@@ -149,4 +149,4 @@ Fallback legado aceptado por código:
 
 Para la configuración operativa completa de auth, dominios, migraciones y claves necesarias para reutilizar este patrón en otras apps, ver:
 
-- [`AUTH_SETUP.md`](/Users/sam/Desktop/webs/web%20fuengirola/apps/studio-panel/AUTH_SETUP.md)
+- [`AUTH_SETUP.md`](AUTH_SETUP.md)
