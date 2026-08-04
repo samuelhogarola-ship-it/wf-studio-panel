@@ -1,6 +1,6 @@
 const publicEnv = {
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-  supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.trim(),
+  supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim(),
 }
 
 export function getPublicEnv() {
@@ -8,7 +8,7 @@ export function getPublicEnv() {
 }
 
 export function getRequiredServerEnv(name: keyof NodeJS.ProcessEnv) {
-  const value = process.env[name]
+  const value = process.env[name]?.trim()
 
   if (!value) {
     throw new Error(`Missing environment variable: ${name}`)

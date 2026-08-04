@@ -24,10 +24,17 @@ export async function adminLoginAction(_prevState: AuthFormState, formData: Form
   })
 
   if (error) {
+    console.warn('[auth/admin/password] signInWithPassword failed', {
+      email,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? null,
+      publicKeyPrefix: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim().slice(0, 24) ?? null,
+      message: error.message,
+      status: error.status,
+    })
     return { error: 'No se pudo iniciar sesión. Revisa el email y la contraseña.' }
   }
 
-  redirect('/paneladmin/dashboard')
+  redirect('/paneladmin/inicio')
 }
 
 export async function clientPasswordLoginAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
