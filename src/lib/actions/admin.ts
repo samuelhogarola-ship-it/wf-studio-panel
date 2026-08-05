@@ -307,15 +307,15 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
   await requireAdmin()
   const supabase = await createSupabaseServerClient()
   const parsed = activitySchema.safeParse({
-    client_id: formData.get('client_id'),
-    pack_id: formData.get('pack_id'),
-    activity_type: formData.get('activity_type'),
-    title: formData.get('title'),
-    description: formData.get('description'),
-    hours_used: formData.get('hours_used') || 0,
-    minutes_direct: formData.get('minutes_direct') ?? undefined,
-    work_date: formData.get('work_date'),
-    notify_client: formData.get('notify_client') ?? undefined,
+    client_id: formString(formData, 'client_id'),
+    pack_id: formString(formData, 'pack_id'),
+    activity_type: formString(formData, 'activity_type'),
+    title: formString(formData, 'title'),
+    description: formString(formData, 'description'),
+    hours_used: formString(formData, 'hours_used') || 0,
+    minutes_direct: formString(formData, 'minutes_direct') || undefined,
+    work_date: formString(formData, 'work_date'),
+    notify_client: formString(formData, 'notify_client') || undefined,
   })
 
   if (!parsed.success) {
