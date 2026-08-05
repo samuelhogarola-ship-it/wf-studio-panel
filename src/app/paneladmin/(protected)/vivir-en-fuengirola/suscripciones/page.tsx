@@ -100,7 +100,7 @@ export default async function Page() {
             </tbody>
           </table>
           {data.packs.length === 0 && (
-            <p className="px-6 py-10 text-sm text-muted">No hay suscripciones todavía. Créalas desde la sección Horas del panel.</p>
+            <p className="px-6 py-10 text-sm text-muted">No hay suscripciones todavía. Créalas desde la sección Bonos del panel.</p>
           )}
         </div>
       </Card>

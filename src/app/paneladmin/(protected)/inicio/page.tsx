@@ -32,7 +32,7 @@ const PANELS: Panel[] = [
     ),
     links: [
       { label: 'Clientes', href: '/paneladmin/clientes' },
-      { label: 'Horas / Bonos', href: '/paneladmin/bonos' },
+      { label: 'Bonos', href: '/paneladmin/bonos' },
       { label: 'Facturas', href: '/paneladmin/facturas' },
       { label: 'Servicios', href: '/paneladmin/servicios' },
       { label: 'Actividades', href: '/paneladmin/actividades' },

@@ -161,7 +161,7 @@ export default async function AdminClientsPage({
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {hasHours && <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">Horas</span>}
+                        {hasHours && <span className="rounded-full bg-brand/10 px-2 py-0.5 text-xs font-semibold text-brand">Bonos</span>}
                         {hasCerrado && <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-700">Pack</span>}
                         {hasServices && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">Servicios</span>}
                       </div>
