@@ -77,6 +77,46 @@ export async function sendPackDepletedEmail({
   })
 }
 
+export async function sendPackStartedEmail({
+  clientEmail,
+  clientName,
+  previousPackNames,
+  packName,
+  totalMinutes,
+}: {
+  clientEmail: string
+  clientName: string
+  previousPackNames: string[]
+  packName: string
+  totalMinutes: number
+}) {
+  const resend = getResend()
+  const previousText = previousPackNames.length
+    ? previousPackNames.map((name) => `  • ${name}`).join('\n')
+    : '  • Bonos anteriores de horas'
+
+  return resend.emails.send({
+    from: getRequiredServerEnv('RESEND_FROM_EMAIL'),
+    to: clientEmail,
+    subject: `[WF-Studio] Nuevo bono iniciado — ${packName}`,
+    text: [
+      `Hola ${clientName},`,
+      '',
+      'Los bonos anteriores de horas ya se han completado y hemos empezado el nuevo bono:',
+      '',
+      `Nuevo bono: ${packName}`,
+      `Tiempo contratado: ${formatDuration(totalMinutes)}`,
+      '',
+      'Bonos anteriores completados:',
+      previousText,
+      '',
+      'A partir de ahora, el trabajo se registrará en este nuevo bono desde tu panel.',
+      '',
+      '— WF-Studio',
+    ].join('\n'),
+  })
+}
+
 export async function sendActivityNotificationEmail({
   clientEmail,
   clientName,

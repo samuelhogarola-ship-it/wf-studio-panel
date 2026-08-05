@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { PackActivityForm } from '@/components/admin/pack-activity-form'
+import { PackTransitionEmailForm } from '@/components/admin/pack-transition-email-form'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -139,6 +140,10 @@ export default async function PackDetailPage({
 
         {pack.notes && (
           <p className="mt-4 text-sm text-slate-500 border-t border-line pt-4">{pack.notes}</p>
+        )}
+
+        {isHoursPack && pack.status === 'active' && client?.email && (
+          <PackTransitionEmailForm packId={id} />
         )}
       </Card>
 

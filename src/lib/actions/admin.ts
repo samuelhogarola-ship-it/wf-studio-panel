@@ -5,7 +5,7 @@ import { z } from 'zod'
 
 import { requireAdmin } from '@/lib/auth'
 import { ACTIVITY_TYPES } from '@/lib/activity-types'
-import { sendActivityNotificationEmail, sendPackDepletedEmail, sendPendingItemCreatedEmail } from '@/lib/email'
+import { sendActivityNotificationEmail, sendPackDepletedEmail, sendPackStartedEmail, sendPendingItemCreatedEmail } from '@/lib/email'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -253,6 +253,54 @@ export async function upsertPackAction(_prevState: AdminFormState, formData: For
   revalidatePath('/paneladmin/bonos')
   revalidatePath('/paneladmin/dashboard')
   return { success: payload.id ? 'Pack actualizado correctamente.' : 'Pack creado correctamente.' }
+}
+
+export async function sendPackStartedEmailAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
+  await requireAdmin()
+  const packId = formString(formData, 'pack_id')
+  if (!packId) return toStateError('No se ha indicado el bono.')
+
+  const supabase = await createSupabaseServerClient()
+  const { data: pack } = await supabase
+    .from('packs')
+    .select('id, name, pack_type, minutes_total, client_id, clients(name, email)')
+    .eq('id', packId)
+    .maybeSingle()
+
+  const client = pack && !Array.isArray(pack.clients) ? pack.clients : null
+  if (!pack || pack.pack_type !== 'hours' || !client?.email) {
+    return toStateError('No se pudo encontrar un bono de horas con un email de cliente válido.')
+  }
+
+  const [{ data: previousPacks }, { data: previousSummaries }] = await Promise.all([
+    supabase
+      .from('packs')
+      .select('id, name, status, minutes_total')
+      .eq('client_id', pack.client_id)
+      .eq('pack_type', 'hours')
+      .neq('id', pack.id)
+      .order('purchase_date', { ascending: false }),
+    supabase.from('pack_summary').select('pack_id, remaining_minutes').eq('client_id', pack.client_id),
+  ])
+
+  const summaryMap = new Map((previousSummaries ?? []).map((summary) => [summary.pack_id, Number(summary.remaining_minutes ?? 0)]))
+  const completedNames = (previousPacks ?? [])
+    .filter((previousPack) => previousPack.status === 'completed' || summaryMap.get(previousPack.id) !== undefined && summaryMap.get(previousPack.id)! <= 0)
+    .map((previousPack) => previousPack.name)
+
+  try {
+    await sendPackStartedEmail({
+      clientEmail: client.email,
+      clientName: client.name ?? 'cliente',
+      previousPackNames: completedNames,
+      packName: pack.name,
+      totalMinutes: Number(pack.minutes_total ?? 0),
+    })
+  } catch {
+    return toStateError('El bono existe, pero no se pudo enviar el email.')
+  }
+
+  return { success: `Aviso enviado a ${client.email}.` }
 }
 
 export async function createActivityAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
