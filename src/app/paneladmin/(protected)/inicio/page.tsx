@@ -52,6 +52,7 @@ const PANELS: Panel[] = [
     links: [
       { label: 'Clientes', href: '/paneladmin/vivir-en-fuengirola/clientes' },
       { label: 'Suscripciones', href: '/paneladmin/vivir-en-fuengirola/suscripciones' },
+      { label: 'Negocios', href: '/paneladmin/vivir-en-fuengirola/negocios' },
     ],
   },
   {

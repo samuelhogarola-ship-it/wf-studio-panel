@@ -14,7 +14,7 @@ export type AdminFormState = {
   success?: string
 }
 
-const PROJECT_VALUES = ['wf-studio', 'vivir-fuengirola', 'conoce-fuengirola'] as const
+const PROJECT_VALUES = ['wf-studio', 'vivir-fuengirola', 'vivir-fuengirola-negocios', 'conoce-fuengirola'] as const
 const PACK_TYPE_VALUES = ['hours', 'tasks', 'domain', 'hosting', 'service', 'subscription', 'membership'] as const
 const BILLING_CYCLE_VALUES = ['one_time', 'monthly'] as const
 
@@ -67,6 +67,7 @@ function formString(formData: FormData, name: string, fallback = '') {
 
 function getClientListPath(project: string) {
   if (project === 'vivir-fuengirola') return '/paneladmin/vivir-en-fuengirola/clientes'
+  if (project === 'vivir-fuengirola-negocios') return '/paneladmin/vivir-en-fuengirola/negocios'
   if (project === 'conoce-fuengirola') return '/paneladmin/conoce-fuengirola/clientes'
   return '/paneladmin/clientes'
 }
