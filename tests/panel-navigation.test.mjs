@@ -22,6 +22,20 @@ test("launcher keeps marketplace visible before the lower panel row", async () =
   );
 });
 
+test("launcher keeps company and admin marketplace links on Agama, not Superentrenador", async () => {
+  const source = await readSource("src/app/paneladmin/(protected)/inicio/page.tsx");
+
+  const agamaSection = source.slice(
+    source.indexOf("title: 'Agama Marketplace'"),
+    source.indexOf("title: 'Superentrenador'"),
+  );
+  const superentrenadorSection = source.slice(source.indexOf("title: 'Superentrenador'"));
+
+  assert.match(agamaSection, /Panel empresa/);
+  assert.match(agamaSection, /Panel admin/);
+  assert.doesNotMatch(superentrenadorSection, /Admin marketplace|Mi panel de entrenador|Mis anuncios|Coach Studio/);
+});
+
 test("admin shell allows page content and navigation to scroll", async () => {
   const source = await readSource("src/components/layout/app-shell.tsx");
 

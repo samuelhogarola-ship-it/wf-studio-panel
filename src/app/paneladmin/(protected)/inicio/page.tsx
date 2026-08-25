@@ -6,8 +6,8 @@ import { getLocale } from '@/lib/locale'
 
 export const dynamic = 'force-dynamic'
 
-const SUPERENTRENADOR_URL = process.env.NEXT_PUBLIC_SUPERENTRENADOR_URL ?? 'https://superentrenador.com'
-const COACH_STUDIO_URL = process.env.NEXT_PUBLIC_COACH_STUDIO_URL ?? 'https://coach.superentrenador.com'
+const TODO_PLASTICO_PUBLIC_URL = process.env.NEXT_PUBLIC_TODO_PLASTICO_PUBLIC_URL ?? 'https://agama.eco'
+const TODO_PLASTICO_ADMIN_URL = process.env.NEXT_PUBLIC_TODO_PLASTICO_ADMIN_URL ?? 'https://agama.eco/admin'
 
 type SubLink = { label: string; href: string; external?: boolean }
 type Panel = {
@@ -113,8 +113,8 @@ const PANELS: Panel[] = [
       </svg>
     ),
     links: [
-      { label: 'Empresas', href: '/paneladmin/todoplastico?view=empresas' },
-      { label: 'Anuncios', href: '/paneladmin/todoplastico?view=anuncios' },
+      { label: 'Panel empresa', href: `${TODO_PLASTICO_PUBLIC_URL}/dashboard`, external: true },
+      { label: 'Panel admin', href: TODO_PLASTICO_ADMIN_URL, external: true },
     ],
   },
   {
@@ -130,11 +130,6 @@ const PANELS: Panel[] = [
     links: [
       { label: 'Panel PT', href: '/paneladmin/superentrenador/pt' },
       { label: 'Usuarios', href: '/paneladmin/superentrenador/usuarios' },
-      { label: 'Admin marketplace (aprobar anuncios)', href: `${SUPERENTRENADOR_URL}/admin/entrenadores`, external: true },
-      { label: 'Mi panel de entrenador (marketplace)', href: `${SUPERENTRENADOR_URL}/dashboard`, external: true },
-      { label: 'Mis anuncios (marketplace)', href: `${SUPERENTRENADOR_URL}/mis-anuncios`, external: true },
-      { label: 'Mi panel de entrenador (Coach Studio)', href: `${COACH_STUDIO_URL}/app/pt`, external: true },
-      { label: 'Vista alumno (Coach Studio)', href: `${COACH_STUDIO_URL}/app/client`, external: true },
     ],
   },
 ]
