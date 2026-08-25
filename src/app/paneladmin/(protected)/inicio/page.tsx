@@ -37,6 +37,7 @@ const PANELS: Panel[] = [
       { label: 'Servicios', href: '/paneladmin/servicios' },
       { label: 'Actividades', href: '/paneladmin/actividades' },
       { label: 'Informes', href: '/paneladmin/informes' },
+      { label: 'Estadísticas', href: '/paneladmin/dashboard#estadisticas' },
     ],
   },
   {
@@ -53,6 +54,7 @@ const PANELS: Panel[] = [
       { label: 'Clientes', href: '/paneladmin/vivir-en-fuengirola/clientes' },
       { label: 'Suscripciones', href: '/paneladmin/vivir-en-fuengirola/suscripciones' },
       { label: 'Negocios', href: '/paneladmin/vivir-en-fuengirola/negocios' },
+      { label: 'Estadísticas', href: '/paneladmin/vivir-en-fuengirola#estadisticas' },
     ],
   },
   {
@@ -68,6 +70,7 @@ const PANELS: Panel[] = [
     links: [
       { label: 'Clientes', href: '/paneladmin/conoce-fuengirola/clientes' },
       { label: 'Suscripciones', href: '/paneladmin/conoce-fuengirola/suscripciones' },
+      { label: 'Estadísticas', href: '/paneladmin/conoce-fuengirola#estadisticas' },
     ],
   },
   {
@@ -84,6 +87,7 @@ const PANELS: Panel[] = [
       { label: 'Alumnos', href: '/paneladmin/samuel-coach/alumnos' },
       { label: 'Ejercicios', href: '/paneladmin/samuel-coach/ejercicios' },
       { label: 'Progreso', href: '/paneladmin/samuel-coach/progreso' },
+      { label: 'Estadísticas', href: '/paneladmin/samuel-coach#estadisticas' },
     ],
   },
   {
@@ -100,6 +104,7 @@ const PANELS: Panel[] = [
       { label: 'Vokabel-Lab', href: '/paneladmin/vokabel-world/vokabel-lab' },
       { label: 'imKontext', href: '/paneladmin/vokabel-world/imkontext' },
       { label: 'Der Die Das', href: '/paneladmin/vokabel-world/derdiedas' },
+      { label: 'Estadísticas', href: '/paneladmin/vokabel-world#estadisticas' },
     ],
   },
   {
@@ -115,6 +120,7 @@ const PANELS: Panel[] = [
     links: [
       { label: 'Panel empresa', href: `${TODO_PLASTICO_PUBLIC_URL}/dashboard`, external: true },
       { label: 'Panel admin', href: TODO_PLASTICO_ADMIN_URL, external: true },
+      { label: 'Estadísticas', href: '/paneladmin/todoplastico#estadisticas' },
     ],
   },
   {
@@ -130,6 +136,7 @@ const PANELS: Panel[] = [
     links: [
       { label: 'Panel PT', href: '/paneladmin/superentrenador/pt' },
       { label: 'Usuarios', href: '/paneladmin/superentrenador/usuarios' },
+      { label: 'Estadísticas', href: '/paneladmin/superentrenador/pt#estadisticas' },
     ],
   },
 ]

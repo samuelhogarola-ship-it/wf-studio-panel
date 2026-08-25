@@ -110,6 +110,7 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 | `STAT_REPORT_UMAMI_PASSWORD`           | Contraseña de Umami                                                                |
 | `STAT_REPORT_EMAIL_TO`                 | Destinatario del informe mensual                                                   |
 | `STAT_REPORT_STORAGE_DIR`              | Carpeta persistente para informes, por ejemplo `/app/storage/stat-reports`         |
+| `STAT_REPORT_UMAMI_WEBSITE_ID_*`       | UUID opcional de cada web; el panel intenta resolverlo por dominio si falta        |
 
 > `APP_URL` es ahora la referencia canónica del servidor para auth y callbacks. `NEXT_PUBLIC_APP_URL` debe apuntar al mismo dominio para evitar discrepancias entre servidor y cliente.
 
@@ -128,6 +129,26 @@ curl -X POST https://admin.webfuengirola.com/api/monthly-stat-reports -H "Author
 ```
 
 Configura también las variables `STAT_REPORT_UMAMI_WEBSITE_ID_*` de `.env.example` para fijar los UUIDs de cada web.
+
+### Estadísticas en vivo e históricas
+
+Cada proyecto del panel incluye un bloque común de estadísticas de Umami. La vista `En vivo` muestra visitantes activos y las últimas 24 horas, con actualización automática cada minuto. La vista `Histórico` permite consultar 7, 30 y 90 días, 6 meses o 1 año.
+
+El bloque incluye páginas vistas, visitantes, visitas, rebote, tiempo, páginas por visita, evolución temporal, contenido, entradas y salidas, referencias, canales, ubicación, dispositivos, navegadores, sistemas operativos y eventos. Las dimensiones no disponibles en la versión instalada de Umami se ocultan como `Sin datos` sin impedir que cargue el resto.
+
+La URL, usuario y contraseña de Umami son variables compartidas con el generador mensual. Para los proyectos visibles en WF Panel existen estos UUID opcionales:
+
+```text
+STAT_REPORT_UMAMI_WEBSITE_ID_WEBFUENGIROLA
+STAT_REPORT_UMAMI_WEBSITE_ID_VIVIRENFUENGIROLA
+STAT_REPORT_UMAMI_WEBSITE_ID_CONOCEF
+STAT_REPORT_UMAMI_WEBSITE_ID_SAMUELCOACHDEALEMAN
+STAT_REPORT_UMAMI_WEBSITE_ID_VOKABELWORLD
+STAT_REPORT_UMAMI_WEBSITE_ID_SUPERENTRENADOR
+STAT_REPORT_UMAMI_WEBSITE_ID_AGAMA
+```
+
+Si falta un UUID, el backend busca el sitio por dominio o nombre en Umami. Si tampoco existe allí, el panel muestra el nombre exacto de la variable que falta.
 
 ### Variables usadas por el formulario público
 

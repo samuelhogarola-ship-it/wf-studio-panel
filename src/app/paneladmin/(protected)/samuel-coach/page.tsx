@@ -1,3 +1,4 @@
+import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -41,6 +42,12 @@ export default async function SamuelCoachAdminPage() {
           </Card>
         ))}
       </section>
+
+      <ProjectAnalyticsPanel
+        projectKey="samuelcoachdealeman"
+        projectLabel="Samuel Coach de Alemán"
+        domain="samuelcoachdealeman.com"
+      />
 
       <section className="mb-8">
         <a
