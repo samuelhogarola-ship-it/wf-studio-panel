@@ -8,6 +8,10 @@ node_modules/
 # Environment
 .env.local
 .env.*.local
+.env
+
+# Generated reports
+storage/stat-reports/*.md
 
 # TypeScript incremental build info
 tsconfig.tsbuildinfo

@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises'
+import path from 'node:path'
+
 import Link from 'next/link'
 
 import { AdminShell } from '@/components/layout/app-shell'
@@ -8,10 +11,37 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
+async function getStatReports() {
+  const storageDir = process.env.STAT_REPORT_STORAGE_DIR || path.join(process.cwd(), 'storage', 'stat-reports')
+
+  try {
+    const entries = await fs.readdir(storageDir, { withFileTypes: true })
+    const reports = await Promise.all(
+      entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+        .map(async (entry) => {
+          const filePath = path.join(storageDir, entry.name)
+          const content = await fs.readFile(filePath, 'utf8')
+          return {
+            month: entry.name.replace(/\.md$/, ''),
+            filePath,
+            content,
+          }
+        })
+    )
+    return reports.sort((a, b) => b.month.localeCompare(a.month))
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []
+    throw error
+  }
+}
+
 export default async function AdminInformesPage() {
   const identity = await requireAdmin()
   const locale = await getLocale()
   const supabase = await createSupabaseServerClient()
+  const statReports = await getStatReports()
+  const latestStatReport = statReports[0]
 
   const { data: clients } = await supabase
     .from('clients')
@@ -29,6 +59,30 @@ export default async function AdminInformesPage() {
       userEmail={identity.email}
       locale={locale}
     >
+      <Card className="mb-6 overflow-hidden">
+        <div className="border-b border-line px-6 py-5">
+          <h2 className="text-xl font-bold text-foreground">Informes estadísticos</h2>
+          <p className="mt-1 text-sm text-muted">Resumen mensual automático de Umami para las webs gestionadas.</p>
+        </div>
+        {statReports.length > 0 ? (
+          <div className="grid gap-0 lg:grid-cols-[240px_1fr]">
+            <div className="border-b border-line lg:border-b-0 lg:border-r">
+              {statReports.map((report) => (
+                <div key={report.month} className="border-b border-line px-6 py-4 last:border-b-0">
+                  <p className="font-semibold text-foreground">{report.month}</p>
+                  <p className="mt-1 break-all text-xs text-muted">{report.filePath}</p>
+                </div>
+              ))}
+            </div>
+            <pre className="max-h-[560px] overflow-auto whitespace-pre-wrap bg-slate-950 px-6 py-5 text-xs leading-6 text-slate-100">
+              {latestStatReport?.content}
+            </pre>
+          </div>
+        ) : (
+          <p className="px-6 py-8 text-sm text-muted">Todavía no hay informes estadísticos generados.</p>
+        )}
+      </Card>
+
       <Card className="overflow-hidden">
         <div className="border-b border-line px-6 py-5">
           <h2 className="text-xl font-bold text-foreground">Clientes activos</h2>

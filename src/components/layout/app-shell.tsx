@@ -140,7 +140,7 @@ export function AdminShell({
         },
         {
           href: '/paneladmin/todoplastico',
-          label: 'Agama',
+          label: 'Agama Marketplace',
           icon: panelIcon,
         },
       ],
@@ -148,13 +148,13 @@ export function AdminShell({
   ]
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="min-h-screen h-screen overflow-hidden bg-background flex">
       {/* Sidebar */}
-      <aside className="hidden lg:flex w-56 flex-col border-r border-line bg-white">
-        <div className="px-5 py-6 border-b border-line">
+      <aside className="hidden lg:flex h-screen w-56 flex-col border-r border-line bg-white">
+        <div className="shrink-0 px-5 py-6 border-b border-line">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">{t(locale, 'shell.brand')}</p>
         </div>
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-0 overflow-y-auto">
+        <nav className="min-h-0 flex-1 px-3 py-4 flex flex-col gap-0 overflow-y-auto">
           {navGroups.map((group) => (
             <div key={group.label} className="mb-3">
               <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">{group.label}</p>
@@ -176,7 +176,7 @@ export function AdminShell({
             </div>
           ))}
         </nav>
-        <div className="px-3 py-4 border-t border-line flex flex-col gap-2">
+        <div className="shrink-0 px-3 py-4 border-t border-line flex flex-col gap-2">
           <div className="px-3 py-2 text-xs text-muted truncate">{userEmail}</div>
           <form action="/auth/sign-out" method="post">
             <input type="hidden" name="redirect" value="admin" />
@@ -188,8 +188,8 @@ export function AdminShell({
       </aside>
 
       {/* Mobile header */}
-      <div className="flex flex-col flex-1 min-w-0">
-        <header className="lg:hidden border-b border-line bg-white px-4 py-4 flex items-center justify-between">
+      <div className="flex h-screen flex-col flex-1 min-w-0 overflow-hidden">
+        <header className="shrink-0 lg:hidden border-b border-line bg-white px-4 py-4 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">{t(locale, 'shell.brand')}</p>
           <div className="flex items-center gap-2">
             <div className="text-xs text-muted">{userEmail}</div>
@@ -202,7 +202,7 @@ export function AdminShell({
           </div>
         </header>
         {/* Mobile nav */}
-        <div className="lg:hidden space-y-3 border-b border-line bg-white px-4 py-3">
+        <div className="shrink-0 lg:hidden space-y-3 border-b border-line bg-white px-4 py-3">
           {navGroups.map((group) => (
             <div key={group.label}>
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">{group.label}</p>
@@ -227,12 +227,12 @@ export function AdminShell({
         </div>
 
         {/* Page header */}
-        <div className="border-b border-line bg-white px-6 py-5">
+        <div className="shrink-0 border-b border-line bg-white px-6 py-5">
           <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
           <p className="mt-1 text-sm text-muted">{description}</p>
         </div>
 
-        <main className="flex-1 px-6 py-8">{children}</main>
+        <main className="flex-1 overflow-y-auto px-6 py-8">{children}</main>
       </div>
     </div>
   )

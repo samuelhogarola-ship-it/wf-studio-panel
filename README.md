@@ -103,6 +103,13 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 | `RESEND_API_KEY`                       | API key de Resend para emails                                                      |
 | `RESEND_FROM_EMAIL`                    | Email remitente verificado en Resend                                               |
 | `NEXT_PUBLIC_APP_URL`                  | URL pública expuesta al cliente; mantenerla igual que `APP_URL`                    |
+| `CRON_SECRET`                          | Secreto compartido para llamadas programadas                                       |
+| `MONTHLY_STAT_REPORTS_CRON_SECRET`     | Secreto específico opcional para `/api/monthly-stat-reports`                       |
+| `STAT_REPORT_UMAMI_URL`                | URL de Umami, por ejemplo `https://analytics.187.124.55.36.sslip.io`               |
+| `STAT_REPORT_UMAMI_USERNAME`           | Usuario de Umami; por defecto `admin`                                              |
+| `STAT_REPORT_UMAMI_PASSWORD`           | Contraseña de Umami                                                                |
+| `STAT_REPORT_EMAIL_TO`                 | Destinatario del informe mensual                                                   |
+| `STAT_REPORT_STORAGE_DIR`              | Carpeta persistente para informes, por ejemplo `/app/storage/stat-reports`         |
 
 > `APP_URL` es ahora la referencia canónica del servidor para auth y callbacks. `NEXT_PUBLIC_APP_URL` debe apuntar al mismo dominio para evitar discrepancias entre servidor y cliente.
 
@@ -111,6 +118,16 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 > El código mantiene compatibilidad secundaria con `TURNSTILE_SITE_KEY` como fallback legado para `/api/contact/config`, pero la convención principal de producción es `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
 > `CONTACT_EMAIL` no existe todavía como variable en esta app. El destinatario del formulario público está fijado en `info@webfuengirola.com` dentro de `src/lib/email.ts`.
+
+### Informes estadísticos mensuales
+
+El endpoint `/api/monthly-stat-reports` genera un archivo Markdown mensual con datos de Umami, lo guarda en `STAT_REPORT_STORAGE_DIR` y lo envía por Resend. En Coolify crea una tarea programada mensual que llame a:
+
+```bash
+curl -X POST https://admin.webfuengirola.com/api/monthly-stat-reports -H "Authorization: Bearer $MONTHLY_STAT_REPORTS_CRON_SECRET"
+```
+
+Configura también las variables `STAT_REPORT_UMAMI_WEBSITE_ID_*` de `.env.example` para fijar los UUIDs de cada web.
 
 ### Variables usadas por el formulario público
 
