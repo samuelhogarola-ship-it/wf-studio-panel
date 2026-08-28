@@ -10,6 +10,15 @@ import {
   previousValue,
 } from '../src/lib/data/umami-core.mjs'
 import { getSuperEntrenadorNavigation } from '../src/lib/data/superentrenador-navigation.mjs'
+import { buildChartPoints } from '../src/lib/data/analytics-chart.mjs'
+
+test('chart points scale values safely and handle an empty series', () => {
+  assert.deepEqual(buildChartPoints([], 100, 40), [])
+  assert.deepEqual(
+    buildChartPoints([{ x: 'a', y: 0 }, { x: 'b', y: 10 }, { x: 'c', y: 5 }], 100, 40),
+    [{ x: 0, y: 40 }, { x: 50, y: 0 }, { x: 100, y: 20 }],
+  )
+})
 
 test('Superentrenador navigation exposes statistics as its landing page', () => {
   assert.deepEqual(getSuperEntrenadorNavigation('/paneladmin/superentrenador/usuarios'), [
