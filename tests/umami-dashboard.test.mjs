@@ -77,7 +77,7 @@ test('dashboard fetches and derives the complete Umami summary without exposing 
     '/pageviews': { pageviews: [{ x: '2026-08-27', y: 12 }], sessions: [{ x: '2026-08-27', y: 8 }] },
   }
   const metrics = {
-    url: [{ x: '/', y: 70 }],
+    path: [{ x: '/', y: 70 }],
     referrer: [{ x: 'google.com', y: 30 }],
     country: [{ x: 'ES', y: 45 }],
     device: [{ x: 'mobile', y: 35 }],
@@ -110,10 +110,11 @@ test('dashboard fetches and derives the complete Umami summary without exposing 
     averageVisitSeconds: { value: 120, previous: 100, trend: '+20%' },
   })
   assert.deepEqual(result.series.pageviews, fixtures['/pageviews'].pageviews)
-  assert.deepEqual(result.topPages, metrics.url)
+  assert.deepEqual(result.topPages, metrics.path)
   assert.equal(result.funnel['mensaje-enviado'], 4)
   assert.equal(result.funnel['contacto-iniciar-sesion'], 0)
   assert.equal(requests.length, 8)
+  assert.equal(requests.some(({ url }) => url.searchParams.get('type') === 'path'), true)
   assert.match(requests[1].init.headers.Authorization, /^Bearer /)
   assert.equal(JSON.stringify(result).includes('do-not-leak'), false)
 })

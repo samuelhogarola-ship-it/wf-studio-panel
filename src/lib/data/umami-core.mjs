@@ -76,7 +76,7 @@ export async function buildUmamiDashboard({ config, days, now = new Date(), fetc
   const [stats, series, topPages, referrers, countries, devices, events] = await Promise.all([
     get('/stats', { compare: 'prev' }),
     get('/pageviews', { unit: 'day' }),
-    get('/metrics', { type: 'url', limit: 10 }),
+    get('/metrics', { type: 'path', limit: 10 }),
     get('/metrics', { type: 'referrer', limit: 10 }),
     get('/metrics', { type: 'country', limit: 10 }),
     get('/metrics', { type: 'device', limit: 10 }),
