@@ -9,6 +9,15 @@ import {
   parseAnalyticsDays,
   previousValue,
 } from '../src/lib/data/umami-core.mjs'
+import { getSuperEntrenadorNavigation } from '../src/lib/data/superentrenador-navigation.mjs'
+
+test('Superentrenador navigation exposes statistics as its landing page', () => {
+  assert.deepEqual(getSuperEntrenadorNavigation('/paneladmin/superentrenador/usuarios'), [
+    { href: '/paneladmin/superentrenador/estadisticas', label: 'Estadísticas', active: false },
+    { href: '/paneladmin/superentrenador/pt', label: 'Entrenadores', active: false },
+    { href: '/paneladmin/superentrenador/usuarios', label: 'Usuarios', active: true },
+  ])
+})
 
 test('configuration reports every missing server credential', () => {
   assert.deepEqual(

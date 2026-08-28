@@ -134,7 +134,7 @@ export function AdminShell({
           icon: panelIcon,
         },
         {
-          href: '/paneladmin/superentrenador/pt',
+          href: '/paneladmin/superentrenador/estadisticas',
           label: 'Superentrenador',
           icon: panelIcon,
         },
