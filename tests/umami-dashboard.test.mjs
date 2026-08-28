@@ -4,10 +4,23 @@ import assert from 'node:assert/strict'
 import {
   buildUmamiDashboard,
   formatTrend,
+  getMissingUmamiConfig,
   numberValue,
   parseAnalyticsDays,
   previousValue,
 } from '../src/lib/data/umami-core.mjs'
+
+test('configuration reports every missing server credential', () => {
+  assert.deepEqual(
+    getMissingUmamiConfig({
+      UMAMI_URL: 'https://analytics.example.com',
+      UMAMI_USERNAME: '',
+      UMAMI_PASSWORD: undefined,
+      UMAMI_SUPERENTRENADOR_WEBSITE_ID: 'site-1',
+    }),
+    ['UMAMI_USERNAME', 'UMAMI_PASSWORD'],
+  )
+})
 
 test('analytics periods accept 7, 30, and 90 days and default to 30', () => {
   assert.equal(parseAnalyticsDays('7'), 7)

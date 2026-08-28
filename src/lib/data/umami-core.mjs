@@ -1,4 +1,9 @@
 const ALLOWED_DAYS = new Set([7, 30, 90])
+const REQUIRED_CONFIG = ['UMAMI_URL', 'UMAMI_USERNAME', 'UMAMI_PASSWORD', 'UMAMI_SUPERENTRENADOR_WEBSITE_ID']
+
+export function getMissingUmamiConfig(env) {
+  return REQUIRED_CONFIG.filter((name) => !env[name]?.trim())
+}
 
 export function parseAnalyticsDays(value) {
   const days = Number(value)

@@ -22,6 +22,7 @@ declare module '@/lib/data/umami-core.mjs' {
   }
   export type UmamiConfig = { baseUrl: string; username: string; password: string; websiteId: string }
   export function parseAnalyticsDays(value: string | undefined): AnalyticsDays
+  export function getMissingUmamiConfig(env: Record<string, string | undefined>): string[]
   export function numberValue(metric: UmamiMetricValue): number
   export function previousValue(metric: UmamiMetricValue): number
   export function formatTrend(current: number, previous: number): string
