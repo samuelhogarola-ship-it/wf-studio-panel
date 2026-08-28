@@ -1,9 +1,8 @@
 import 'server-only'
 
-import { cache } from 'react'
-
 import {
   buildUmamiDashboard,
+  createTtlCache,
   getMissingUmamiConfig,
   type AnalyticsDays,
   type UmamiDashboard,
@@ -14,13 +13,15 @@ export type SuperEntrenadorAnalyticsResult =
   | { status: 'not-configured'; missing: string[] }
   | { status: 'error'; message: string }
 
-export const getSuperEntrenadorAnalytics = cache(
-  async (days: AnalyticsDays): Promise<SuperEntrenadorAnalyticsResult> => {
-    const missing = getMissingUmamiConfig(process.env)
-    if (missing.length) return { status: 'not-configured', missing }
+const loadCachedDashboard = createTtlCache({ ttlMs: 5 * 60 * 1000 })
 
-    try {
-      const data = await buildUmamiDashboard({
+export async function getSuperEntrenadorAnalytics(days: AnalyticsDays): Promise<SuperEntrenadorAnalyticsResult> {
+  const missing = getMissingUmamiConfig(process.env)
+  if (missing.length) return { status: 'not-configured', missing }
+
+  try {
+    const data = await loadCachedDashboard(String(days), () =>
+      buildUmamiDashboard({
         config: {
           baseUrl: process.env.UMAMI_URL!,
           username: process.env.UMAMI_USERNAME!,
@@ -28,11 +29,11 @@ export const getSuperEntrenadorAnalytics = cache(
           websiteId: process.env.UMAMI_SUPERENTRENADOR_WEBSITE_ID!,
         },
         days,
-      })
-      return { status: 'ready', data }
-    } catch (error) {
-      console.error('[superentrenador/analytics] Umami request failed', error)
-      return { status: 'error', message: 'No se pudo conectar con Umami en este momento.' }
-    }
-  },
-)
+      }),
+    )
+    return { status: 'ready', data }
+  } catch (error) {
+    console.error('[superentrenador/analytics] Umami request failed', error)
+    return { status: 'error', message: 'No se pudo conectar con Umami en este momento.' }
+  }
+}

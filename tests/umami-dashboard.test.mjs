@@ -3,13 +3,31 @@ import assert from 'node:assert/strict'
 
 import {
   buildUmamiDashboard,
+  createTtlCache,
   formatTrend,
   getMissingUmamiConfig,
   numberValue,
   parseAnalyticsDays,
   previousValue,
+  statsCurrentValue,
+  statsPreviousValue,
 } from '../src/lib/data/umami-core.mjs'
-import { getSuperEntrenadorNavigation } from '../src/lib/data/superentrenador-navigation.mjs'
+
+test('TTL cache reuses complete dashboard loads and retries failures', async () => {
+  let now = 1_000
+  let loads = 0
+  const cached = createTtlCache({ ttlMs: 300, now: () => now })
+  const load = async () => ({ load: ++loads })
+
+  assert.deepEqual(await cached('30', load), { load: 1 })
+  assert.deepEqual(await cached('30', load), { load: 1 })
+  now = 1_301
+  assert.deepEqual(await cached('30', load), { load: 2 })
+
+  await assert.rejects(cached('90', async () => { throw new Error('temporary') }), /temporary/)
+  assert.deepEqual(await cached('90', load), { load: 3 })
+})
+import { getSuperEntrenadorNavigation, isNavigationItemActive } from '../src/lib/data/superentrenador-navigation.mjs'
 import { buildChartPoints } from '../src/lib/data/analytics-chart.mjs'
 
 test('chart points scale values safely and handle an empty series', () => {
@@ -26,6 +44,23 @@ test('Superentrenador navigation exposes statistics as its landing page', () => 
     { href: '/paneladmin/superentrenador/pt', label: 'Entrenadores', active: false },
     { href: '/paneladmin/superentrenador/usuarios', label: 'Usuarios', active: true },
   ])
+})
+
+test('sidebar section remains active on every Superentrenador route', () => {
+  for (const path of [
+    '/paneladmin/superentrenador/estadisticas',
+    '/paneladmin/superentrenador/pt',
+    '/paneladmin/superentrenador/usuarios',
+  ]) {
+    assert.equal(
+      isNavigationItemActive(path, '/paneladmin/superentrenador/estadisticas', '/paneladmin/superentrenador'),
+      true,
+    )
+  }
+  assert.equal(
+    isNavigationItemActive('/paneladmin/samuel-coach', '/paneladmin/superentrenador/estadisticas', '/paneladmin/superentrenador'),
+    false,
+  )
 })
 
 test('configuration reports every missing server credential', () => {
@@ -56,6 +91,15 @@ test('Umami scalar and comparison metrics normalize to current and previous valu
   assert.equal(previousValue(12), 0)
 })
 
+test('current and legacy Umami stats shapes both expose prior-period values', () => {
+  const current = { visits: 60, comparison: { visits: 50 } }
+  const legacy = { visits: { value: 60, prev: 50 } }
+  assert.equal(statsCurrentValue(current, 'visits'), 60)
+  assert.equal(statsPreviousValue(current, 'visits'), 50)
+  assert.equal(statsCurrentValue(legacy, 'visits'), 60)
+  assert.equal(statsPreviousValue(legacy, 'visits'), 50)
+})
+
 test('trend formatting handles growth, decline, new traffic, and no change', () => {
   assert.equal(formatTrend(15, 10), '+50%')
   assert.equal(formatTrend(5, 10), '-50%')
@@ -68,11 +112,12 @@ test('dashboard fetches and derives the complete Umami summary without exposing 
   const fixtures = {
     '/api/auth/login': { token: 'secret-token' },
     '/stats': {
-      pageviews: { value: 120, prev: 100 },
-      visitors: { value: 50, prev: 40 },
-      visits: { value: 60, prev: 50 },
-      bounces: { value: 15, prev: 10 },
-      totaltime: { value: 7200, prev: 5000 },
+      pageviews: 120,
+      visitors: 50,
+      visits: 60,
+      bounces: 15,
+      totaltime: 7200,
+      comparison: { pageviews: 100, visitors: 40, visits: 50, bounces: 10, totaltime: 5000 },
     },
     '/pageviews': { pageviews: [{ x: '2026-08-27', y: 12 }], sessions: [{ x: '2026-08-27', y: 8 }] },
   }

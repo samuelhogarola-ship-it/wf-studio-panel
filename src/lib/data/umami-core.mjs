@@ -1,6 +1,24 @@
 const ALLOWED_DAYS = new Set([7, 30, 90])
 const REQUIRED_CONFIG = ['UMAMI_URL', 'UMAMI_USERNAME', 'UMAMI_PASSWORD', 'UMAMI_SUPERENTRENADOR_WEBSITE_ID']
 
+export function createTtlCache({ ttlMs, now = Date.now }) {
+  const entries = new Map()
+  return async (key, load) => {
+    const existing = entries.get(key)
+    if (existing && existing.expiresAt > now()) return existing.promise
+
+    const promise = Promise.resolve().then(load)
+    const entry = { expiresAt: now() + ttlMs, promise }
+    entries.set(key, entry)
+    try {
+      return await promise
+    } catch (error) {
+      if (entries.get(key) === entry) entries.delete(key)
+      throw error
+    }
+  }
+}
+
 export function getMissingUmamiConfig(env) {
   return REQUIRED_CONFIG.filter((name) => !env[name]?.trim())
 }
@@ -19,6 +37,15 @@ export function numberValue(metric) {
 export function previousValue(metric) {
   if (metric && typeof metric === 'object' && typeof metric.prev === 'number') return metric.prev
   return 0
+}
+
+export function statsCurrentValue(stats, name) {
+  return numberValue(stats?.[name])
+}
+
+export function statsPreviousValue(stats, name) {
+  const comparison = stats?.comparison?.[name]
+  return typeof comparison === 'number' ? comparison : previousValue(stats?.[name])
 }
 
 export function formatTrend(current, previous) {
@@ -83,12 +110,12 @@ export async function buildUmamiDashboard({ config, days, now = new Date(), fetc
     get('/metrics', { type: 'event', limit: 20 }),
   ])
 
-  const visits = numberValue(stats.visits)
-  const previousVisits = previousValue(stats.visits)
-  const bounceRate = visits ? Math.round((numberValue(stats.bounces) / visits) * 100) : 0
-  const previousBounceRate = previousVisits ? Math.round((previousValue(stats.bounces) / previousVisits) * 100) : 0
-  const averageVisitSeconds = visits ? Math.round(numberValue(stats.totaltime) / visits) : 0
-  const previousAverageVisitSeconds = previousVisits ? Math.round(previousValue(stats.totaltime) / previousVisits) : 0
+  const visits = statsCurrentValue(stats, 'visits')
+  const previousVisits = statsPreviousValue(stats, 'visits')
+  const bounceRate = visits ? Math.round((statsCurrentValue(stats, 'bounces') / visits) * 100) : 0
+  const previousBounceRate = previousVisits ? Math.round((statsPreviousValue(stats, 'bounces') / previousVisits) * 100) : 0
+  const averageVisitSeconds = visits ? Math.round(statsCurrentValue(stats, 'totaltime') / visits) : 0
+  const previousAverageVisitSeconds = previousVisits ? Math.round(statsPreviousValue(stats, 'totaltime') / previousVisits) : 0
   const eventCounts = new Map((events ?? []).map((event) => [event.x, event.y]))
   const funnelNames = [
     'contacto-iniciar-sesion',
@@ -102,8 +129,8 @@ export async function buildUmamiDashboard({ config, days, now = new Date(), fetc
     days,
     generatedAt: now.toISOString(),
     summary: {
-      pageviews: metric(numberValue(stats.pageviews), previousValue(stats.pageviews)),
-      visitors: metric(numberValue(stats.visitors), previousValue(stats.visitors)),
+      pageviews: metric(statsCurrentValue(stats, 'pageviews'), statsPreviousValue(stats, 'pageviews')),
+      visitors: metric(statsCurrentValue(stats, 'visitors'), statsPreviousValue(stats, 'visitors')),
       visits: metric(visits, previousVisits),
       bounceRate: metric(bounceRate, previousBounceRate),
       averageVisitSeconds: metric(averageVisitSeconds, previousAverageVisitSeconds),

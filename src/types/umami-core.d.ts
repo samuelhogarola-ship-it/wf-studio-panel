@@ -21,10 +21,13 @@ declare module '@/lib/data/umami-core.mjs' {
     devices: UmamiListItem[]
   }
   export type UmamiConfig = { baseUrl: string; username: string; password: string; websiteId: string }
+  export function createTtlCache(options: { ttlMs: number; now?: () => number }): <T>(key: string, load: () => Promise<T>) => Promise<T>
   export function parseAnalyticsDays(value: string | undefined): AnalyticsDays
   export function getMissingUmamiConfig(env: Record<string, string | undefined>): string[]
   export function numberValue(metric: UmamiMetricValue): number
   export function previousValue(metric: UmamiMetricValue): number
+  export function statsCurrentValue(stats: Record<string, unknown>, name: string): number
+  export function statsPreviousValue(stats: Record<string, unknown>, name: string): number
   export function formatTrend(current: number, previous: number): string
   export function buildUmamiDashboard(options: {
     config: UmamiConfig
