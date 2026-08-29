@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -39,6 +40,12 @@ export default async function AdminDashboardPage() {
           </Link>
         ))}
       </section>
+
+      <ProjectAnalyticsPanel
+        projectKey="webfuengirola"
+        projectLabel="Web Fuengirola"
+        domain="webfuengirola.com"
+      />
 
       <section className="mt-8">
         <Card className="overflow-hidden">

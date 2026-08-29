@@ -4,6 +4,7 @@ import { updateTodoPlasticoCompanyAction, updateTodoPlasticoListingAction } from
 import { requireAdmin } from '@/lib/auth'
 import { getCachedTodoPlasticoData } from '@/lib/data/todoplastico'
 import { getLocale } from '@/lib/locale'
+import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -67,6 +68,12 @@ export default async function TodoPlasticoPage({ searchParams }: { searchParams:
           Nuevo anuncio
         </a>
       </div>
+
+      <ProjectAnalyticsPanel
+        projectKey="agama"
+        projectLabel="Agama Marketplace"
+        domain="agama.eco"
+      />
 
       {error ? (
         <Card className="border-amber-200 bg-amber-50 p-5">

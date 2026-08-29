@@ -6,8 +6,8 @@ import { getLocale } from '@/lib/locale'
 
 export const dynamic = 'force-dynamic'
 
-const SUPERENTRENADOR_URL = process.env.NEXT_PUBLIC_SUPERENTRENADOR_URL ?? 'https://superentrenador.com'
-const COACH_STUDIO_URL = process.env.NEXT_PUBLIC_COACH_STUDIO_URL ?? 'https://coach.superentrenador.com'
+const TODO_PLASTICO_PUBLIC_URL = process.env.NEXT_PUBLIC_TODO_PLASTICO_PUBLIC_URL ?? 'https://agama.eco'
+const TODO_PLASTICO_ADMIN_URL = process.env.NEXT_PUBLIC_TODO_PLASTICO_ADMIN_URL ?? 'https://agama.eco/admin'
 
 type SubLink = { label: string; href: string; external?: boolean }
 type Panel = {
@@ -37,6 +37,7 @@ const PANELS: Panel[] = [
       { label: 'Servicios', href: '/paneladmin/servicios' },
       { label: 'Actividades', href: '/paneladmin/actividades' },
       { label: 'Informes', href: '/paneladmin/informes' },
+      { label: 'Estadísticas', href: '/paneladmin/dashboard#estadisticas' },
     ],
   },
   {
@@ -53,6 +54,7 @@ const PANELS: Panel[] = [
       { label: 'Clientes', href: '/paneladmin/vivir-en-fuengirola/clientes' },
       { label: 'Suscripciones', href: '/paneladmin/vivir-en-fuengirola/suscripciones' },
       { label: 'Negocios', href: '/paneladmin/vivir-en-fuengirola/negocios' },
+      { label: 'Estadísticas', href: '/paneladmin/vivir-en-fuengirola#estadisticas' },
     ],
   },
   {
@@ -68,6 +70,7 @@ const PANELS: Panel[] = [
     links: [
       { label: 'Clientes', href: '/paneladmin/conoce-fuengirola/clientes' },
       { label: 'Suscripciones', href: '/paneladmin/conoce-fuengirola/suscripciones' },
+      { label: 'Estadísticas', href: '/paneladmin/conoce-fuengirola#estadisticas' },
     ],
   },
   {
@@ -84,6 +87,7 @@ const PANELS: Panel[] = [
       { label: 'Alumnos', href: '/paneladmin/samuel-coach/alumnos' },
       { label: 'Ejercicios', href: '/paneladmin/samuel-coach/ejercicios' },
       { label: 'Progreso', href: '/paneladmin/samuel-coach/progreso' },
+      { label: 'Estadísticas', href: '/paneladmin/samuel-coach#estadisticas' },
     ],
   },
   {
@@ -100,6 +104,23 @@ const PANELS: Panel[] = [
       { label: 'Vokabel-Lab', href: '/paneladmin/vokabel-world/vokabel-lab' },
       { label: 'imKontext', href: '/paneladmin/vokabel-world/imkontext' },
       { label: 'Der Die Das', href: '/paneladmin/vokabel-world/derdiedas' },
+      { label: 'Estadísticas', href: '/paneladmin/vokabel-world#estadisticas' },
+    ],
+  },
+  {
+    title: 'Agama Marketplace',
+    description: 'Empresas, anuncios y usuarios de la plataforma de reciclado.',
+    color: 'from-emerald-600 to-emerald-900',
+    href: '/paneladmin/todoplastico',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="1 4 1 10 7 10" /><polyline points="23 20 23 14 17 14" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
+      </svg>
+    ),
+    links: [
+      { label: 'Panel empresa', href: `${TODO_PLASTICO_PUBLIC_URL}/dashboard`, external: true },
+      { label: 'Panel admin', href: TODO_PLASTICO_ADMIN_URL, external: true },
+      { label: 'Estadísticas', href: '/paneladmin/todoplastico#estadisticas' },
     ],
   },
   {
@@ -115,26 +136,7 @@ const PANELS: Panel[] = [
     links: [
       { label: 'Panel PT', href: '/paneladmin/superentrenador/pt' },
       { label: 'Usuarios', href: '/paneladmin/superentrenador/usuarios' },
-      { label: 'Admin marketplace (aprobar anuncios)', href: `${SUPERENTRENADOR_URL}/admin/entrenadores`, external: true },
-      { label: 'Mi panel de entrenador (marketplace)', href: `${SUPERENTRENADOR_URL}/dashboard`, external: true },
-      { label: 'Mis anuncios (marketplace)', href: `${SUPERENTRENADOR_URL}/mis-anuncios`, external: true },
-      { label: 'Mi panel de entrenador (Coach Studio)', href: `${COACH_STUDIO_URL}/app/pt`, external: true },
-      { label: 'Vista alumno (Coach Studio)', href: `${COACH_STUDIO_URL}/app/client`, external: true },
-    ],
-  },
-  {
-    title: 'Agama Marketplace',
-    description: 'Empresas, anuncios y usuarios de la plataforma de reciclado.',
-    color: 'from-emerald-600 to-emerald-900',
-    href: '/paneladmin/todoplastico',
-    icon: (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="1 4 1 10 7 10" /><polyline points="23 20 23 14 17 14" /><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
-      </svg>
-    ),
-    links: [
-      { label: 'Empresas', href: '/paneladmin/todoplastico?view=empresas' },
-      { label: 'Anuncios', href: '/paneladmin/todoplastico?view=anuncios' },
+      { label: 'Estadísticas', href: '/paneladmin/superentrenador/pt#estadisticas' },
     ],
   },
 ]

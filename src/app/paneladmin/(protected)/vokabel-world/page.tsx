@@ -1,3 +1,4 @@
+import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
 import { AdminShell } from '@/components/layout/app-shell'
 import { requireAdmin } from '@/lib/auth'
 import { getLocale } from '@/lib/locale'
@@ -13,9 +14,11 @@ export default async function Page() {
       userEmail={identity.email}
       locale={locale}
     >
-      <div className="flex items-center justify-center rounded-xl border border-dashed border-line h-64">
-        <p className="text-sm text-muted">Selecciona una app del menú lateral.</p>
-      </div>
+      <ProjectAnalyticsPanel
+        projectKey="vokabelworld"
+        projectLabel="Vokabel-World"
+        domain="vokabellab.com"
+      />
     </AdminShell>
   )
 }

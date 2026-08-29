@@ -13,6 +13,15 @@ function getResend() {
   return resendClient
 }
 
+type EmailPayload = Parameters<Resend['emails']['send']>[0]
+type EmailOptions = Parameters<Resend['emails']['send']>[1]
+
+async function sendEmail(payload: EmailPayload, options?: EmailOptions) {
+  const { data, error } = await getResend().emails.send(payload, options)
+  if (error) throw new Error(`Resend rechazó el email: ${error.message}`)
+  return data
+}
+
 export async function sendAdminRequestEmail({
   clientName,
   clientEmail,
@@ -216,6 +225,39 @@ export async function sendPendingItemReminderEmail({
       '— WF-Studio',
     ].join('\n'),
   })
+}
+
+export async function sendMonthlyStatReportEmail({
+  to,
+  subject,
+  markdown,
+  monthKey,
+  idempotencyKey,
+}: {
+  to: string
+  subject: string
+  markdown: string
+  monthKey: string
+  idempotencyKey: string
+}) {
+  return sendEmail({
+    from: getRequiredServerEnv('RESEND_FROM_EMAIL'),
+    to,
+    subject,
+    text: [
+      'Informe estadístico mensual generado automáticamente.',
+      '',
+      markdown,
+      '',
+      '— WF-Studio',
+    ].join('\n'),
+    attachments: [
+      {
+        filename: `informe-estadistico-${monthKey}.md`,
+        content: Buffer.from(markdown, 'utf8'),
+      },
+    ],
+  }, { idempotencyKey })
 }
 
 export async function sendPublicContactEmail({

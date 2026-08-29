@@ -1,3 +1,6 @@
+import Link from 'next/link'
+
+import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -42,11 +45,15 @@ export default async function SamuelCoachAdminPage() {
         ))}
       </section>
 
+      <ProjectAnalyticsPanel
+        projectKey="samuelcoachdealeman"
+        projectLabel="Samuel Coach de Alemán"
+        domain="samuelcoachdealeman.com"
+      />
+
       <section className="mb-8">
-        <a
-          href="https://www.samuelcoachdealeman.com/informes-profesor/"
-          target="_blank"
-          rel="noreferrer"
+        <Link
+          href="/paneladmin/samuel-coach/informes"
           className="block rounded-lg border border-line bg-white p-6 transition hover:border-brand/40 hover:shadow-sm"
         >
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
@@ -58,10 +65,10 @@ export default async function SamuelCoachAdminPage() {
               </p>
             </div>
             <span className="inline-flex w-fit items-center rounded px-4 py-2 text-sm font-bold text-white bg-brand">
-              Abrir herramienta
+              Abrir en el panel
             </span>
           </div>
-        </a>
+        </Link>
       </section>
 
       {/* By nivel */}

@@ -1,5 +1,6 @@
 import Image from 'next/image'
 
+import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -55,6 +56,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
           <p className="mt-3 text-3xl font-black tracking-tight text-rose-600">{stats.rejected}</p>
         </Card>
       </section>
+
+      <ProjectAnalyticsPanel
+        projectKey="superentrenador"
+        projectLabel="Superentrenador"
+        domain="superentrenador.com"
+      />
 
       <form className="mb-6">
         <input
