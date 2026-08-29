@@ -103,6 +103,10 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 | `RESEND_API_KEY`                       | API key de Resend para emails                                                      |
 | `RESEND_FROM_EMAIL`                    | Email remitente verificado en Resend                                               |
 | `NEXT_PUBLIC_APP_URL`                  | URL pública expuesta al cliente; mantenerla igual que `APP_URL`                    |
+| `UMAMI_URL`                            | URL base de la instancia Umami, sin `/api` (solo servidor)                         |
+| `UMAMI_USERNAME`                       | Usuario API de Umami (solo servidor)                                               |
+| `UMAMI_PASSWORD`                       | Contraseña API de Umami (solo servidor)                                            |
+| `UMAMI_SUPERENTRENADOR_WEBSITE_ID`     | Website ID de Superentrenador en Umami (solo servidor)                             |
 | `CRON_SECRET`                          | Secreto compartido para llamadas programadas                                       |
 | `MONTHLY_STAT_REPORTS_CRON_SECRET`     | Secreto específico opcional para `/api/monthly-stat-reports`                       |
 | `STAT_REPORT_UMAMI_URL`                | URL de Umami, por ejemplo `https://analytics.187.124.55.36.sslip.io`               |
@@ -115,6 +119,8 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 > `APP_URL` es ahora la referencia canónica del servidor para auth y callbacks. `NEXT_PUBLIC_APP_URL` debe apuntar al mismo dominio para evitar discrepancias entre servidor y cliente.
 
 > `NEXT_PUBLIC_*` se incrustan en el bundle cliente en build time — deben estar disponibles durante el build en Coolify, no solo en runtime.
+
+> El panel de estadísticas de Superentrenador muestra un aviso seguro mientras falte alguna variable `UMAMI_*`; ninguna credencial se expone al navegador.
 
 > El código mantiene compatibilidad secundaria con `TURNSTILE_SITE_KEY` como fallback legado para `/api/contact/config`, pero la convención principal de producción es `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 

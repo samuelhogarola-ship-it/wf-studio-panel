@@ -1,6 +1,7 @@
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { SuperEntrenadorNav } from '@/components/superentrenador/superentrenador-nav'
 import { requireAdmin } from '@/lib/auth'
 import { getSuperEntrenadorUsuariosData } from '@/lib/data/superentrenador'
 import { getLocale } from '@/lib/locale'
@@ -31,6 +32,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
       userEmail={identity.email}
       locale={locale}
     >
+      <SuperEntrenadorNav currentPath="/paneladmin/superentrenador/usuarios" />
       {error ? (
         <Card className="mb-8 border-amber-200 bg-amber-50 p-5">
           <p className="font-semibold text-amber-900">Conexión de usuarios pendiente</p>

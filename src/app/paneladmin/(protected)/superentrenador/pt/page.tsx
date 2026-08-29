@@ -5,6 +5,7 @@ import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { TrainerActions } from '@/components/superentrenador/trainer-actions'
+import { SuperEntrenadorNav } from '@/components/superentrenador/superentrenador-nav'
 import { requireAdmin } from '@/lib/auth'
 import { getSuperEntrenadorPTData } from '@/lib/data/superentrenador'
 import { getLocale } from '@/lib/locale'
@@ -36,6 +37,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
       userEmail={identity.email}
       locale={locale}
     >
+      <SuperEntrenadorNav currentPath="/paneladmin/superentrenador/pt" />
       <section className="grid gap-4 md:grid-cols-4 mb-8">
         <Card className="p-5">
           <p className="text-sm text-muted">Total</p>
