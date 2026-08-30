@@ -1,6 +1,9 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 
-import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
+import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
+import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { AdminShell } from '@/components/layout/app-shell'
 import { requireAdmin } from '@/lib/auth'
 import { getLocale } from '@/lib/locale'
@@ -23,11 +26,10 @@ export default async function Page() {
         <ProjectLink href="/paneladmin/conoce-fuengirola/clientes" label="Clientes" />
         <ProjectLink href="/paneladmin/conoce-fuengirola/suscripciones" label="Suscripciones" />
       </div>
-      <ProjectAnalyticsPanel
-        projectKey="conocef"
-        projectLabel="Conoce Fuengirola"
-        domain="conocefuengirola.com"
-      />
+      <Suspense fallback={<AnalyticsSkeleton />}>
+        <PanelAnalyticsSection panelKey="conoce" />
+      </Suspense>
+      <AdvancedProjectAnalyticsPanel projectKey="conocef" projectLabel="Conoce Fuengirola" domain="conocefuengirola.com" />
     </AdminShell>
   )
 }

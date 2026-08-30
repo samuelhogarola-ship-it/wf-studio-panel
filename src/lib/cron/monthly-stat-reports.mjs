@@ -1,50 +1,10 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-
 import { isAuthorizedCronRequest } from "./pending-reminders.mjs";
-
-const REPORT_SITES = [
-  {
-    key: "webfuengirola",
-    label: "Web Fuengirola",
-    domain: "webfuengirola.com",
-  },
-  {
-    key: "vivirenfuengirola",
-    label: "Vivir en Fuengirola",
-    domain: "vivirenfuengirola.com",
-  },
-  {
-    key: "conocef",
-    label: "Conoce Fuengirola",
-    domain: "conocefuengirola.com",
-  },
-  {
-    key: "topfuengirola",
-    label: "Top Fuengirola",
-    domain: "topfuengirola.com",
-  },
-  {
-    key: "samuelcoachdealeman",
-    label: "Samuel Coach de Alemán",
-    domain: "samuelcoachdealeman.com",
-  },
-  {
-    key: "vikingfitness",
-    label: "Viking Fitness",
-    domain: "vikingfitness.es",
-  },
-  {
-    key: "personaltrainerfuengirola",
-    label: "Personal Trainer Fuengirola",
-    domain: "personaltrainerfuengirola.com",
-  },
-  {
-    key: "gimnasionuevoestilo",
-    label: "Gimnasio Nuevo Estilo",
-    domain: "gimnasionuevoestilo.com",
-  },
-];
+import {
+  fetchUmamiSiteData as fetchSharedUmamiSiteData,
+  getConfiguredUmamiSites,
+  getUmamiToken as getSharedUmamiToken,
+  resolveUmamiSites,
+} from "../analytics/umami-core.mjs";
 
 const MONTHS_ES = [
   "enero",
@@ -61,17 +21,16 @@ const MONTHS_ES = [
   "diciembre",
 ];
 
-function envKeyForSite(siteKey, suffix) {
-  return `STAT_REPORT_UMAMI_${suffix}_${siteKey.toUpperCase()}`;
-}
-
 function numberValue(metric) {
   if (typeof metric === "number") return metric;
   if (metric && typeof metric.value === "number") return metric.value;
   return 0;
 }
 
-function previousValue(metricName, stats) {
+function previousValue(metricName, stats, previousStats) {
+  if (previousStats?.[metricName] !== undefined) {
+    return numberValue(previousStats[metricName]);
+  }
   const metric = stats?.[metricName];
   if (metric && typeof metric.prev === "number") return metric.prev;
   if (stats?.comparison && typeof stats.comparison[metricName] === "number") {
@@ -95,33 +54,6 @@ function renderMetricList(rows) {
     .join("\n");
 }
 
-function apiUrl(baseUrl, endpoint, params) {
-  const url = new URL(endpoint, baseUrl);
-  for (const [key, value] of Object.entries(params || {})) {
-    if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
-  }
-  return url;
-}
-
-async function requestJson(url, { token, method = "GET", body, fetchImpl = fetch } = {}) {
-  const response = await fetchImpl(url, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-
-  const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!response.ok) {
-    const message = data?.message || data?.error || `HTTP ${response.status}`;
-    throw new Error(message);
-  }
-  return data;
-}
-
 export function getPreviousMonthRange(now = new Date()) {
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth();
@@ -134,42 +66,90 @@ export function getPreviousMonthRange(now = new Date()) {
     label: `${MONTHS_ES[start.getUTCMonth()]} ${start.getUTCFullYear()}`,
     startAt: start.getTime(),
     endAt: end.getTime(),
+    previousStartAt: Date.UTC(year, month - 2, 1),
+    previousEndAt: start.getTime() - 1,
+    days: Math.round((end.getTime() - start.getTime() + 1) / 86_400_000),
   };
 }
 
 export function getConfiguredReportSites(env = process.env) {
-  return REPORT_SITES.map((site) => ({
-    ...site,
-    domain: env[envKeyForSite(site.key, "DOMAIN")] || site.domain,
-    websiteId: env[envKeyForSite(site.key, "WEBSITE_ID")] || undefined,
-  }));
+  return getConfiguredUmamiSites(env);
+}
+
+export function isAuthorizedMonthlyCronRequest({
+  cronSecret,
+  monthlySecret,
+  authorization,
+  headerSecret,
+}) {
+  return [cronSecret, monthlySecret]
+    .filter(Boolean)
+    .some((configuredSecret) => isAuthorizedCronRequest({ configuredSecret, authorization, headerSecret }));
+}
+
+export function getMonthlyStatReportConfig(env = process.env) {
+  const reportTo = env.STAT_REPORT_EMAIL_TO || env.RESEND_TO_EMAIL;
+
+  if (!reportTo) {
+    throw new Error("STAT_REPORT_EMAIL_TO or RESEND_TO_EMAIL is required");
+  }
+
+  return {
+    reportTo,
+  };
+}
+
+export async function deliverMonthlyStatReport({
+  monthKey,
+  emailTo,
+  claimToken,
+  claimDelivery,
+  send,
+  completeDelivery,
+  releaseDelivery,
+}) {
+  const claimedSnapshot = await claimDelivery({ monthKey, emailTo, claimToken });
+  if (!claimedSnapshot) return { sent: false };
+
+  let email;
+  try {
+    email = await send(claimedSnapshot);
+  } catch (error) {
+    await releaseDelivery({
+      monthKey,
+      claimToken,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+
+  try {
+    await completeDelivery({
+      monthKey,
+      claimToken,
+      sentAt: new Date().toISOString(),
+      messageId: email?.id ?? null,
+    });
+  } catch (error) {
+    throw new Error(`Email accepted but completion failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  return { sent: true };
 }
 
 export async function getUmamiToken({ baseUrl, username, password, fetchImpl = fetch }) {
-  const login = await requestJson(apiUrl(baseUrl, "/api/auth/login"), {
-    method: "POST",
-    body: { username, password },
+  return getSharedUmamiToken({
+    connection: { source: "personal", baseUrl, username, password },
     fetchImpl,
   });
-  return login.token;
 }
 
 export async function resolveReportSites({ baseUrl, token, sites, fetchImpl = fetch }) {
-  const response = await requestJson(apiUrl(baseUrl, "/api/websites", { pageSize: 200 }), {
+  return resolveUmamiSites({
+    connection: { source: "personal", baseUrl, username: "admin" },
     token,
+    sites,
     fetchImpl,
-  });
-  const websites = Array.isArray(response) ? response : response?.data || [];
-
-  return sites.map((site) => {
-    if (site.websiteId) return site;
-    const match = websites.find((website) => {
-      const id = website.id || website.websiteId || website.website_id;
-      const domain = website.domain || "";
-      const name = website.name || "";
-      return id && (domain === site.domain || name.toLowerCase() === site.label.toLowerCase());
-    });
-    return match ? { ...site, websiteId: match.id || match.websiteId || match.website_id } : site;
   });
 }
 
@@ -180,62 +160,13 @@ export async function fetchUmamiSiteSummary({
   range,
   fetchImpl = fetch,
 }) {
-  if (!site.websiteId) {
-    return {
-      site,
-      status: "missing_website_id",
-      message: "Sin websiteId configurado",
-    };
-  }
-
-  try {
-    const baseParams = {
-      startAt: range.startAt,
-      endAt: range.endAt,
-    };
-    const [stats, topPages, topReferrers, topCountries, devices] = await Promise.all([
-      requestJson(apiUrl(baseUrl, `/api/websites/${site.websiteId}/stats`, baseParams), {
-        token,
-        fetchImpl,
-      }),
-      requestJson(apiUrl(baseUrl, `/api/websites/${site.websiteId}/metrics`, {
-        ...baseParams,
-        type: "url",
-        limit: 8,
-      }), { token, fetchImpl }),
-      requestJson(apiUrl(baseUrl, `/api/websites/${site.websiteId}/metrics`, {
-        ...baseParams,
-        type: "referrer",
-        limit: 8,
-      }), { token, fetchImpl }),
-      requestJson(apiUrl(baseUrl, `/api/websites/${site.websiteId}/metrics`, {
-        ...baseParams,
-        type: "country",
-        limit: 8,
-      }), { token, fetchImpl }),
-      requestJson(apiUrl(baseUrl, `/api/websites/${site.websiteId}/metrics`, {
-        ...baseParams,
-        type: "device",
-        limit: 8,
-      }), { token, fetchImpl }),
-    ]);
-
-    return {
-      site,
-      status: "ok",
-      stats,
-      topPages,
-      topReferrers,
-      topCountries,
-      devices,
-    };
-  } catch (error) {
-    return {
-      site,
-      status: "error",
-      message: error instanceof Error ? error.message : String(error),
-    };
-  }
+  return fetchSharedUmamiSiteData({
+    connection: { source: site.source || "personal", baseUrl, username: "admin" },
+    token,
+    site,
+    range,
+    fetchImpl,
+  });
 }
 
 export function renderMonthlyStatReport({ range, siteReports, generatedAt = new Date() }) {
@@ -267,10 +198,10 @@ export function renderMonthlyStatReport({ range, siteReports, generatedAt = new 
     const bounces = numberValue(stats.bounces);
     const totaltime = numberValue(stats.totaltime);
 
-    lines.push(metricLine("Páginas vistas", pageviews, previousValue("pageviews", stats)));
-    lines.push(metricLine("Visitantes", visitors, previousValue("visitors", stats)));
-    lines.push(metricLine("Visitas", visits, previousValue("visits", stats)));
-    lines.push(metricLine("Rebotes", bounces, previousValue("bounces", stats)));
+    lines.push(metricLine("Páginas vistas", pageviews, previousValue("pageviews", stats, report.previousStats)));
+    lines.push(metricLine("Visitantes", visitors, previousValue("visitors", stats, report.previousStats)));
+    lines.push(metricLine("Visitas", visits, previousValue("visits", stats, report.previousStats)));
+    lines.push(metricLine("Rebotes", bounces, previousValue("bounces", stats, report.previousStats)));
     lines.push(`- Tiempo total: ${Math.round(totaltime / 60)} min`);
     lines.push("");
     lines.push("Páginas principales:");
@@ -290,58 +221,68 @@ export function renderMonthlyStatReport({ range, siteReports, generatedAt = new 
   return lines.join("\n").trimEnd() + "\n";
 }
 
-export async function writeMonthlyStatReportFile({
-  monthKey,
-  markdown,
-  storageDir = path.join(process.cwd(), "storage", "stat-reports"),
-}) {
-  await mkdir(storageDir, { recursive: true });
-  const filePath = path.join(storageDir, `${monthKey}.md`);
-  await writeFile(filePath, markdown, "utf8");
-  return filePath;
-}
-
 export async function processMonthlyStatReport({
   now = new Date(),
   sites,
   fetchSiteSummary,
-  writeReport,
+  fetchSiteReports,
+  saveReport,
   sendReport,
   reportTo,
 }) {
   const range = getPreviousMonthRange(now);
-  const siteReports = [];
+  const siteReports = fetchSiteReports
+    ? await fetchSiteReports({ sites, range })
+    : [];
 
-  for (const site of sites) {
-    if (!site.websiteId) {
-      siteReports.push({
-        site,
-        status: "missing_website_id",
-        message: "Sin websiteId configurado",
-      });
-      continue;
+  if (!fetchSiteReports) {
+    for (const site of sites) {
+      if (!site.websiteId) {
+        siteReports.push({
+          site,
+          status: "missing_website_id",
+          message: "Sin websiteId configurado",
+        });
+        continue;
+      }
+      siteReports.push(await fetchSiteSummary({ site, range }));
     }
-    siteReports.push(await fetchSiteSummary({ site, range }));
   }
 
   const markdown = renderMonthlyStatReport({ range, siteReports, generatedAt: now });
-  const filePath = await writeReport({ monthKey: range.monthKey, markdown });
+  const complete = siteReports.length === sites.length && siteReports.every((report) => report.status === "ok");
+  const savedReport = await saveReport({
+    monthKey: range.monthKey,
+    label: range.label,
+    markdown,
+    siteReports,
+    generatedAt: now.toISOString(),
+    complete,
+  });
+  const storageRef = typeof savedReport === "string" ? savedReport : savedReport.storageRef;
+  const alreadySent = typeof savedReport === "object" && savedReport?.alreadySent === true;
 
-  if (reportTo && sendReport) {
-    await sendReport({
+  let sent = false;
+  if (complete && !alreadySent && reportTo && sendReport) {
+    const delivery = await sendReport({
       to: reportTo,
       subject: `Informe estadístico mensual - ${range.label}`,
       markdown,
-      filePath,
+      storageRef,
       monthKey: range.monthKey,
       idempotencyKey: `monthly-stat-report-${range.monthKey}`,
     });
+    sent = delivery?.sent !== false;
   }
 
   return {
     generated: true,
-    sent: Boolean(reportTo && sendReport),
-    filePath,
+    complete,
+    deliverySatisfied: sent || alreadySent,
+    alreadySent,
+    sent,
+    deliverySkippedReason: complete ? undefined : "incomplete_site_reports",
+    storageRef,
     monthKey: range.monthKey,
     siteReports,
   };

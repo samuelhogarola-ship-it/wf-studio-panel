@@ -83,6 +83,18 @@ test('configuration reports every missing server credential', () => {
   )
 })
 
+test('Superentrenador advanced analytics accepts the shared personal Umami variables', () => {
+  assert.deepEqual(
+    getMissingUmamiConfig({
+      UMAMI_PERSONAL_URL: 'https://analytics.example.com',
+      UMAMI_PERSONAL_USERNAME: 'admin',
+      UMAMI_PERSONAL_PASSWORD: 'secret',
+      UMAMI_WEBSITE_ID_SUPERENTRENADOR: 'site-1',
+    }),
+    [],
+  )
+})
+
 test('analytics periods accept 7, 30, and 90 days and default to 30', () => {
   assert.equal(parseAnalyticsDays('7'), 7)
   assert.equal(parseAnalyticsDays('90'), 90)
@@ -252,11 +264,13 @@ test('analytics project registry covers every WF Panel project and explains miss
     STAT_REPORT_UMAMI_WEBSITE_ID_SUPERENTRENADOR: 'super-id',
   })
   assert.equal(configured.websiteId, 'super-id')
-  assert.equal(configured.websiteIdEnv, 'STAT_REPORT_UMAMI_WEBSITE_ID_SUPERENTRENADOR')
+  assert.equal(configured.websiteIdEnv, 'UMAMI_WEBSITE_ID_SUPERENTRENADOR')
 
   const missing = getAnalyticsProject('agama', {})
   assert.equal(missing.websiteId, undefined)
-  assert.equal(missing.websiteIdEnv, 'STAT_REPORT_UMAMI_WEBSITE_ID_AGAMA')
+  assert.equal(missing.websiteIdEnv, 'UMAMI_WEBSITE_ID_TODOPLASTICO')
+  assert.equal(missing.label, 'TodoPlástico')
+  assert.equal(missing.domain, 'todo-plastico.com')
 })
 
 test('dashboard resolves website id and returns all supported Umami dimensions', async () => {
@@ -330,8 +344,10 @@ test('dashboard resolves website id and returns all supported Umami dimensions',
 })
 
 test('dashboard keeps working when optional metrics are unsupported', async () => {
+  const origins = []
   const fetchImpl = async (input) => {
     const url = new URL(String(input))
+    origins.push(url.origin)
     if (url.pathname === '/api/auth/login') return jsonResponse({ token: 'token' })
     if (url.pathname.endsWith('/active')) return jsonResponse({ visitors: 0 })
     if (url.pathname.endsWith('/events/stats')) return jsonResponse({ message: 'unsupported' }, 404)
@@ -347,9 +363,11 @@ test('dashboard keeps working when optional metrics are unsupported', async () =
     projectKey: 'agama',
     period: '12m',
     env: {
-      STAT_REPORT_UMAMI_URL: 'https://analytics.example.com',
-      STAT_REPORT_UMAMI_PASSWORD: 'secret',
-      STAT_REPORT_UMAMI_WEBSITE_ID_AGAMA: 'agama-id',
+      UMAMI_AGAMA_URL: 'https://agama-analytics.example.com',
+      UMAMI_AGAMA_PASSWORD: 'secret',
+      UMAMI_WEBSITE_ID_TODOPLASTICO: 'agama-id',
+      UMAMI_PERSONAL_URL: 'https://personal-analytics.example.com',
+      UMAMI_PERSONAL_PASSWORD: 'must-not-be-used',
     },
     fetchImpl,
   })
@@ -358,6 +376,7 @@ test('dashboard keeps working when optional metrics are unsupported', async () =
   assert.deepEqual(dashboard.metrics.pages, [])
   assert.deepEqual(dashboard.metrics.countries, [])
   assert.equal(dashboard.summary.bounceRate.value, 0)
+  assert.deepEqual(new Set(origins), new Set(['https://agama-analytics.example.com']))
 })
 
 test('summary refresh skips dimension requests and uses the exact event count', async () => {
@@ -418,9 +437,9 @@ test('event summary falls back to the v2 event metric without counting pageviews
     period: 'live',
     summaryOnly: true,
     env: {
-      STAT_REPORT_UMAMI_URL: 'https://analytics.v2.example.com',
-      STAT_REPORT_UMAMI_PASSWORD: 'secret',
-      STAT_REPORT_UMAMI_WEBSITE_ID_AGAMA: 'agama-id',
+      UMAMI_AGAMA_URL: 'https://analytics.v2.example.com',
+      UMAMI_AGAMA_PASSWORD: 'secret',
+      UMAMI_WEBSITE_ID_TODOPLASTICO: 'agama-id',
     },
     fetchImpl,
   })

@@ -6,8 +6,8 @@ import { getLocale } from '@/lib/locale'
 
 export const dynamic = 'force-dynamic'
 
-const TODO_PLASTICO_PUBLIC_URL = process.env.NEXT_PUBLIC_TODO_PLASTICO_PUBLIC_URL ?? 'https://agama.eco'
-const TODO_PLASTICO_ADMIN_URL = process.env.NEXT_PUBLIC_TODO_PLASTICO_ADMIN_URL ?? 'https://agama.eco/admin'
+const TODO_PLASTICO_CLIENT_PANEL_URL = process.env.NEXT_PUBLIC_TODO_PLASTICO_PUBLIC_URL ?? 'https://todo-plastico.com/panel'
+const TODO_PLASTICO_ADMIN_URL = process.env.NEXT_PUBLIC_TODO_PLASTICO_ADMIN_URL ?? 'https://todo-plastico.com/ingresar?next=/admin'
 
 type SubLink = { label: string; href: string; external?: boolean }
 type Panel = {
@@ -118,7 +118,7 @@ const PANELS: Panel[] = [
       </svg>
     ),
     links: [
-      { label: 'Panel empresa', href: `${TODO_PLASTICO_PUBLIC_URL}/dashboard`, external: true },
+      { label: 'Panel clientes', href: TODO_PLASTICO_CLIENT_PANEL_URL, external: true },
       { label: 'Panel admin', href: TODO_PLASTICO_ADMIN_URL, external: true },
       { label: 'Estadísticas', href: '/paneladmin/todoplastico#estadisticas' },
     ],

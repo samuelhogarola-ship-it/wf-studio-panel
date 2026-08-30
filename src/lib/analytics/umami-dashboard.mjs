@@ -27,14 +27,19 @@ export function createRequestCoordinator() {
 }
 
 export const ANALYTICS_PROJECTS = [
-  { key: 'webfuengirola', label: 'Web Fuengirola', domain: 'webfuengirola.com' },
-  { key: 'vivirenfuengirola', label: 'Vivir en Fuengirola', domain: 'vivirenfuengirola.com' },
-  { key: 'conocef', label: 'Conoce Fuengirola', domain: 'conocefuengirola.com' },
-  { key: 'samuelcoachdealeman', label: 'Samuel Coach de Alemán', domain: 'samuelcoachdealeman.com' },
-  { key: 'vokabelworld', label: 'Vokabel-World', domain: 'vokabellab.com' },
-  { key: 'superentrenador', label: 'Superentrenador', domain: 'superentrenador.com' },
-  { key: 'agama', label: 'Agama Marketplace', domain: 'agama.eco' },
+  { key: 'webfuengirola', label: 'Web Fuengirola', domain: 'webfuengirola.com', source: 'personal' },
+  { key: 'vivirenfuengirola', label: 'Vivir en Fuengirola', domain: 'vivirenfuengirola.com', source: 'personal' },
+  { key: 'conocef', label: 'Conoce Fuengirola', domain: 'conocefuengirola.com', source: 'personal' },
+  { key: 'samuelcoachdealeman', label: 'Samuel Coach de Alemán', domain: 'samuelcoachdealeman.com', source: 'personal' },
+  { key: 'vokabelworld', label: 'Vokabel-World', domain: 'vokabellab.com', source: 'personal' },
+  { key: 'superentrenador', label: 'Superentrenador', domain: 'superentrenador.com', source: 'personal' },
+  { key: 'agama', label: 'TodoPlástico', domain: 'todo-plastico.com', source: 'agama' },
 ]
+
+const PROJECT_ENV_SUFFIX = {
+  vokabelworld: 'VOKABELLAB',
+  agama: 'TODOPLASTICO',
+}
 
 const METRIC_TYPES = {
   entries: ['entry'],
@@ -108,13 +113,16 @@ export function getAnalyticsProject(projectKey, env = process.env) {
   const project = ANALYTICS_PROJECTS.find(({ key }) => key === projectKey)
   if (!project) throw new Error(`Proyecto de estadísticas desconocido: ${projectKey}`)
 
-  const suffix = project.key.toUpperCase()
-  const websiteIdEnv = `STAT_REPORT_UMAMI_WEBSITE_ID_${suffix}`
-  const domainEnv = `STAT_REPORT_UMAMI_DOMAIN_${suffix}`
+  const legacySuffix = project.key.toUpperCase()
+  const suffix = PROJECT_ENV_SUFFIX[project.key] || legacySuffix
+  const websiteIdEnv = `UMAMI_WEBSITE_ID_${suffix}`
+  const legacyWebsiteIdEnv = `STAT_REPORT_UMAMI_WEBSITE_ID_${legacySuffix}`
+  const domainEnv = `UMAMI_DOMAIN_${suffix}`
+  const legacyDomainEnv = `STAT_REPORT_UMAMI_DOMAIN_${legacySuffix}`
   return {
     ...project,
-    domain: env[domainEnv]?.trim() || project.domain,
-    websiteId: env[websiteIdEnv]?.trim() || undefined,
+    domain: env[domainEnv]?.trim() || env[legacyDomainEnv]?.trim() || project.domain,
+    websiteId: env[websiteIdEnv]?.trim() || env[legacyWebsiteIdEnv]?.trim() || undefined,
     websiteIdEnv,
   }
 }
@@ -322,9 +330,16 @@ export async function fetchUmamiDashboard({
   summaryOnly = false,
 }) {
   const project = getAnalyticsProject(projectKey, env)
-  const baseUrl = env.STAT_REPORT_UMAMI_URL?.trim()
-  const username = env.STAT_REPORT_UMAMI_USERNAME?.trim() || 'admin'
-  const password = env.STAT_REPORT_UMAMI_PASSWORD?.trim()
+  const isAgama = project.source === 'agama'
+  const baseUrl = isAgama
+    ? env.UMAMI_AGAMA_URL?.trim()
+    : env.UMAMI_PERSONAL_URL?.trim() || env.STAT_REPORT_UMAMI_URL?.trim()
+  const username = isAgama
+    ? env.UMAMI_AGAMA_USERNAME?.trim() || 'admin'
+    : env.UMAMI_PERSONAL_USERNAME?.trim() || env.STAT_REPORT_UMAMI_USERNAME?.trim() || 'admin'
+  const password = isAgama
+    ? env.UMAMI_AGAMA_PASSWORD?.trim()
+    : env.UMAMI_PERSONAL_PASSWORD?.trim() || env.STAT_REPORT_UMAMI_PASSWORD?.trim()
   const range = getAnalyticsRange(period, now)
 
   if (!baseUrl || !password) {
@@ -332,7 +347,9 @@ export async function fetchUmamiDashboard({
       status: 'configuration_error',
       project,
       range,
-      message: 'Faltan STAT_REPORT_UMAMI_URL o STAT_REPORT_UMAMI_PASSWORD en Coolify.',
+      message: isAgama
+        ? 'Faltan UMAMI_AGAMA_URL o UMAMI_AGAMA_PASSWORD en Coolify.'
+        : 'Faltan UMAMI_PERSONAL_URL o UMAMI_PERSONAL_PASSWORD en Coolify.',
     }
   }
 

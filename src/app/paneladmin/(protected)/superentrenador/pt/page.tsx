@@ -1,6 +1,9 @@
 import Image from 'next/image'
+import { Suspense } from 'react'
 
-import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
+import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
+import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -57,11 +60,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
         </Card>
       </section>
 
-      <ProjectAnalyticsPanel
-        projectKey="superentrenador"
-        projectLabel="Superentrenador"
-        domain="superentrenador.com"
-      />
+      <Suspense fallback={<AnalyticsSkeleton />}>
+        <PanelAnalyticsSection panelKey="superentrenador" />
+      </Suspense>
+      <AdvancedProjectAnalyticsPanel projectKey="superentrenador" projectLabel="Superentrenador" domain="superentrenador.com" />
 
       <form className="mb-6">
         <input

@@ -1,10 +1,13 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 
+import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
+import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { updateTodoPlasticoCompanyAction, updateTodoPlasticoListingAction } from '@/lib/actions/todoplastico'
 import { requireAdmin } from '@/lib/auth'
 import { getCachedTodoPlasticoData } from '@/lib/data/todoplastico'
 import { getLocale } from '@/lib/locale'
-import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -32,7 +35,7 @@ export default async function TodoPlasticoPage({ searchParams }: { searchParams:
   const status = params.status ?? 'all'
   const q = params.q ?? ''
   const page = Number(params.page ?? 1) || 1
-  const externalAdminUrl = process.env.TODO_PLASTICO_ADMIN_URL ?? 'https://agama.eco'
+  const externalAdminUrl = process.env.TODO_PLASTICO_ADMIN_URL ?? 'https://todo-plastico.com/ingresar?next=/admin'
 
   let data: Awaited<ReturnType<typeof getCachedTodoPlasticoData>> | null = null
   let error: string | null = null
@@ -60,20 +63,19 @@ export default async function TodoPlasticoPage({ searchParams }: { searchParams:
           </p>
         </div>
         <a
-          href={`${externalAdminUrl}/admin/nuevo-anuncio`}
+          href={externalAdminUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90"
         >
-          Nuevo anuncio
+          Abrir panel admin
         </a>
       </div>
 
-      <ProjectAnalyticsPanel
-        projectKey="agama"
-        projectLabel="Agama Marketplace"
-        domain="agama.eco"
-      />
+      <Suspense fallback={<AnalyticsSkeleton />}>
+        <PanelAnalyticsSection panelKey="todoplastico" />
+      </Suspense>
+      <AdvancedProjectAnalyticsPanel projectKey="agama" projectLabel="TodoPlástico" domain="todo-plastico.com" />
 
       {error ? (
         <Card className="border-amber-200 bg-amber-50 p-5">

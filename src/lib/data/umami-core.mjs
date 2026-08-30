@@ -1,5 +1,10 @@
 const ALLOWED_DAYS = new Set([7, 30, 90])
-const REQUIRED_CONFIG = ['UMAMI_URL', 'UMAMI_USERNAME', 'UMAMI_PASSWORD', 'UMAMI_SUPERENTRENADOR_WEBSITE_ID']
+const CONFIG_ALIASES = [
+  ['UMAMI_PERSONAL_URL', 'UMAMI_URL'],
+  ['UMAMI_PERSONAL_USERNAME', 'UMAMI_USERNAME'],
+  ['UMAMI_PERSONAL_PASSWORD', 'UMAMI_PASSWORD'],
+  ['UMAMI_WEBSITE_ID_SUPERENTRENADOR', 'UMAMI_SUPERENTRENADOR_WEBSITE_ID'],
+]
 
 export function createTtlCache({ ttlMs, now = Date.now }) {
   const entries = new Map()
@@ -20,7 +25,19 @@ export function createTtlCache({ ttlMs, now = Date.now }) {
 }
 
 export function getMissingUmamiConfig(env) {
-  return REQUIRED_CONFIG.filter((name) => !env[name]?.trim())
+  const usingLegacy = CONFIG_ALIASES.some(([, legacy]) => env[legacy]?.trim())
+  return CONFIG_ALIASES
+    .filter(([preferred, legacy]) => !env[preferred]?.trim() && !env[legacy]?.trim())
+    .map(([preferred, legacy]) => usingLegacy ? legacy : preferred)
+}
+
+export function getSuperEntrenadorUmamiConfig(env) {
+  return {
+    baseUrl: env.UMAMI_PERSONAL_URL?.trim() || env.UMAMI_URL?.trim(),
+    username: env.UMAMI_PERSONAL_USERNAME?.trim() || env.UMAMI_USERNAME?.trim(),
+    password: env.UMAMI_PERSONAL_PASSWORD?.trim() || env.UMAMI_PASSWORD?.trim(),
+    websiteId: env.UMAMI_WEBSITE_ID_SUPERENTRENADOR?.trim() || env.UMAMI_SUPERENTRENADOR_WEBSITE_ID?.trim(),
+  }
 }
 
 export function parseAnalyticsDays(value) {

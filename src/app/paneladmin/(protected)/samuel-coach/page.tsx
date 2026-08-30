@@ -1,6 +1,9 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 
-import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
+import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
+import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -45,11 +48,10 @@ export default async function SamuelCoachAdminPage() {
         ))}
       </section>
 
-      <ProjectAnalyticsPanel
-        projectKey="samuelcoachdealeman"
-        projectLabel="Samuel Coach de Alemán"
-        domain="samuelcoachdealeman.com"
-      />
+      <Suspense fallback={<AnalyticsSkeleton />}>
+        <PanelAnalyticsSection panelKey="samuel-coach" />
+      </Suspense>
+      <AdvancedProjectAnalyticsPanel projectKey="samuelcoachdealeman" projectLabel="Samuel Coach de Alemán" domain="samuelcoachdealeman.com" />
 
       <section className="mb-8">
         <Link
