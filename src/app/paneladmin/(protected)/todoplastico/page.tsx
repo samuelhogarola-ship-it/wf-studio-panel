@@ -48,7 +48,7 @@ export default async function TodoPlasticoPage({ searchParams }: { searchParams:
 
   return (
     <AdminShell
-      title="Agama Marketplace"
+      title="TodoPlástico · Agama Marketplace"
       description="Empresas, usuarios y anuncios de la plataforma"
       currentPath="/paneladmin/todoplastico"
       userEmail={identity.email}

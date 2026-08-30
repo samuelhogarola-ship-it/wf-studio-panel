@@ -142,7 +142,7 @@ export function AdminShell({
         },
         {
           href: '/paneladmin/todoplastico',
-          label: 'Agama Marketplace',
+          label: 'TodoPlástico · Agama Marketplace',
           icon: panelIcon,
         },
       ],
