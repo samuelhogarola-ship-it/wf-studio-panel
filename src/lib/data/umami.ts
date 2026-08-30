@@ -4,6 +4,7 @@ import {
   buildUmamiDashboard,
   createTtlCache,
   getMissingUmamiConfig,
+  getSuperEntrenadorUmamiConfig,
   type AnalyticsDays,
   type UmamiDashboard,
 } from '@/lib/data/umami-core.mjs'
@@ -18,15 +19,16 @@ const loadCachedDashboard = createTtlCache({ ttlMs: 5 * 60 * 1000 })
 export async function getSuperEntrenadorAnalytics(days: AnalyticsDays): Promise<SuperEntrenadorAnalyticsResult> {
   const missing = getMissingUmamiConfig(process.env)
   if (missing.length) return { status: 'not-configured', missing }
+  const config = getSuperEntrenadorUmamiConfig(process.env)
 
   try {
     const data = await loadCachedDashboard(String(days), () =>
       buildUmamiDashboard({
         config: {
-          baseUrl: process.env.UMAMI_URL!,
-          username: process.env.UMAMI_USERNAME!,
-          password: process.env.UMAMI_PASSWORD!,
-          websiteId: process.env.UMAMI_SUPERENTRENADOR_WEBSITE_ID!,
+          baseUrl: config.baseUrl!,
+          username: config.username!,
+          password: config.password!,
+          websiteId: config.websiteId!,
         },
         days,
       }),

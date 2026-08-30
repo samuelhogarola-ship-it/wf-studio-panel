@@ -24,6 +24,12 @@ declare module '@/lib/data/umami-core.mjs' {
   export function createTtlCache(options: { ttlMs: number; now?: () => number }): <T>(key: string, load: () => Promise<T>) => Promise<T>
   export function parseAnalyticsDays(value: string | undefined): AnalyticsDays
   export function getMissingUmamiConfig(env: Record<string, string | undefined>): string[]
+  export function getSuperEntrenadorUmamiConfig(env: Record<string, string | undefined>): {
+    baseUrl?: string
+    username?: string
+    password?: string
+    websiteId?: string
+  }
   export function numberValue(metric: UmamiMetricValue): number
   export function previousValue(metric: UmamiMetricValue): number
   export function statsCurrentValue(stats: Record<string, unknown>, name: string): number

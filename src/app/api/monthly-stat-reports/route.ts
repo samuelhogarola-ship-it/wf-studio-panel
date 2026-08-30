@@ -1,55 +1,47 @@
+import { randomUUID } from 'node:crypto'
+
 import { NextResponse } from 'next/server'
 
 import {
-  fetchUmamiSiteSummary,
+  fetchAllUmamiPanelData,
+  getUmamiConnections,
+} from '@/lib/analytics/umami-core.mjs'
+import {
+  deliverMonthlyStatReport,
   getConfiguredReportSites,
-  getUmamiToken,
-  isAuthorizedCronRequest,
+  getMonthlyStatReportConfig,
+  isAuthorizedMonthlyCronRequest,
   processMonthlyStatReport,
-  resolveReportSites,
-  writeMonthlyStatReportFile,
 } from '@/lib/cron/monthly-stat-reports.mjs'
+import { createMonthlyStatReportRepository } from '@/lib/data/monthly-stat-reports.mjs'
 import { sendMonthlyStatReportEmail } from '@/lib/email'
+import { createSupabaseAdminClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
-function getCronSecret() {
-  return process.env.MONTHLY_STAT_REPORTS_CRON_SECRET || process.env.CRON_SECRET
-}
-
 function getRequiredConfig() {
-  const baseUrl = process.env.STAT_REPORT_UMAMI_URL
-  const username = process.env.STAT_REPORT_UMAMI_USERNAME || 'admin'
-  const password = process.env.STAT_REPORT_UMAMI_PASSWORD
-
-  if (!baseUrl || !password) {
+  try {
+    return { config: getMonthlyStatReportConfig(process.env) }
+  } catch (error) {
     return {
       error: NextResponse.json({
         error: 'stat_report_not_configured',
-        message: 'STAT_REPORT_UMAMI_URL and STAT_REPORT_UMAMI_PASSWORD are required.',
+        message: error instanceof Error ? error.message : 'Monthly report configuration is incomplete.',
       }, { status: 503 }),
     }
-  }
-
-  return {
-    config: {
-      baseUrl,
-      username,
-      password,
-      storageDir: process.env.STAT_REPORT_STORAGE_DIR,
-      reportTo: process.env.STAT_REPORT_EMAIL_TO || process.env.RESEND_TO_EMAIL || 'samuel.hogarola@gmail.com',
-    },
   }
 }
 
 async function runMonthlyStatReport(request: Request) {
-  const configuredSecret = getCronSecret()
-  if (!configuredSecret) {
+  const cronSecret = process.env.CRON_SECRET
+  const monthlySecret = process.env.MONTHLY_STAT_REPORTS_CRON_SECRET
+  if (!cronSecret && !monthlySecret) {
     return NextResponse.json({ error: 'cron_not_configured', message: 'Cron secret is required.' }, { status: 503 })
   }
 
-  if (!isAuthorizedCronRequest({
-    configuredSecret,
+  if (!isAuthorizedMonthlyCronRequest({
+    cronSecret,
+    monthlySecret,
     authorization: request.headers.get('authorization'),
     headerSecret: request.headers.get('x-cron-secret'),
   })) {
@@ -59,29 +51,55 @@ async function runMonthlyStatReport(request: Request) {
   const setup = getRequiredConfig()
   if ('error' in setup) return setup.error
 
-  const { baseUrl, username, password, storageDir, reportTo } = setup.config
-  const token = await getUmamiToken({ baseUrl, username, password })
-  const sites = await resolveReportSites({
-    baseUrl,
-    token,
-    sites: getConfiguredReportSites(),
-  })
+  const { reportTo } = setup.config
+  const reportRepository = createMonthlyStatReportRepository(createSupabaseAdminClient())
+  const sites = getConfiguredReportSites()
 
   const result = await processMonthlyStatReport({
     sites,
-    fetchSiteSummary: ({ site, range }) => fetchUmamiSiteSummary({ baseUrl, token, site, range }),
-    writeReport: ({ monthKey, markdown }) => writeMonthlyStatReportFile({ monthKey, markdown, storageDir }),
-    sendReport: async ({ to, subject, markdown, monthKey, idempotencyKey }) => {
-      await sendMonthlyStatReportEmail({
-        to,
-        subject,
-        markdown,
+    fetchSiteReports: ({ range }) => fetchAllUmamiPanelData({
+      connections: getUmamiConnections(process.env),
+      sites,
+      range,
+    }),
+    saveReport: ({ monthKey, label, markdown, siteReports, generatedAt, complete }) => {
+      return reportRepository.save({
         monthKey,
-        idempotencyKey,
+        label,
+        markdown,
+        siteReports,
+        generatedAt,
+        complete,
+      })
+    },
+    sendReport: async ({ to, monthKey, idempotencyKey }) => {
+      const claimToken = randomUUID()
+      return deliverMonthlyStatReport({
+        monthKey,
+        emailTo: to,
+        claimToken,
+        claimDelivery: (input) => reportRepository.claimDelivery(input),
+        send: (claimedSnapshot) => sendMonthlyStatReportEmail({
+          to,
+          subject: `Informe estadístico mensual - ${claimedSnapshot.label}`,
+          markdown: claimedSnapshot.markdown,
+          monthKey,
+          idempotencyKey,
+        }),
+        completeDelivery: (input) => reportRepository.completeDelivery(input),
+        releaseDelivery: (input) => reportRepository.releaseDelivery(input),
       })
     },
     reportTo,
   })
+
+  if (!result.deliverySatisfied) {
+    return NextResponse.json({
+      ok: false,
+      error: 'incomplete_site_reports',
+      ...result,
+    }, { status: 503 })
+  }
 
   return NextResponse.json({ ok: true, ...result })
 }

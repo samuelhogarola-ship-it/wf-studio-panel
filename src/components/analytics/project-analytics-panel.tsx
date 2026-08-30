@@ -66,10 +66,12 @@ export function ProjectAnalyticsPanel({
   projectKey,
   projectLabel,
   domain,
+  sectionId = 'estadisticas',
 }: {
   projectKey: string
   projectLabel: string
   domain: string
+  sectionId?: string
 }) {
   const [period, setPeriod] = useState<AnalyticsPeriod>('live')
   const [historyPeriod, setHistoryPeriod] = useState<AnalyticsPeriod>('30d')
@@ -135,7 +137,7 @@ export function ProjectAnalyticsPanel({
   const okDashboard = dashboard?.status === 'ok' ? dashboard : null
 
   return (
-    <section id="estadisticas" className="mb-10 scroll-mt-6" aria-labelledby={`${projectKey}-analytics-title`}>
+    <section id={sectionId} className="mb-10 scroll-mt-6" aria-labelledby={`${projectKey}-analytics-title`}>
       <div className="border-y border-line bg-white">
         <div className="flex flex-col gap-4 border-b border-line px-5 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>

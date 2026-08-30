@@ -1,6 +1,9 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 
-import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
+import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
+import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -41,11 +44,10 @@ export default async function AdminDashboardPage() {
         ))}
       </section>
 
-      <ProjectAnalyticsPanel
-        projectKey="webfuengirola"
-        projectLabel="Web Fuengirola"
-        domain="webfuengirola.com"
-      />
+      <Suspense fallback={<AnalyticsSkeleton />}>
+        <PanelAnalyticsSection panelKey="wf-studio" />
+      </Suspense>
+      <AdvancedProjectAnalyticsPanel projectKey="webfuengirola" projectLabel="Web Fuengirola" domain="webfuengirola.com" />
 
       <section className="mt-8">
         <Card className="overflow-hidden">

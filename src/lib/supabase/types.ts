@@ -34,6 +34,12 @@ export type Database = {
           { foreignKeyName: "messages_reply_to_id_fkey"; columns: ["reply_to_id"]; isOneToOne: false; referencedRelation: "messages"; referencedColumns: ["id"] },
         ]
       }
+      monthly_stat_reports: {
+        Row: { created_at: string; delivery_claim_token: string | null; delivery_claimed_at: string | null; email_message_id: string | null; email_sent_at: string | null; email_to: string | null; generated_at: string; is_complete: boolean; label: string; last_delivery_error: string | null; markdown: string; month_key: string; site_reports: Json; updated_at: string }
+        Insert: { created_at?: string; delivery_claim_token?: string | null; delivery_claimed_at?: string | null; email_message_id?: string | null; email_sent_at?: string | null; email_to?: string | null; generated_at: string; is_complete?: boolean; label: string; last_delivery_error?: string | null; markdown: string; month_key: string; site_reports?: Json; updated_at?: string }
+        Update: { created_at?: string; delivery_claim_token?: string | null; delivery_claimed_at?: string | null; email_message_id?: string | null; email_sent_at?: string | null; email_to?: string | null; generated_at?: string; is_complete?: boolean; label?: string; last_delivery_error?: string | null; markdown?: string; month_key?: string; site_reports?: Json; updated_at?: string }
+        Relationships: []
+      }
       notifications: {
         Row: { activity_id: string | null; body: string | null; client_id: string; created_at: string; id: string; minutes_delta: number | null; remaining_minutes: number | null; title: string }
         Insert: { activity_id?: string | null; body?: string | null; client_id: string; created_at?: string; id?: string; minutes_delta?: number | null; remaining_minutes?: number | null; title: string }
@@ -75,7 +81,14 @@ export type Database = {
         Relationships: [{ foreignKeyName: "packs_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
     }
-    Functions: { next_invoice_number: { Args: never; Returns: string } }
+    Functions: {
+      claim_monthly_stat_report_delivery: { Args: { p_claim_token: string; p_email_to: string; p_month_key: string }; Returns: boolean }
+      complete_monthly_stat_report_delivery: { Args: { p_claim_token: string; p_message_id: string | null; p_month_key: string; p_sent_at: string }; Returns: boolean }
+      next_invoice_number: { Args: never; Returns: string }
+      release_monthly_stat_report_delivery: { Args: { p_claim_token: string; p_error: string; p_month_key: string }; Returns: boolean }
+      claim_monthly_stat_report_delivery_snapshot: { Args: { p_claim_token: string; p_email_to: string; p_month_key: string }; Returns: Json }
+      save_monthly_stat_report_snapshot: { Args: { p_generated_at: string; p_is_complete: boolean; p_label: string; p_markdown: string; p_month_key: string; p_site_reports: Json }; Returns: string }
+    }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
   }
