@@ -108,7 +108,7 @@ const PANELS: Panel[] = [
     ],
   },
   {
-    title: 'Agama Marketplace',
+    title: 'TodoPlástico · Agama Marketplace',
     description: 'Empresas, anuncios y usuarios de la plataforma de reciclado.',
     color: 'from-emerald-600 to-emerald-900',
     href: '/paneladmin/todoplastico',

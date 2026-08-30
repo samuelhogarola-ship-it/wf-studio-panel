@@ -22,11 +22,11 @@ test("launcher keeps marketplace visible before the lower panel row", async () =
   );
 });
 
-test("launcher keeps client and admin marketplace links on TodoPlástico, not Superentrenador", async () => {
+test("launcher names TodoPlástico explicitly and keeps its marketplace links out of Superentrenador", async () => {
   const source = await readSource("src/app/paneladmin/(protected)/inicio/page.tsx");
 
   const agamaSection = source.slice(
-    source.indexOf("title: 'Agama Marketplace'"),
+    source.indexOf("title: 'TodoPlástico · Agama Marketplace'"),
     source.indexOf("title: 'Superentrenador'"),
   );
   const superentrenadorSection = source.slice(source.indexOf("title: 'Superentrenador'"));
@@ -42,5 +42,11 @@ test("admin shell allows page content and navigation to scroll", async () => {
   assert.match(source, /className="min-h-screen h-screen overflow-hidden bg-background flex"/);
   assert.match(source, /className="hidden lg:flex h-screen w-56/);
   assert.match(source, /className="flex-1 overflow-y-auto px-6 py-8"/);
-  assert.match(source, /label: 'Agama Marketplace'/);
+  assert.match(source, /label: 'TodoPlástico · Agama Marketplace'/);
+});
+
+test("TodoPlástico page keeps the product name visible in its heading", async () => {
+  const source = await readSource("src/app/paneladmin/(protected)/todoplastico/page.tsx");
+
+  assert.match(source, /title="TodoPlástico · Agama Marketplace"/);
 });
