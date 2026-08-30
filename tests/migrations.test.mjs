@@ -65,6 +65,8 @@ test("monthly reports migration creates durable storage and idempotent delivery 
   );
 
   assert.match(reportSql, /create table if not exists public\.monthly_stat_reports/);
+  assert.match(reportSql, /create or replace function public\.set_monthly_stat_reports_updated_at\(\)/);
+  assert.match(reportSql, /execute function public\.set_monthly_stat_reports_updated_at\(\)/);
   assert.match(reportSql, /create or replace function public\.claim_monthly_stat_report_delivery/);
   assert.match(reportSql, /create or replace function public\.complete_monthly_stat_report_delivery/);
   assert.match(reportSql, /create or replace function public\.release_monthly_stat_report_delivery/);

@@ -14,11 +14,25 @@ create table if not exists public.monthly_stat_reports (
   updated_at timestamptz not null default timezone('utc', now())
 );
 
+create or replace function public.set_monthly_stat_reports_updated_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.updated_at = timezone('utc', now());
+  return new;
+end;
+$$;
+
 drop trigger if exists set_monthly_stat_reports_updated_at on public.monthly_stat_reports;
 create trigger set_monthly_stat_reports_updated_at
 before update on public.monthly_stat_reports
 for each row
-execute function public.set_updated_at();
+execute function public.set_monthly_stat_reports_updated_at();
+
+revoke all on function public.set_monthly_stat_reports_updated_at() from public, anon, authenticated;
+grant execute on function public.set_monthly_stat_reports_updated_at() to service_role;
 
 alter table public.monthly_stat_reports enable row level security;
 
