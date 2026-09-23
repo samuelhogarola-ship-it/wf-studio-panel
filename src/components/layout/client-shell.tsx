@@ -10,6 +10,9 @@ import { cn } from '@/lib/utils'
 
 function getNavItems(locale: Locale) {
   return [
+    { href: '/cliente/informes', label: t(locale, 'clientNav.informes'), icon: null },
+    { href: '/cliente/actualizaciones', label: t(locale, 'clientNav.actualizaciones'), icon: null },
+    { href: '/cliente/fotografias', label: t(locale, 'clientNav.fotografias'), icon: null },
     {
       href: '/cliente/dashboard',
       label: t(locale, 'clientNav.dashboard'),
