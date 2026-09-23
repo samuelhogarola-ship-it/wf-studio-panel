@@ -50,7 +50,7 @@ export default async function AdminInformesPage({
 
   const { data: clients } = await supabase
     .from('clients')
-    .select('id, name, email, status')
+    .select('id, name, email, status, project')
     .order('name')
 
   const activeClients = (clients ?? []).filter((c) => c.status === 'active')
@@ -106,7 +106,7 @@ export default async function AdminInformesPage({
                 <p className="text-xs text-muted">{client.email}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Link className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold" href={`/paneladmin/clientes/${client.id}/recursos`}>Informes, novedades y fotos</Link>
+                {client.project === 'wf-studio' && <Link className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold" href={`/paneladmin/clientes/${client.id}/recursos`}>Informes, novedades y fotos</Link>}
                 <Link
                   href={`/paneladmin/clientes/${client.id}/print/servicios`}
                   target="_blank"
@@ -143,7 +143,7 @@ export default async function AdminInformesPage({
                   <p className="text-xs text-muted">{client.email}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                <Link className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold" href={`/paneladmin/clientes/${client.id}/recursos`}>Informes, novedades y fotos</Link>
+                {client.project === 'wf-studio' && <Link className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold" href={`/paneladmin/clientes/${client.id}/recursos`}>Informes, novedades y fotos</Link>}
                   <Link
                     href={`/paneladmin/clientes/${client.id}/print/servicios`}
                     target="_blank"

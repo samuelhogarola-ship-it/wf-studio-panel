@@ -331,6 +331,9 @@ export const translations = {
 
     // Client shell nav
     'clientNav.dashboard': 'Resumen',
+    'clientNav.informes': 'Informes',
+    'clientNav.actualizaciones': 'Actualizaciones',
+    'clientNav.fotografias': 'Fotografías',
     'clientNav.servicios': 'Servicios',
     'clientNav.bonos': 'Bonos',
     'clientNav.pendientes': 'Pendientes',
@@ -690,6 +693,9 @@ export const translations = {
     // Client dashboard page
     // Client shell nav
     'clientNav.dashboard': 'Overview',
+    'clientNav.informes': 'Reports',
+    'clientNav.actualizaciones': 'Updates',
+    'clientNav.fotografias': 'Photos',
     'clientNav.servicios': 'Services',
     'clientNav.bonos': 'Hours',
     'clientNav.pendientes': 'Pending',
