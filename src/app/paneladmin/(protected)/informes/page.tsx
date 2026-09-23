@@ -105,7 +105,8 @@ export default async function AdminInformesPage({
                 <p className="font-semibold text-foreground">{client.name}</p>
                 <p className="text-xs text-muted">{client.email}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Link className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold" href={`/paneladmin/clientes/${client.id}/recursos`}>Informes, novedades y fotos</Link>
                 <Link
                   href={`/paneladmin/clientes/${client.id}/print/servicios`}
                   target="_blank"
@@ -141,7 +142,8 @@ export default async function AdminInformesPage({
                   <p className="font-semibold text-foreground">{client.name}</p>
                   <p className="text-xs text-muted">{client.email}</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                <Link className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold" href={`/paneladmin/clientes/${client.id}/recursos`}>Informes, novedades y fotos</Link>
                   <Link
                     href={`/paneladmin/clientes/${client.id}/print/servicios`}
                     target="_blank"
