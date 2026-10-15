@@ -105,7 +105,7 @@ test("configured report sites include all panels and keep missing website ids vi
     STAT_REPORT_UMAMI_WEBSITE_ID_SUPERENTRENADOR: "super-id",
   });
 
-  assert.equal(sites.length, 14);
+  assert.equal(sites.length, 17);
   assert.equal(sites.find((site) => site.key === "webfuengirola")?.source, "personal");
   assert.equal(sites.find((site) => site.key === "webfuengirola")?.websiteId, "wf-id");
   assert.equal(sites.find((site) => site.key === "superentrenador")?.websiteId, "super-id");
@@ -622,4 +622,11 @@ test("accepted email with failed completion keeps its claim and is not released"
   );
 
   assert.equal(released, false);
+});
+
+test("newly connected public websites participate in monthly reports", () => {
+  const sites = getConfiguredReportSites({ UMAMI_WEBSITE_ID_BIONATURA: "bio-id", UMAMI_WEBSITE_ID_SPORTMASSAGEFUENGIROLA: "sport-id", UMAMI_WEBSITE_ID_DEUTSCHKOMPAKT: "deutsch-id" });
+  for (const [key, id] of [["bionatura", "bio-id"], ["sportmassagefuengirola", "sport-id"], ["deutschkompakt", "deutsch-id"]]) {
+    assert.equal(sites.find((site) => site.key === key)?.websiteId, id);
+  }
 });

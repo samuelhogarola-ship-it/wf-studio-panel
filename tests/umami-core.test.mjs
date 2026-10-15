@@ -46,13 +46,13 @@ test("TodoPlastico is isolated on agama and every other site uses personal", () 
     sites.filter((site) => site.source === "agama").map((site) => site.key),
     ["todoplastico"],
   );
-  assert.equal(sites.filter((site) => site.source === "personal").length, 13);
+  assert.equal(sites.filter((site) => site.source === "personal").length, 16);
 });
 
-test("registry exposes all fourteen sites with their exact panel grouping", () => {
+test("registry exposes all seventeen sites with their exact panel grouping", () => {
   const sites = getConfiguredUmamiSites({});
 
-  assert.equal(sites.length, 14);
+  assert.equal(sites.length, 17);
   assert.deepEqual(
     getPanelUmamiSites("vokabel-world", sites).map((site) => site.key),
     ["vokabellab", "imkontext", "derdiedas"],
@@ -379,4 +379,23 @@ test("shared Umami requests abort after the configured timeout", async () => {
   assert.equal(reports[0].status, "error");
   assert.match(reports[0].message, /timed out/);
   assert.ok(Date.now() - startedAt < 250);
+});
+
+test("new public websites use personal reports-only metrics and runtime website IDs", () => {
+  const entries = [
+    ["bionatura", "bionatura.es"],
+    ["sportmassagefuengirola", "sportmassagefuengirola.com"],
+    ["deutschkompakt", "deutschkompakt.com"],
+  ];
+  const env = Object.fromEntries(entries.map(([key]) => [`UMAMI_WEBSITE_ID_${key.toUpperCase()}`, `${key}-test-id`]));
+  const sites = getConfiguredUmamiSites(env);
+  for (const [key, domain] of entries) {
+    const site = sites.find((entry) => entry.key === key);
+    assert.ok(site, key);
+    assert.equal(site.domain, domain);
+    assert.equal(site.source, "personal");
+    assert.equal(site.panelKey, "reports-only");
+    assert.equal(site.websiteId, `${key}-test-id`);
+    assert.equal(getConfiguredUmamiSites({}).find((entry) => entry.key === key).websiteId, undefined);
+  }
 });
