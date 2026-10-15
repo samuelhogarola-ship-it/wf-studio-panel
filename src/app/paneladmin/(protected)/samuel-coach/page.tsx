@@ -55,18 +55,18 @@ export default async function SamuelCoachAdminPage() {
 
       <section className="mb-8 grid gap-4">
         <a
-          href="http://127.0.0.1:4545/"
+          href="http://127.0.0.1:4321/"
           target="_blank"
           rel="noopener noreferrer"
           className="block rounded-lg border border-line bg-white p-6 transition hover:border-brand/40 hover:shadow-sm"
         >
           <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-brand">Blog Creator · local</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-brand">Gestor de posts · local</p>
               <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground">Editor de posts</h2>
               <p className="mt-2 max-w-2xl text-sm text-muted">
                 Edita los artículos, las imágenes y los metadatos SEO del blog de Samuel.
-                Abre Blog Creator en este ordenador antes de entrar. Los cambios se guardan en los archivos locales; no se publican automáticamente.
+                Abre el gestor de posts en este ordenador antes de entrar. Los cambios se guardan en los archivos locales; no se publican automáticamente.
               </p>
             </div>
             <span className="inline-flex w-fit items-center rounded px-4 py-2 text-sm font-bold text-white bg-brand">
