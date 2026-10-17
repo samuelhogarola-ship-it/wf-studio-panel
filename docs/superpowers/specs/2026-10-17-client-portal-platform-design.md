@@ -123,6 +123,7 @@ Initial intended states:
 
 - Samuel Coach: active;
 - Agama: active;
+- Web Fuengirola: active, connected to its existing blog and Blog Creator configuration;
 - Viking: connect or provision, then active;
 - Sportmassage: available until its blog is created, then active;
 - projects without blogs: unavailable or available, never active by default.
@@ -232,7 +233,7 @@ Migration is additive and must not break current access.
 1. Create project and capability tables with RLS.
 2. Backfill project records from known Studio/Umami registries and existing client services.
 3. Map Ángel's existing domains, reports and services without changing their source records.
-4. Register Samuel Coach, Agama, Viking and Sportmassage Blogger states.
+4. Register Samuel Coach, Agama, Web Fuengirola, Viking and Sportmassage Blogger states.
 5. Keep current static client navigation as a temporary fallback until a client's capability set is complete.
 6. Enable dynamic navigation for internal/admin testing.
 7. Enable selected clients one at a time.
@@ -292,7 +293,7 @@ The rollout is phased to reduce risk:
 2. administrator capability management and registration endpoint;
 3. dynamic Client Portal navigation and project selector;
 4. statistics and existing service integrations;
-5. secure Blogger launch for Samuel Coach and Agama;
+5. secure Blogger launch for Samuel Coach, Agama and Web Fuengirola;
 6. Samuel Coach content/URL recovery;
 7. Viking and Sportmassage Blogger onboarding;
 8. selected-client pilot, beginning with an existing cooperative client;
