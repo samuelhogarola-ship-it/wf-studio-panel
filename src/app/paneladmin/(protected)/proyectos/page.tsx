@@ -48,14 +48,12 @@ export default async function Page() {
                 Abrir panel
               </Link>
               {site.blogger.enabled ? (
-                <a
-                  href={site.blogger.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href={`/paneladmin/proyectos/${site.key}/blogger`}
                   className="rounded bg-brand px-3 py-2 text-sm font-bold text-white"
                 >
-                  Blogger ↗
-                </a>
+                  Blogger
+                </Link>
               ) : null}
             </div>
           </Card>
