@@ -1,10 +1,27 @@
 import registry from "../../config/sites.json" with { type: "json" };
 
 const LOCAL_SUFFIXES = new Set(["localhost", "local", "internal", "lan", "home", "test", "invalid", "example"]);
-const KNOWN_MULTI_LABEL_PUBLIC_SUFFIXES = new Set([
-  "ac.uk", "co.uk", "gov.uk", "org.uk",
-  "com.au", "net.au", "org.au",
-  "co.nz", "com.br", "com.mx", "co.jp", "co.in", "com.cn", "com.sg", "com.tr",
+const SITE_DOMAINS = new Map([
+  ["webfuengirola", "webfuengirola.com"],
+  ["vivirenfuengirola", "vivirenfuengirola.com"],
+  ["conocef", "conocefuengirola.com"],
+  ["topfuengirola", "topfuengirola.com"],
+  ["samuelcoachdealeman", "samuelcoachdealeman.com"],
+  ["vikingfitness", "vikingfitness.es"],
+  ["personaltrainerfuengirola", "personaltrainerfuengirola.com"],
+  ["gimnasionuevoestilo", "gimnasionuevoestilo.com"],
+  ["bionatura", "bionatura.es"],
+  ["sportmassagefuengirola", "sportmassagefuengirola.com"],
+  ["deutschkompakt", "deutschkompakt.com"],
+  ["vokabellab", "vokabellab.com"],
+  ["imkontext", "imkontext.vokabellab.com"],
+  ["derdiedas", "derdiedas.vokabellab.com"],
+  ["superentrenador", "superentrenador.com"],
+  ["coachstudio", "coach.superentrenador.com"],
+  ["todoplastico", "todo-plastico.com"],
+]);
+const SITE_PRODUCTION_HOST_OVERRIDES = new Map([
+  ["samuelcoachdealeman", "www.samuelcoachdealeman.com"],
 ]);
 
 function isIpLiteral(value) {
@@ -14,7 +31,7 @@ function isIpLiteral(value) {
   return parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
 }
 
-function validatePublicHostname(value, label) {
+function validateHostnameSyntax(value, label) {
   if (typeof value !== "string" || value !== value.trim().toLowerCase() || value.length > 253) {
     throw new Error(`Registro de sitios: ${label} no es un hostname público canónico`);
   }
@@ -26,9 +43,6 @@ function validatePublicHostname(value, label) {
   const suffix = labels.at(-1);
   if (!suffix || LOCAL_SUFFIXES.has(suffix) || (!/^[a-z]{2,63}$/.test(suffix) && !/^xn--[a-z0-9-]{2,59}$/.test(suffix))) {
     throw new Error(`Registro de sitios: ${label} no usa un sufijo público válido`);
-  }
-  if (KNOWN_MULTI_LABEL_PUBLIC_SUFFIXES.has(value)) {
-    throw new Error(`Registro de sitios: ${label} es un sufijo público, no un dominio registrable`);
   }
   return value;
 }
@@ -49,20 +63,28 @@ function parseOrigin(value, label) {
   ) {
     throw new Error(`Registro de sitios: ${label} no usa un origen HTTPS seguro`);
   }
-  validatePublicHostname(parsed.hostname.toLowerCase(), `${label} hostname`);
+  validateHostnameSyntax(parsed.hostname.toLowerCase(), `${label} hostname`);
   return parsed;
 }
 
-function allowedSiteOrigins(site, domain) {
-  const allowed = new Set([`https://${domain}`, `https://www.${domain}`]);
+function parseExactOrigin(value, label) {
+  const parsed = parseOrigin(value, label);
+  if (value !== parsed.origin) {
+    throw new Error(`Registro de sitios: ${label} debe ser un origen HTTPS normalizado`);
+  }
+  return parsed;
+}
+
+function allowedSiteOrigins(site, domain, productionOrigin) {
+  const allowed = new Set([productionOrigin]);
   if (site.allowedOrigins === undefined) return allowed;
   if (!Array.isArray(site.allowedOrigins) || new Set(site.allowedOrigins).size !== site.allowedOrigins.length) {
     throw new Error(`Registro de sitios: orígenes permitidos de ${site.key} no válidos`);
   }
   for (const value of site.allowedOrigins) {
-    const parsed = parseOrigin(value, `origen permitido de ${site.key}`);
+    const parsed = parseExactOrigin(value, `origen permitido de ${site.key}`);
     const targetHost = parsed.hostname.toLowerCase();
-    if (value !== parsed.origin || (targetHost !== domain && !targetHost.endsWith(`.${domain}`))) {
+    if (targetHost !== domain && !targetHost.endsWith(`.${domain}`)) {
       throw new Error(`Registro de sitios: origen no aprobado para ${site.key}`);
     }
     allowed.add(parsed.origin);
@@ -83,9 +105,18 @@ export function validateSite(site) {
     throw new Error("Registro de sitios: schemaVersion no compatible");
   if (!site.key || !site.name || !site.domain || !site.productionUrl)
     throw new Error("Registro de sitios: faltan campos obligatorios");
-  const domain = validatePublicHostname(site.domain, `dominio de ${site.key}`);
-  const allowedOrigins = allowedSiteOrigins(site, domain);
-  parseHttpsUrl(site.productionUrl, "producción", site, allowedOrigins);
+  const approvedDomain = SITE_DOMAINS.get(site.key);
+  if (!approvedDomain || site.domain !== approvedDomain) {
+    throw new Error(`Registro de sitios: identidad de producción no aprobada para ${site.key}`);
+  }
+  const domain = validateHostnameSyntax(site.domain, `dominio de ${site.key}`);
+  const production = parseExactOrigin(site.productionUrl, `producción de ${site.key}`);
+  const expectedProductionHost = SITE_PRODUCTION_HOST_OVERRIDES.get(site.key) ?? domain;
+  const expectedProductionOrigin = `https://${expectedProductionHost}`;
+  if (production.origin !== expectedProductionOrigin) {
+    throw new Error(`Registro de sitios: identidad de producción no aprobada para ${site.key}`);
+  }
+  const allowedOrigins = allowedSiteOrigins(site, domain, production.origin);
   if (site.blogger?.enabled) {
     if (!site.blogger.url) throw new Error(`Registro de sitios: Blogger de ${site.key} no tiene acceso directo`);
     parseHttpsUrl(site.blogger.url, "Blogger", site, allowedOrigins);

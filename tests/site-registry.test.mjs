@@ -55,11 +55,18 @@ test("Blogger handoff registry accepts only complete same-site HTTPS destination
   }
 });
 
-test("site domains must be canonical public registrable hostnames before URL validation", () => {
+test("closed site identities reject public suffixes, local hosts and malformed domains for every key", () => {
   const base = structuredClone(getSiteByKey("samuelcoachdealeman"));
+  const candidateKeys = [...getSites().map(({ key }) => key), "unregistered-site"];
   const invalidDomains = [
     ["com", "https://com"],
     ["co.uk", "https://co.uk"],
+    ["github.io", "https://github.io"],
+    ["appspot.com", "https://appspot.com"],
+    ["pages.dev", "https://pages.dev"],
+    ["vercel.app", "https://vercel.app"],
+    ["co.za", "https://co.za"],
+    ["com.ar", "https://com.ar"],
     ["localhost", "https://localhost"],
     ["studio.local", "https://studio.local"],
     ["127.0.0.1", "https://127.0.0.1"],
@@ -70,14 +77,81 @@ test("site domains must be canonical public registrable hostnames before URL val
   ];
 
   for (const [domain, origin] of invalidDomains) {
-    const site = {
-      ...base,
-      domain,
-      productionUrl: origin,
-      blogger: { enabled: true, url: `${origin}/admin/blogger/` },
-    };
-    assert.throws(() => validateSite(site), /dominio|hostname|registro|públic/i, domain);
+    for (const key of candidateKeys) {
+      const site = {
+        ...base,
+        key,
+        domain,
+        productionUrl: origin,
+        blogger: { enabled: true, url: `${origin}/admin/blogger/` },
+      };
+      assert.throws(
+        () => validateSite(site),
+        /dominio|hostname|identidad|registro|públic/i,
+        `${key}: ${domain}`,
+      );
+    }
   }
+});
+
+test("a registered domain cannot be re-keyed as another site identity", () => {
+  const sites = getSites();
+  for (const site of sites) {
+    const otherKey = sites.find(({ key }) => key !== site.key)?.key;
+    assert.ok(otherKey);
+    assert.throws(
+      () => validateSite({ ...structuredClone(site), key: otherKey }),
+      /identidad|registro/i,
+      `${site.key} as ${otherKey}`,
+    );
+  }
+});
+
+test("registered sites accept only their exact closed production identity", () => {
+  const bareProduction = structuredClone(getSiteByKey("webfuengirola"));
+  const wwwProduction = structuredClone(getSiteByKey("samuelcoachdealeman"));
+
+  assert.equal(validateSite(bareProduction).productionUrl, "https://webfuengirola.com");
+  assert.equal(validateSite(wwwProduction).productionUrl, "https://www.samuelcoachdealeman.com");
+
+  for (const site of [
+    { ...bareProduction, productionUrl: "https://www.webfuengirola.com" },
+    { ...wwwProduction, productionUrl: "https://samuelcoachdealeman.com" },
+    { ...bareProduction, productionUrl: "https://webfuengirola.com/path" },
+    { ...bareProduction, productionUrl: "https://webfuengirola.com?preview=1" },
+    { ...bareProduction, productionUrl: "https://webfuengirola.com#preview" },
+    {
+      ...bareProduction,
+      domain: "webfuengirola.example.com",
+      productionUrl: "https://webfuengirola.example.com",
+    },
+  ]) {
+    assert.throws(() => validateSite(site), /producción|identidad|origen|registro/i, site.productionUrl);
+  }
+});
+
+test("Blogger destinations do not inherit undeclared bare or www origins", () => {
+  const bareProduction = structuredClone(getSiteByKey("webfuengirola"));
+  const wwwProduction = structuredClone(getSiteByKey("samuelcoachdealeman"));
+
+  assert.throws(
+    () => validateSite({
+      ...bareProduction,
+      blogger: { enabled: true, url: "https://www.webfuengirola.com/admin/blogger/" },
+    }),
+    /Blogger|origen|registro/i,
+  );
+  assert.throws(
+    () => validateSite({
+      ...wwwProduction,
+      blogger: {
+        ...wwwProduction.blogger,
+        launchUrl: "https://samuelcoachdealeman.com/admin/blogger/launch",
+        healthUrl: "https://www.samuelcoachdealeman.com/api/blogger/health",
+      },
+    }),
+    /Blogger|origen|registro/i,
+  );
 });
 
 test("Blogger destinations reject credentials, non-default ports and unapproved origins", () => {
@@ -131,6 +205,8 @@ test("explicit allowedOrigins permits only the exact approved Blogger subdomain 
     ["https://samuelcoachdealeman.com.evil.example"],
     ["https://evilsamuelcoachdealeman.com"],
     ["https://tools.samuelcoachdealeman.com/path"],
+    ["https://tools.samuelcoachdealeman.com?preview=1"],
+    ["https://tools.samuelcoachdealeman.com#preview"],
     ["http://tools.samuelcoachdealeman.com"],
   ]) {
     assert.throws(
