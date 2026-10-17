@@ -340,6 +340,174 @@ test('exchange POST authenticates the target server and returns only audience-bo
   assert.match(response.headers.get('content-security-policy') ?? '', /form-action 'none'/)
 })
 
+async function boundedExchangeSetup() {
+  const ticketModule = await import('../src/lib/tools/launch-tickets.mjs')
+  const calls = { registry: 0, secret: 0, authorization: 0, database: 0, consume: 0 }
+  const route = loadProjectModule(exchangeRoutePath, {
+    '@/lib/sites/registry.mjs': {
+      getSiteByKey() {
+        calls.registry += 1
+        return configuredSite
+      },
+      getBloggerHandoff: site => site.blogger,
+    },
+    '@/lib/supabase/admin': {
+      getSupabaseAdminClient() {
+        calls.database += 1
+        return { serviceRole: true }
+      },
+    },
+    '@/lib/tools/launch-tickets.mjs': {
+      ...ticketModule,
+      getBloggerExchangeSecret() {
+        calls.secret += 1
+        return 'target-secret'
+      },
+      isBloggerExchangeAuthorized() {
+        calls.authorization += 1
+        return true
+      },
+      async consumeLaunchTicket() {
+        calls.consume += 1
+        return {
+          protocol,
+          siteKey: 'example',
+          audience: 'https://example.com',
+          projectId: project.id,
+          clientId: client.id,
+          userId: claims().userId,
+          actorRole: 'client',
+          expiresAt: new Date(now + 60_000).toISOString(),
+        }
+      },
+    },
+  })
+  return { calls, route }
+}
+
+function exchangeRequest(body, extraHeaders = {}) {
+  return new Request('https://studio.example/api/tool-launch/exchange', {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer target-secret',
+      'content-type': 'application/json',
+      ...extraHeaders,
+    },
+    body,
+  })
+}
+
+function streamedExchangeRequest(chunks, extraHeaders = {}) {
+  const encoder = new TextEncoder()
+  let index = 0
+  let cancelled = false
+  const body = new ReadableStream({
+    pull(controller) {
+      if (index === chunks.length) {
+        controller.close()
+        return
+      }
+      const chunk = chunks[index]
+      index += 1
+      controller.enqueue(typeof chunk === 'string' ? encoder.encode(chunk) : chunk)
+    },
+    cancel() {
+      cancelled = true
+    },
+  })
+  const request = new Request('https://studio.example/api/tool-launch/exchange', {
+    method: 'POST',
+    headers: {
+      authorization: 'Bearer target-secret',
+      'content-type': 'application/json',
+      ...extraHeaders,
+    },
+    body,
+    duplex: 'half',
+  })
+  return { request, wasCancelled: () => cancelled }
+}
+
+function validExchangeBody() {
+  return JSON.stringify({ protocol, code: 'A'.repeat(43), siteKey: 'example' })
+}
+
+function assertNoExchangeBoundaryWork(calls) {
+  assert.deepEqual(calls, { registry: 0, secret: 0, authorization: 0, database: 0, consume: 0 })
+}
+
+test('exchange accepts a valid JSON body without Content-Length', async () => {
+  const setup = await boundedExchangeSetup()
+  const request = exchangeRequest(validExchangeBody())
+  assert.equal(request.headers.get('content-length'), null)
+
+  const response = await setup.route.POST(request)
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(setup.calls, { registry: 1, secret: 1, authorization: 1, database: 1, consume: 1 })
+})
+
+test('exchange stops and cancels a chunked stream after it exceeds 4096 bytes', async () => {
+  const setup = await boundedExchangeSetup()
+  const streamed = streamedExchangeRequest(['x'.repeat(3000), 'y'.repeat(2000), 'unread'])
+
+  const response = await setup.route.POST(streamed.request)
+
+  assert.equal(response.status, 400)
+  assert.deepEqual(await response.json(), { error: 'invalid_request' })
+  assert.equal(streamed.wasCancelled(), true)
+  assertNoExchangeBoundaryWork(setup.calls)
+})
+
+test('exchange counts actual streamed bytes when Content-Length underreports the body', async () => {
+  const setup = await boundedExchangeSetup()
+  const streamed = streamedExchangeRequest(['x'.repeat(2048), 'y'.repeat(2049), 'unread'], { 'content-length': '10' })
+
+  const response = await setup.route.POST(streamed.request)
+
+  assert.equal(response.status, 400)
+  assert.equal(streamed.wasCancelled(), true)
+  assertNoExchangeBoundaryWork(setup.calls)
+})
+
+test('exchange rejects and cancels invalid Content-Length values before reading or authenticating', async () => {
+  for (const value of ['-1', 'NaN', '4.5', '10, 20']) {
+    const setup = await boundedExchangeSetup()
+    const streamed = streamedExchangeRequest([validExchangeBody()], { 'content-length': value })
+
+    const response = await setup.route.POST(streamed.request)
+
+    assert.equal(response.status, 400, value)
+    assert.equal(streamed.wasCancelled(), true, value)
+    assertNoExchangeBoundaryWork(setup.calls)
+  }
+})
+
+test('exchange enforces the limit in UTF-8 bytes rather than JavaScript characters', async () => {
+  const setup = await boundedExchangeSetup()
+  const body = JSON.stringify({ padding: 'é'.repeat(2050) })
+  assert.ok(body.length < 4096)
+  assert.ok(new TextEncoder().encode(body).byteLength > 4096)
+  const split = Math.floor(body.length / 2)
+  const streamed = streamedExchangeRequest([body.slice(0, split), body.slice(split), 'unread'], { 'content-length': String(body.length) })
+
+  const response = await setup.route.POST(streamed.request)
+
+  assert.equal(response.status, 400)
+  assert.equal(streamed.wasCancelled(), true)
+  assertNoExchangeBoundaryWork(setup.calls)
+})
+
+test('exchange rejects malformed JSON before registry, authentication or database work', async () => {
+  const setup = await boundedExchangeSetup()
+
+  const response = await setup.route.POST(exchangeRequest('{"protocol":'))
+
+  assert.equal(response.status, 400)
+  assert.deepEqual(await response.json(), { error: 'invalid_request' })
+  assertNoExchangeBoundaryWork(setup.calls)
+})
+
 test('exchange rejects wrong credentials, wrong audience, replay and unavailable tools with safe identical ticket errors', async t => {
   const oldExample = process.env.WF_BLOGGER_HANDOFF_SECRET_EXAMPLE
   const oldOther = process.env.WF_BLOGGER_HANDOFF_SECRET_OTHER

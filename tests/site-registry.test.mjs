@@ -55,6 +55,92 @@ test("Blogger handoff registry accepts only complete same-site HTTPS destination
   }
 });
 
+test("site domains must be canonical public registrable hostnames before URL validation", () => {
+  const base = structuredClone(getSiteByKey("samuelcoachdealeman"));
+  const invalidDomains = [
+    ["com", "https://com"],
+    ["co.uk", "https://co.uk"],
+    ["localhost", "https://localhost"],
+    ["studio.local", "https://studio.local"],
+    ["127.0.0.1", "https://127.0.0.1"],
+    ["[::1]", "https://[::1]"],
+    ["example..com", "https://example..com"],
+    ["-example.com", "https://-example.com"],
+    ["user@example.com", "https://example.com"],
+  ];
+
+  for (const [domain, origin] of invalidDomains) {
+    const site = {
+      ...base,
+      domain,
+      productionUrl: origin,
+      blogger: { enabled: true, url: `${origin}/admin/blogger/` },
+    };
+    assert.throws(() => validateSite(site), /dominio|hostname|registro|públic/i, domain);
+  }
+});
+
+test("Blogger destinations reject credentials, non-default ports and unapproved origins", () => {
+  const base = structuredClone(getSiteByKey("samuelcoachdealeman"));
+  const configured = {
+    ...base,
+    blogger: {
+      ...base.blogger,
+      launchUrl: "https://www.samuelcoachdealeman.com/admin/blogger/launch",
+      healthUrl: "https://www.samuelcoachdealeman.com/api/blogger/health",
+    },
+  };
+  const attacks = [
+    "not a URL",
+    "https://user:pass@samuelcoachdealeman.com/admin/blogger/launch",
+    "https://samuelcoachdealeman.com:8443/admin/blogger/launch",
+    "https://admin.samuelcoachdealeman.com/admin/blogger/launch",
+    "https://evil.samuelcoachdealeman.com/admin/blogger/launch",
+    "https://evilsamuelcoachdealeman.com/admin/blogger/launch",
+    "https://samuelcoachdealeman.com.evil.example/admin/blogger/launch",
+    "https://www.samuelcoachdealeman.com.evil.example/admin/blogger/launch",
+    "https://127.0.0.1/admin/blogger/launch",
+    "https://[::1]/admin/blogger/launch",
+  ];
+
+  for (const launchUrl of attacks) {
+    assert.throws(
+      () => validateSite({ ...configured, blogger: { ...configured.blogger, launchUrl } }),
+      /Blogger|HTTPS|origen|registro|públic/i,
+      launchUrl,
+    );
+  }
+});
+
+test("explicit allowedOrigins permits only the exact approved Blogger subdomain origin", () => {
+  const base = structuredClone(getSiteByKey("samuelcoachdealeman"));
+  const approved = {
+    ...base,
+    allowedOrigins: ["https://tools.samuelcoachdealeman.com"],
+    blogger: {
+      ...base.blogger,
+      launchUrl: "https://tools.samuelcoachdealeman.com/admin/blogger/launch",
+      healthUrl: "https://tools.samuelcoachdealeman.com/api/blogger/health",
+    },
+  };
+  assert.equal(getBloggerHandoff(validateSite(approved)).launchUrl, approved.blogger.launchUrl);
+
+  for (const allowedOrigins of [
+    ["https://tools.samuelcoachdealeman.com:8443"],
+    ["https://user@tools.samuelcoachdealeman.com"],
+    ["https://samuelcoachdealeman.com.evil.example"],
+    ["https://evilsamuelcoachdealeman.com"],
+    ["https://tools.samuelcoachdealeman.com/path"],
+    ["http://tools.samuelcoachdealeman.com"],
+  ]) {
+    assert.throws(
+      () => validateSite({ ...approved, allowedOrigins }),
+      /origen|HTTPS|registro|públic/i,
+      allowedOrigins[0],
+    );
+  }
+});
+
 test("legacy analytics facade is derived from canonical sites without changing keys", () => {
   const projects = getLegacyAnalyticsProjects();
   assert.deepEqual(

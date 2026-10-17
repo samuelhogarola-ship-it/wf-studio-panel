@@ -12,6 +12,8 @@ import {
 
 export const dynamic = 'force-dynamic'
 
+const MAX_BODY_BYTES = 4096
+
 const responseHeaders = {
   ...buildLaunchSecurityHeaders(),
   'Content-Type': 'application/json; charset=utf-8',
@@ -30,18 +32,79 @@ function validInput(value: unknown): value is { protocol: string; code: string; 
     typeof input.siteKey === 'string' && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.siteKey)
 }
 
+function declaredBodyLength(value: string | null) {
+  if (value === null) return { valid: true as const, value: null }
+  if (!/^\d+$/.test(value)) return { valid: false as const, value: null }
+  const length = Number(value)
+  if (!Number.isSafeInteger(length)) return { valid: false as const, value: null }
+  return { valid: true as const, value: length }
+}
+
+async function cancelBody(body: ReadableStream<Uint8Array> | null) {
+  if (!body || body.locked) return
+  try {
+    await body.cancel()
+  } catch {
+    // The response remains a generic invalid request even if the peer closed first.
+  }
+}
+
+async function readBoundedJson(request: Request): Promise<{ ok: true; value: unknown } | { ok: false }> {
+  const contentLength = declaredBodyLength(request.headers.get('content-length'))
+  if (!contentLength.valid || (contentLength.value !== null && contentLength.value > MAX_BODY_BYTES)) {
+    await cancelBody(request.body)
+    return { ok: false }
+  }
+  if (!request.body) return { ok: false }
+
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > MAX_BODY_BYTES) {
+        await reader.cancel()
+        return { ok: false }
+      }
+      chunks.push(value)
+    }
+  } catch {
+    try {
+      await reader.cancel()
+    } catch {
+      // Preserve the same non-revealing response for transport failures.
+    }
+    return { ok: false }
+  } finally {
+    reader.releaseLock()
+  }
+
+  const bytes = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+    return { ok: true, value: JSON.parse(text) }
+  } catch {
+    return { ok: false }
+  }
+}
+
 export async function POST(request: Request) {
-  const length = Number(request.headers.get('content-length') ?? '0')
-  if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json') || length > 4096) {
+  if (!request.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
+    await cancelBody(request.body)
     return json({ error: 'invalid_request' }, 400)
   }
 
-  let input: unknown
-  try {
-    input = await request.json()
-  } catch {
-    return json({ error: 'invalid_request' }, 400)
-  }
+  const parsed = await readBoundedJson(request)
+  if (!parsed.ok) return json({ error: 'invalid_request' }, 400)
+  const input = parsed.value
   if (!validInput(input)) return json({ error: 'invalid_request' }, 400)
 
   let handoff

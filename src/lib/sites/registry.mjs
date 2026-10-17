@@ -1,22 +1,79 @@
 import registry from "../../config/sites.json" with { type: "json" };
 
-function parseHttpsUrl(value, label, site, sameSite = false) {
+const LOCAL_SUFFIXES = new Set(["localhost", "local", "internal", "lan", "home", "test", "invalid", "example"]);
+const KNOWN_MULTI_LABEL_PUBLIC_SUFFIXES = new Set([
+  "ac.uk", "co.uk", "gov.uk", "org.uk",
+  "com.au", "net.au", "org.au",
+  "co.nz", "com.br", "com.mx", "co.jp", "co.in", "com.cn", "com.sg", "com.tr",
+]);
+
+function isIpLiteral(value) {
+  const candidate = value.startsWith("[") && value.endsWith("]") ? value.slice(1, -1) : value;
+  if (candidate.includes(":")) return true;
+  const parts = candidate.split(".");
+  return parts.length === 4 && parts.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255);
+}
+
+function validatePublicHostname(value, label) {
+  if (typeof value !== "string" || value !== value.trim().toLowerCase() || value.length > 253) {
+    throw new Error(`Registro de sitios: ${label} no es un hostname público canónico`);
+  }
+  if (isIpLiteral(value)) throw new Error(`Registro de sitios: ${label} no puede ser una dirección IP`);
+  const labels = value.split(".");
+  if (labels.length < 2 || labels.some((part) => !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(part))) {
+    throw new Error(`Registro de sitios: ${label} no es un dominio público completo`);
+  }
+  const suffix = labels.at(-1);
+  if (!suffix || LOCAL_SUFFIXES.has(suffix) || (!/^[a-z]{2,63}$/.test(suffix) && !/^xn--[a-z0-9-]{2,59}$/.test(suffix))) {
+    throw new Error(`Registro de sitios: ${label} no usa un sufijo público válido`);
+  }
+  if (KNOWN_MULTI_LABEL_PUBLIC_SUFFIXES.has(value)) {
+    throw new Error(`Registro de sitios: ${label} es un sufijo público, no un dominio registrable`);
+  }
+  return value;
+}
+
+function parseOrigin(value, label) {
   let parsed;
   try {
     parsed = new URL(value);
   } catch {
-    throw new Error(`Registro de sitios: ${label} de ${site.key} no es una URL HTTPS válida`);
+    throw new Error(`Registro de sitios: ${label} no es una URL HTTPS válida`);
   }
-  const siteHost = site.domain.toLowerCase().replace(/^www\./, "");
-  const targetHost = parsed.hostname.toLowerCase().replace(/^www\./, "");
   if (
     parsed.protocol !== "https:" ||
     parsed.username ||
     parsed.password ||
-    parsed.hash ||
-    (sameSite && targetHost !== siteHost && !targetHost.endsWith(`.${siteHost}`))
+    parsed.port ||
+    parsed.hash
   ) {
-    throw new Error(`Registro de sitios: ${label} de ${site.key} no usa HTTPS seguro del sitio`);
+    throw new Error(`Registro de sitios: ${label} no usa un origen HTTPS seguro`);
+  }
+  validatePublicHostname(parsed.hostname.toLowerCase(), `${label} hostname`);
+  return parsed;
+}
+
+function allowedSiteOrigins(site, domain) {
+  const allowed = new Set([`https://${domain}`, `https://www.${domain}`]);
+  if (site.allowedOrigins === undefined) return allowed;
+  if (!Array.isArray(site.allowedOrigins) || new Set(site.allowedOrigins).size !== site.allowedOrigins.length) {
+    throw new Error(`Registro de sitios: orígenes permitidos de ${site.key} no válidos`);
+  }
+  for (const value of site.allowedOrigins) {
+    const parsed = parseOrigin(value, `origen permitido de ${site.key}`);
+    const targetHost = parsed.hostname.toLowerCase();
+    if (value !== parsed.origin || (targetHost !== domain && !targetHost.endsWith(`.${domain}`))) {
+      throw new Error(`Registro de sitios: origen no aprobado para ${site.key}`);
+    }
+    allowed.add(parsed.origin);
+  }
+  return allowed;
+}
+
+function parseHttpsUrl(value, label, site, allowedOrigins) {
+  const parsed = parseOrigin(value, `${label} de ${site.key}`);
+  if (!allowedOrigins.has(parsed.origin)) {
+    throw new Error(`Registro de sitios: ${label} de ${site.key} usa un origen no aprobado`);
   }
   return parsed;
 }
@@ -26,10 +83,12 @@ export function validateSite(site) {
     throw new Error("Registro de sitios: schemaVersion no compatible");
   if (!site.key || !site.name || !site.domain || !site.productionUrl)
     throw new Error("Registro de sitios: faltan campos obligatorios");
-  parseHttpsUrl(site.productionUrl, "producción", site, true);
+  const domain = validatePublicHostname(site.domain, `dominio de ${site.key}`);
+  const allowedOrigins = allowedSiteOrigins(site, domain);
+  parseHttpsUrl(site.productionUrl, "producción", site, allowedOrigins);
   if (site.blogger?.enabled) {
     if (!site.blogger.url) throw new Error(`Registro de sitios: Blogger de ${site.key} no tiene acceso directo`);
-    parseHttpsUrl(site.blogger.url, "Blogger", site, true);
+    parseHttpsUrl(site.blogger.url, "Blogger", site, allowedOrigins);
   }
   const handoffMetadata = site.blogger?.adapter !== undefined || site.blogger?.capabilities !== undefined;
   if (handoffMetadata) {
@@ -53,8 +112,8 @@ export function validateSite(site) {
     if (!handoffMetadata || typeof blogger.launchUrl !== "string" || typeof blogger.healthUrl !== "string") {
       throw new Error(`Registro de sitios: Blogger de ${site.key} tiene un handoff incompleto`);
     }
-    parseHttpsUrl(blogger.launchUrl, "Blogger launchUrl", site, true);
-    parseHttpsUrl(blogger.healthUrl, "Blogger healthUrl", site, true);
+    parseHttpsUrl(blogger.launchUrl, "Blogger launchUrl", site, allowedOrigins);
+    parseHttpsUrl(blogger.healthUrl, "Blogger healthUrl", site, allowedOrigins);
   }
   return site;
 }

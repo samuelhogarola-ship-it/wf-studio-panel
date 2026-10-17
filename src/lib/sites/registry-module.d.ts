@@ -5,6 +5,7 @@ declare module "@/lib/sites/registry.mjs" {
     name: string;
     domain: string;
     productionUrl: string;
+    allowedOrigins?: string[];
     repository?: string;
     panel: { key: string; path: string };
     analytics: {
