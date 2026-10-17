@@ -3,9 +3,11 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
+  getBloggerHandoff,
   getLegacyAnalyticsProjects,
   getSiteByKey,
   getSites,
+  validateSite,
 } from "../src/lib/sites/registry.mjs";
 
 test("canonical website registry covers every current site and configures Samuel Blogger", () => {
@@ -20,6 +22,37 @@ test("canonical website registry covers every current site and configures Samuel
     "https://www.samuelcoachdealeman.com/admin/blogger/",
   );
   assert.equal(samuel.panel.key, "samuel-coach");
+  assert.equal(samuel.blogger.adapter, "supabase-api");
+  assert.deepEqual(samuel.blogger.capabilities, ["posts", "media", "publish"]);
+  assert.equal(getBloggerHandoff(samuel), null);
+});
+
+test("Blogger handoff registry accepts only complete same-site HTTPS destinations", () => {
+  const base = structuredClone(getSiteByKey("samuelcoachdealeman"));
+  const configured = {
+    ...base,
+    blogger: {
+      ...base.blogger,
+      launchUrl: "https://www.samuelcoachdealeman.com/admin/blogger/launch",
+      healthUrl: "https://www.samuelcoachdealeman.com/api/blogger/health",
+      adapter: "supabase-api",
+      capabilities: ["posts", "media", "publish"],
+    },
+  };
+
+  assert.equal(getBloggerHandoff(validateSite(configured)).adapter, "supabase-api");
+
+  for (const blogger of [
+    { ...configured.blogger, launchUrl: "http://www.samuelcoachdealeman.com/launch" },
+    { ...configured.blogger, healthUrl: "https://user:pass@www.samuelcoachdealeman.com/health" },
+    { ...configured.blogger, launchUrl: "https://evil.example/launch" },
+    { ...configured.blogger, healthUrl: "https:///health" },
+    { ...configured.blogger, adapter: "" },
+    { ...configured.blogger, capabilities: [] },
+    { enabled: true, url: configured.blogger.url, launchUrl: configured.blogger.launchUrl },
+  ]) {
+    assert.throws(() => validateSite({ ...base, blogger }), /Blogger|HTTPS|registro/i);
+  }
 });
 
 test("legacy analytics facade is derived from canonical sites without changing keys", () => {

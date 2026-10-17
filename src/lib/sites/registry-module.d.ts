@@ -20,12 +20,18 @@ declare module "@/lib/sites/registry.mjs" {
       apiBase?: string;
       buildEndpoint?: string;
       publicPostBase?: string;
+      launchUrl?: string;
+      healthUrl?: string;
+      adapter?: string;
+      capabilities?: string[];
     };
   };
 
   export const SITE_REGISTRY: readonly RegisteredSite[];
   export function getSites(): readonly RegisteredSite[];
   export function getSiteByKey(key: string): RegisteredSite;
+  export function validateSite(site: RegisteredSite): RegisteredSite;
+  export function getBloggerHandoff(site: RegisteredSite): RegisteredSite['blogger'] | null;
   export function getLegacyAnalyticsProjects(): ReadonlyArray<{
     key: string;
     label: string;

@@ -95,7 +95,13 @@
       "url": "https://www.samuelcoachdealeman.com/admin/blogger/",
       "apiBase": "/api/posts",
       "buildEndpoint": "/api/build",
-      "publicPostBase": "/f/"
+      "publicPostBase": "/f/",
+      "adapter": "supabase-api",
+      "capabilities": [
+        "posts",
+        "media",
+        "publish"
+      ]
     }
   },
   {

@@ -27,6 +27,15 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      tool_launch_tickets: {
+        Row: { code_hash: string; protocol: 'wf-blogger-handoff/v1'; site_key: string; audience: string; project_id: string; client_id: string | null; user_id: string; actor_role: 'admin' | 'client'; created_at: string; expires_at: string; consumed_at: string | null }
+        Insert: never
+        Update: never
+        Relationships: [
+          { foreignKeyName: "tool_launch_tickets_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "client_projects"; referencedColumns: ["id"] },
+          { foreignKeyName: "tool_launch_tickets_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
+        ]
+      }
       client_resources: {
         Row: { id: string; client_id: string; kind: 'report' | 'update' | 'photo'; title: string; body: string; report_path: string | null; storage_path: string | null; content_type: string | null; created_by: string | null; created_at: string }
         Insert: { id?: string; client_id: string; kind: 'report' | 'update' | 'photo'; title: string; body?: string; report_path?: string | null; storage_path?: string | null; content_type?: string | null; created_by?: string | null; created_at?: string }
@@ -117,6 +126,8 @@ export type Database = {
       release_monthly_stat_report_delivery: { Args: { p_claim_token: string; p_error: string; p_month_key: string }; Returns: boolean }
       claim_monthly_stat_report_delivery_snapshot: { Args: { p_claim_token: string; p_email_to: string; p_month_key: string }; Returns: Json }
       save_monthly_stat_report_snapshot: { Args: { p_generated_at: string; p_is_complete: boolean; p_label: string; p_markdown: string; p_month_key: string; p_site_reports: Json }; Returns: string }
+      create_tool_launch_ticket: { Args: { p_code_hash: string; p_protocol: string; p_site_key: string; p_audience: string; p_project_id: string; p_client_id: string | null; p_user_id: string; p_actor_role: string }; Returns: { expires_at: string }[] }
+      consume_tool_launch_ticket: { Args: { p_code_hash: string; p_protocol: string; p_site_key: string; p_audience: string }; Returns: { protocol: string; site_key: string; audience: string; project_id: string; client_id: string | null; user_id: string; actor_role: string; expires_at: string }[] }
     }
     Enums: { [_ in never]: never }
     CompositeTypes: { [_ in never]: never }
