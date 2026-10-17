@@ -17,7 +17,7 @@ test("canonical website registry covers every current site and configures Samuel
   assert.equal(samuel.blogger.enabled, true);
   assert.equal(
     samuel.blogger.url,
-    "https://www.samuelcoachdealeman.com/admin/blogger/",
+    "https://admin.webfuengirola.com/paneladmin/blogger/samuelcoachdealeman",
   );
   assert.equal(samuel.panel.key, "samuel-coach");
 });
