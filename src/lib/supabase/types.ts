@@ -1,9 +1,32 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
+export type PortalMode = 'legacy' | 'dynamic'
+export type ProjectStatus = 'draft' | 'active' | 'archived'
+export type CapabilityKey = 'products' | 'domains' | 'hosting' | 'invoices' | 'bonuses_reports' | 'blogger' | 'analytics'
+export type CapabilityState = 'unavailable' | 'available' | 'active'
+
 export type Database = {
   __InternalSupabase: { PostgrestVersion: "14.5" }
   public: {
     Tables: {
+      client_projects: {
+        Row: { id: string; client_id: string | null; slug: string; name: string; domain: string; status: ProjectStatus; client_access_enabled: boolean; hosting_label: string | null; hosting_management_url: string | null; analytics_registry_key: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; client_id?: string | null; slug: string; name: string; domain: string; status?: ProjectStatus; client_access_enabled?: boolean; hosting_label?: string | null; hosting_management_url?: string | null; analytics_registry_key?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; client_id?: string | null; slug?: string; name?: string; domain?: string; status?: ProjectStatus; client_access_enabled?: boolean; hosting_label?: string | null; hosting_management_url?: string | null; analytics_registry_key?: string | null; created_at?: string; updated_at?: string }
+        Relationships: [{ foreignKeyName: "client_projects_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
+      }
+      project_capabilities: {
+        Row: { id: string; project_id: string; capability_key: CapabilityKey; state: CapabilityState; launch_url: string | null; metadata: Json; validated_at: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; project_id: string; capability_key: CapabilityKey; state?: CapabilityState; launch_url?: string | null; metadata?: Json; validated_at?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; project_id?: string; capability_key?: CapabilityKey; state?: CapabilityState; launch_url?: string | null; metadata?: Json; validated_at?: string | null; created_at?: string; updated_at?: string }
+        Relationships: [{ foreignKeyName: "project_capabilities_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "client_projects"; referencedColumns: ["id"] }]
+      }
+      project_capability_audit: {
+        Row: { id: string; project_id: string; capability_id: string; capability_key: CapabilityKey; actor_id: string | null; operation: 'INSERT' | 'UPDATE' | 'DELETE'; old_record: Json | null; new_record: Json | null; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       client_resources: {
         Row: { id: string; client_id: string; kind: 'report' | 'update' | 'photo'; title: string; body: string; report_path: string | null; storage_path: string | null; content_type: string | null; created_by: string | null; created_at: string }
         Insert: { id?: string; client_id: string; kind: 'report' | 'update' | 'photo'; title: string; body?: string; report_path?: string | null; storage_path?: string | null; content_type?: string | null; created_by?: string | null; created_at?: string }
@@ -20,9 +43,9 @@ export type Database = {
         ]
       }
       clients: {
-        Row: { company: string | null; created_at: string; email: string; id: string; name: string; phone: string | null; project: string; status: string; updated_at: string }
-        Insert: { company?: string | null; created_at?: string; email: string; id?: string; name: string; phone?: string | null; project?: string; status?: string; updated_at?: string }
-        Update: { company?: string | null; created_at?: string; email?: string; id?: string; name?: string; phone?: string | null; project?: string; status?: string; updated_at?: string }
+        Row: { company: string | null; created_at: string; email: string; id: string; name: string; phone: string | null; project: string; portal_mode: PortalMode; status: string; updated_at: string }
+        Insert: { company?: string | null; created_at?: string; email: string; id?: string; name: string; phone?: string | null; project?: string; portal_mode?: PortalMode; status?: string; updated_at?: string }
+        Update: { company?: string | null; created_at?: string; email?: string; id?: string; name?: string; phone?: string | null; project?: string; portal_mode?: PortalMode; status?: string; updated_at?: string }
         Relationships: []
       }
       invoices: {
