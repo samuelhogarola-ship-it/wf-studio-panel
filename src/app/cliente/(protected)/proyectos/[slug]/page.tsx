@@ -16,14 +16,24 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
   const labels = projectTranslations[locale].capabilities
   const hasInvoices = context.navigation.some(item => item.id === 'facturas')
   const hasPacks = context.navigation.some(item => item.id === 'packs')
+  const hasProducts = context.navigation.some(item => item.capability === 'products')
+  const hasDomains = context.navigation.some(item => item.capability === 'domains')
+  const hasHosting = context.navigation.some(item => item.capability === 'hosting')
+  const hasRenewableServices = hasProducts || hasDomains || hasHosting
+  const hasServices = hasPacks || hasRenewableServices
   const [pending, invoices, services] = await Promise.all([
     getClientPendingItems(context.client.id),
     hasInvoices ? getClientFacturasData(context.client.id) : Promise.resolve([]),
-    hasPacks ? getClientServicesData(context.client.id) : Promise.resolve({ packs: [] }),
+    hasServices ? getClientServicesData(context.client.id) : Promise.resolve({ packs: [] }),
   ])
   const pendingCount = pending.filter(item => item.status === 'pending').length
   const pendingTotal = invoices.filter(invoice => invoice.status === 'pending').reduce((sum, invoice) => sum + Number(invoice.amount ?? 0), 0)
-  const packs = services.packs.filter(pack => pack.status === 'active' && ['hours', 'tasks'].includes(pack.pack_type))
+  const activeServices = services.packs.filter(pack => pack.status === 'active' && (
+    pack.pack_type === 'domain' ? hasDomains : pack.pack_type === 'hosting' ? hasHosting :
+    pack.pack_type === 'hours' || pack.pack_type === 'tasks' ? hasPacks :
+    ['service', 'subscription', 'membership'].includes(pack.pack_type) && hasProducts
+  ))
+  const packs = activeServices.filter(pack => ['hours', 'tasks'].includes(pack.pack_type))
   const hoursCount = packs.filter(pack => pack.pack_type === 'hours').length
   const closedCount = packs.length - hoursCount
   const numberLocale = locale === 'en' ? 'en-GB' : 'es-ES'
@@ -39,7 +49,7 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
 
       <section aria-labelledby="account-heading" className="rounded-2xl border border-line bg-white p-6">
         <h2 id="account-heading" className="font-bold">{text.account}</h2>
-        {hasInvoices || hasPacks ? <p className="mt-1 text-sm text-muted">{text.aggregated}</p> : null}
+        {hasInvoices || hasServices ? <p className="mt-1 text-sm text-muted">{text.aggregated}</p> : null}
         <div className="mt-4 flex flex-wrap gap-4 text-sm font-semibold text-brand">
           <Link href="/cliente/pendientes" className="underline">{text.pending}: {pendingCount}</Link>
           <Link href="/cliente/mensajeria" className="underline">{text.messages}</Link>
@@ -48,10 +58,11 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
             <Link href="/cliente/bonos" className="underline">{labels.bonuses_reports}: {hoursCount}</Link>
             <Link href="/cliente/packs" className="underline">{text.packs}: {closedCount}</Link>
           </> : null}
+          {hasRenewableServices ? <Link href="/cliente/servicios" className="underline">{text.services}: {activeServices.length - packs.length}</Link> : null}
         </div>
-        {packs.length > 0 ? (
+        {activeServices.length > 0 ? (
           <ul className="mt-4 space-y-2 text-sm">
-            {packs.map(pack => <li key={pack.id}>
+            {activeServices.map(pack => <li key={pack.id}>
               {pack.name}{pack.renewal_date ? <> · {text.renewal} <time dateTime={pack.renewal_date}>{new Date(pack.renewal_date).toLocaleDateString(numberLocale, { timeZone: 'UTC' })}</time></> : null}
             </li>)}
           </ul>

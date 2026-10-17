@@ -229,6 +229,90 @@ test('project overview presents pending actions and entitled aggregate account a
   assert.match(html, /2027/);
 });
 
+const renewalRecords = [
+  pack('Domain renewal', 'domain'), pack('Hosting renewal', 'hosting'),
+  pack('Service renewal', 'service'), pack('Subscription renewal', 'subscription'),
+  pack('Membership renewal', 'membership'), pack('Hours renewal', 'hours'), pack('Closed pack renewal', 'tasks'),
+];
+const overviewSummary = html => {
+  const section = html.match(/<section aria-labelledby="account-heading"[^>]*>([\s\S]*?)<\/section>/);
+  assert.ok(section, 'overview must render the account summary');
+  return section[1];
+};
+
+for (const [key, visible] of [
+  ['domains', ['Domain renewal']],
+  ['hosting', ['Hosting renewal']],
+  ['products', ['Service renewal', 'Subscription renewal', 'Membership renewal']],
+]) {
+  test(`overview loads entitled ${key} renewals without hours/reports access`, async () => {
+    const s = setup({ capabilities: [cap(key)], seed: { packs: renewalRecords } });
+    const summary = overviewSummary(render(await s.page('proyectos/[slug]', { params: Promise.resolve({ slug: 'example' }) })));
+    for (const record of renewalRecords) assert.equal(summary.includes(record.name), visible.includes(record.name), record.name);
+    assert.match(summary, /2027-10-01/);
+    assert.match(summary, /href="\/cliente\/servicios"/);
+    assert.doesNotMatch(summary, /href="\/cliente\/(bonos|packs)"/);
+    assert.ok(s.db.calls.some(call => call.table === 'packs'));
+  });
+
+  test(`overview filters ${key} renewals by matching active capability even while hours data is loaded`, async () => {
+    for (const state of ['active', 'available', 'unavailable']) {
+      const s = setup({ capabilities: [cap('bonuses_reports'), cap(key, { state })], seed: { packs: renewalRecords } });
+      const summary = overviewSummary(render(await s.page('proyectos/[slug]', { params: Promise.resolve({ slug: 'example' }) })));
+      for (const record of renewalRecords) {
+        const expected = ['Hours renewal', 'Closed pack renewal'].includes(record.name) || (state === 'active' && visible.includes(record.name));
+        assert.equal(summary.includes(record.name), expected, `${state}: ${record.name}`);
+      }
+      // Other service categories must not inflate the hours or closed-pack totals.
+      assert.match(summary, /href="\/cliente\/bonos"[^>]*>[^<]*1/);
+      assert.match(summary, /href="\/cliente\/packs"[^>]*>[^<]*1/);
+    }
+  });
+}
+
+test('overview renewals aggregate by client across accessible projects, regardless of selected website', async () => {
+  const s = setup({ projects: [project, second], capabilities: ['domains', 'hosting', 'products'].map(key => cap(key, { project_id: second.id })), seed: {
+    packs: [pack('First site domain', 'domain'), pack('Second site domain', 'domain'), pack('Shared hosting', 'hosting'), pack('Account subscription', 'subscription'),
+      { ...pack('Foreign domain', 'domain'), client_id: otherClientId }, { ...pack('Inactive hosting', 'hosting'), status: 'inactive' }],
+  } });
+  for (const slug of ['example', 'second-site']) {
+    const summary = overviewSummary(render(await s.page('proyectos/[slug]', { params: Promise.resolve({ slug }) })));
+    for (const name of ['First site domain', 'Second site domain', 'Shared hosting', 'Account subscription']) assert.ok(summary.includes(name), `${slug}: ${name}`);
+    assert.doesNotMatch(summary, /Foreign domain|Inactive hosting/);
+  }
+});
+
+test('overview skips all service reads without an accessible active configured service capability', async () => {
+  const cases = [
+    { capabilities: [] },
+    { capabilities: [cap('invoices')] },
+    { capabilities: ['domains', 'hosting', 'products'].map(key => cap(key, { state: 'available' })) },
+    { capabilities: ['domains', 'hosting', 'products'].map(key => cap(key, { state: 'unavailable' })) },
+    { capabilities: [cap('hosting', { launch_url: 'https://foreign.example/hosting' })] },
+    ...[{ status: 'archived' }, { client_access_enabled: false }, { client_id: otherClientId }].map(overrides => ({
+      projects: [project, { ...second, ...overrides }], capabilities: ['domains', 'hosting', 'products'].map(key => cap(key, { project_id: second.id })),
+    })),
+  ];
+  for (const options of cases) {
+    const s = setup({ ...options, seed: { packs: renewalRecords } });
+    const summary = overviewSummary(render(await s.page('proyectos/[slug]', { params: Promise.resolve({ slug: 'example' }) })));
+    assert.doesNotMatch(summary, /renewal/);
+    assert.deepEqual(s.db.calls.filter(call => ['packs', 'activities', 'pack_summary'].includes(call.table)), []);
+  }
+});
+
+test('overview authorizes the selected project before reading any entitled service data', async () => {
+  const options = { capabilities: ['domains', 'hosting', 'products', 'bonuses_reports'].map(key => cap(key)), seed: { packs: renewalRecords } };
+  const unauthenticated = setup({ ...options, denied: true });
+  await assert.rejects(() => unauthenticated.page('proyectos/[slug]', { params: Promise.resolve({ slug: 'example' }) }), { message: 'redirect:/cliente' });
+  assert.deepEqual(unauthenticated.db.calls, []);
+  const s = setup({ ...options, projects: [project, { ...second, slug: 'archived', status: 'archived' }, { ...second, slug: 'hidden', client_access_enabled: false }, { ...second, slug: 'foreign', client_id: otherClientId }] });
+  for (const slug of ['unknown', 'archived', 'hidden', 'foreign']) {
+    await assert.rejects(() => s.page('proyectos/[slug]', { params: Promise.resolve({ slug }) }), { message: '404' });
+  }
+  assert.deepEqual(s.db.calls.filter(call => accountTables.has(call.table)), []);
+});
+
 test('dynamic clients cannot guess legacy-only photo or update pages', async () => {
   for (const route of ['fotografias', 'actualizaciones']) {
     const s = setup();
