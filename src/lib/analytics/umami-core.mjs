@@ -1,45 +1,32 @@
-const SITE_REGISTRY = [
-  ["webfuengirola", "Web Fuengirola", "webfuengirola.com", "personal", "wf-studio"],
-  ["vivirenfuengirola", "Vivir en Fuengirola", "vivirenfuengirola.com", "personal", "vivir"],
-  ["conocef", "Conoce Fuengirola", "conocefuengirola.com", "personal", "conoce"],
-  ["topfuengirola", "Top Fuengirola", "topfuengirola.com", "personal", "reports-only"],
-  ["samuelcoachdealeman", "Samuel Coach de Alemán", "samuelcoachdealeman.com", "personal", "samuel-coach"],
-  ["vikingfitness", "Viking Fitness", "vikingfitness.es", "personal", "reports-only"],
-  ["personaltrainerfuengirola", "Personal Trainer Fuengirola", "personaltrainerfuengirola.com", "personal", "reports-only"],
-  ["gimnasionuevoestilo", "Gimnasio Nuevo Estilo", "gimnasionuevoestilo.com", "personal", "reports-only"],
-  ["bionatura", "Bionatura", "bionatura.es", "personal", "reports-only"],
-  ["sportmassagefuengirola", "Sport Massage Fuengirola", "sportmassagefuengirola.com", "personal", "reports-only"],
-  ["deutschkompakt", "Deutschkompakt", "deutschkompakt.com", "personal", "reports-only"],
-  ["vokabellab", "VokabelLab", "vokabellab.com", "personal", "vokabel-world"],
-  ["imkontext", "imKontext", "imkontext.vokabellab.com", "personal", "vokabel-world"],
-  ["derdiedas", "Der Die Das", "derdiedas.vokabellab.com", "personal", "vokabel-world"],
-  ["superentrenador", "Superentrenador", "superentrenador.com", "personal", "superentrenador"],
-  ["coachstudio", "Coach Studio", "coach.superentrenador.com", "personal", "superentrenador"],
-  ["todoplastico", "TodoPlástico", "todo-plastico.com", "agama", "todoplastico"],
-];
+import { getSites } from "../sites/registry.mjs";
+
+const SITE_REGISTRY = getSites().map((site) => [
+  site.key,
+  site.name,
+  site.domain,
+  site.analytics.source,
+  site.panel.key,
+  site.analytics.envSuffix,
+]);
 
 const LEGACY_WEBSITE_ID_ENV = {
   vokabellab: "STAT_REPORT_UMAMI_WEBSITE_ID_VOKABELWORLD",
   todoplastico: "STAT_REPORT_UMAMI_WEBSITE_ID_AGAMA",
 };
 
-function siteEnvKey(siteKey, prefix) {
-  return `${prefix}_${siteKey.toUpperCase()}`;
-}
-
 export function getConfiguredUmamiSites(env = process.env) {
-  return SITE_REGISTRY.map(([key, label, defaultDomain, source, panelKey]) => ({
+  return SITE_REGISTRY.map(([key, label, defaultDomain, source, panelKey, envSuffix]) => ({
     key,
     label,
     domain:
-      env[siteEnvKey(key, "UMAMI_DOMAIN")] ||
-      env[siteEnvKey(key, "STAT_REPORT_UMAMI_DOMAIN")] ||
+      env[`UMAMI_DOMAIN_${envSuffix}`] ||
+      env[`STAT_REPORT_UMAMI_DOMAIN_${envSuffix}`] ||
       defaultDomain,
     source,
     panelKey,
     websiteId:
-      env[siteEnvKey(key, "UMAMI_WEBSITE_ID")] ||
-      env[siteEnvKey(key, "STAT_REPORT_UMAMI_WEBSITE_ID")] ||
+      env[`UMAMI_WEBSITE_ID_${envSuffix}`] ||
+      env[`STAT_REPORT_UMAMI_WEBSITE_ID_${envSuffix}`] ||
       (LEGACY_WEBSITE_ID_ENV[key] ? env[LEGACY_WEBSITE_ID_ENV[key]] : undefined) ||
       undefined,
   }));

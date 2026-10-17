@@ -41,6 +41,11 @@ export function AdminShell({
             </svg>
           ),
         },
+        {
+          href: '/paneladmin/proyectos',
+          label: 'Proyectos',
+          icon: panelIcon,
+        },
       ],
     },
     {
