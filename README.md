@@ -39,6 +39,7 @@ npm install
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
+PROJECT_PROVISIONING_SECRET=
 APP_URL=http://localhost:3000
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=
 TURNSTILE_SECRET_KEY=
@@ -112,6 +113,7 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 | `NEXT_PUBLIC_SUPABASE_URL`             | URL del proyecto Supabase                                                          |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Clave pública (anon key)                                                           |
 | `SUPABASE_SECRET_KEY`                  | Service role key; solo servidor, también persiste los informes mensuales           |
+| `PROJECT_PROVISIONING_SECRET`          | Secreto Bearer solo servidor para registrar webs mediante `/api/projects/provision` |
 | `APP_URL`                              | URL canónica del panel para magic links, callbacks y metadatos                     |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`       | Site key pública de Cloudflare Turnstile para `/api/contact/config`                |
 | `TURNSTILE_SECRET_KEY`                 | Secret key privada de Cloudflare Turnstile para validar el token en `/api/contact` |
@@ -154,6 +156,21 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 > La vista editorial carga solo los sitios del panel abierto. La analítica avanzada conserva las vistas en vivo e históricas, eventos y dimensiones, y se carga únicamente al abrirla. La vista avanzada de Superentrenador prioriza `UMAMI_PERSONAL_*` y mantiene `UMAMI_URL`, `UMAMI_USERNAME`, `UMAMI_PASSWORD` y `UMAMI_SUPERENTRENADOR_WEBSITE_ID` como aliases legacy.
 
 > `CONTACT_EMAIL` no existe todavía como variable en esta app. El destinatario del formulario público está fijado en `info@webfuengirola.com` dentro de `src/lib/email.ts`.
+
+## Registro automático de proyectos
+
+El flujo de creación de webs puede registrar un proyecto con `POST /api/projects/provision`. La petición debe enviar `Authorization: Bearer <PROJECT_PROVISIONING_SECRET>` y un JSON con `name`, `slug` y `domain`. La variable `PROJECT_PROVISIONING_SECRET` es exclusivamente de servidor: no debe usar prefijo `NEXT_PUBLIC_`, incluirse en el payload ni registrarse en logs.
+
+El endpoint normaliza slug y dominio. La primera petición devuelve `201`; un reintento con la misma identidad normalizada devuelve `200` y el mismo proyecto. Una coincidencia parcial de slug o dominio devuelve `409` y exige revisión administrativa: el endpoint nunca reasigna el proyecto existente.
+
+Cada alta queda en estado `draft`, sin cliente asignado y con acceso cliente desactivado. Se crean las siete capacidades como `unavailable`; Blogger no se publica ni se activa automáticamente. La asignación, invitación, activación de capacidades y cambio a modo dinámico siguen siendo acciones explícitas del administrador.
+
+Recuperación manual:
+
+1. Si el alta automática falla sin conflicto, reintenta exactamente el mismo payload; el proceso completa capacidades ausentes sin sobrescribir filas ya configuradas.
+2. Si devuelve `409`, abre **Panel administrador → Proyectos**, localiza el slug y el dominio y resuelve la identidad antes de repetir. No cambies propiedad ni acceso para forzar el alta.
+3. Si el endpoint no está disponible, usa **Registrar proyecto** en esa misma pantalla. Comprueba que quede `draft`, sin cliente y con Blogger `unavailable`.
+4. Después de verificar el proyecto, configura capacidades, asigna el cliente y habilita acceso/modo dinámico manualmente cuando corresponda.
 
 ### Variables usadas por el formulario público
 
