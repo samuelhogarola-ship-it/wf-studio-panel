@@ -56,7 +56,7 @@ export function form(values) {
   return data;
 }
 
-export function database(seed = {}, failures = {}) {
+export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
   const tables = structuredClone({ clients: [client], client_projects: [project], project_capabilities: [capability], project_capability_audit: [], ...seed });
   const calls = [];
   return { tables, calls, from(table) {
@@ -68,6 +68,7 @@ export function database(seed = {}, failures = {}) {
     const query = {
       select() { return query; },
       eq(key, value) { call.filters.push(row => row[key] === value); return query; },
+      is(key, value) { call.filters.push(row => row[key] === value); return query; },
       ilike(key, value) { call.filters.push(row => row[key]?.toLowerCase() === value.toLowerCase()); return query; },
       in(key, values) { call.filters.push(row => values.includes(row[key])); return query; },
       order(key, options) { ordering = [key, options?.ascending !== false]; return query; },
@@ -77,11 +78,16 @@ export function database(seed = {}, failures = {}) {
       insert(payload) { call.operation = 'insert'; call.payload = payload; return query; },
       update(payload) { call.operation = 'update'; call.payload = payload; return query; },
       upsert(payload, options) { call.operation = 'upsert'; call.payload = payload; call.conflict = options?.onConflict; return query; },
-      then(resolve, reject) {
+      async then(resolve, reject) {
         try {
+          await beforeExecute?.(call);
           if (failures[table]) return Promise.resolve({ data: null, error: { message: failures[table] } }).then(resolve, reject);
           let rows = (tables[table] ?? []).filter(row => call.filters.every(filter => filter(row)));
-          if (call.operation === 'update') rows.forEach(row => Object.assign(row, call.payload));
+          if (call.operation === 'update') rows.forEach(row => {
+            Object.assign(row, call.payload);
+            // Mirrors the project's existing BEFORE UPDATE timestamp trigger.
+            if (table === 'client_projects') row.updated_at = new Date(Date.parse(row.updated_at ?? project.updated_at) + 1).toISOString();
+          });
           if (['insert', 'upsert'].includes(call.operation)) {
             rows = (Array.isArray(call.payload) ? call.payload : [call.payload]).map(payload => {
               const existing = call.operation === 'upsert' && (tables[table] ?? []).find(row => (call.conflict ?? 'id').split(',').every(key => row[key] === payload[key]));

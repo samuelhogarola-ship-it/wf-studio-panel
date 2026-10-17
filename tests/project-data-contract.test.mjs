@@ -10,6 +10,25 @@ function setup(seed, extra, failures) {
 const writes = db => db.calls.filter(call => call.operation !== 'select');
 const capabilityForm = values => form({ project_id: projectId, capability_key: 'blogger', state: 'active', launch_url: 'https://example.com/admin/', provisioning_confirmed: 'true', ...values });
 
+// Pause one remote UPDATE before evaluating its predicates against shared rows.
+// Both competing requests execute the real server actions on the same database.
+function raceSetup(initialProject, matches) {
+  const blocked = Promise.withResolvers();
+  const release = Promise.withResolvers();
+  let paused = false;
+  const db = database({ client_projects: [initialProject], clients: [client, { ...client, id: otherClientId }] }, {}, {
+    beforeExecute: async call => {
+      if (!paused && call.table === 'client_projects' && call.operation === 'update' && matches(call.payload)) {
+        paused = true;
+        blocked.resolve();
+        await release.promise;
+      }
+    },
+  });
+  const b = boundary(db);
+  return { db, actions: loadProjectModule('src/lib/actions/projects.ts', b.mocks), blocked: blocked.promise, release: release.resolve };
+}
+
 test('inventory combines search, client, lifecycle and active capability filters', async () => {
   const s = setup({ client_projects: [project, { ...project, id: 'other', name: 'Other', status: 'draft' }], project_capabilities: [{ ...capability, state: 'active' }] });
   const result = await s.data().getAdminProjects({ query: '  EXAMPLE.COM ', clientId, status: 'active', capability: 'blogger' });
@@ -217,4 +236,58 @@ test('invalid saved hosting management destinations block activation and client 
   assert.ok((await s.actions().upsertProjectCapabilityAction({}, capabilityForm({ capability_key: 'hosting', launch_url: '' }))).error);
   assert.equal(writes(s.db).length, 0);
   assert.equal(await s.data().clientHasActiveCapability('hosting'), false);
+});
+
+for (const enabled of [true, false]) {
+  test(`stale access ${enabled ? 'enable' : 'disable'} cannot change access after concurrent reassignment`, { timeout: 5000 }, async t => {
+    const s = raceSetup({ ...project, client_access_enabled: !enabled }, payload => !('client_id' in payload) && payload.client_access_enabled === enabled);
+    t.after(s.release);
+    const pending = s.actions.setProjectAccessAction({}, form({ project_id: projectId, enabled }));
+    await s.blocked;
+    assert.ok((await s.actions.assignProjectClientAction({}, form({ project_id: projectId, client_id: otherClientId }))).success);
+    if (!enabled) assert.ok((await s.actions.setProjectAccessAction({}, form({ project_id: projectId, enabled: true }))).success);
+    s.release();
+    const stale = await pending;
+    assert.ok(stale.error, 'the pending access request must reject its stale assignment');
+    assert.equal(stale.success, undefined);
+    assert.equal(s.db.tables.client_projects[0].client_id, otherClientId);
+    assert.equal(s.db.tables.client_projects[0].client_access_enabled, !enabled);
+    if (enabled) {
+      assert.ok((await s.actions.setProjectAccessAction({}, form({ project_id: projectId, enabled: true }))).success);
+      assert.equal(s.db.tables.client_projects[0].client_access_enabled, true);
+    }
+  });
+}
+
+for (const initialOwner of [clientId, null]) {
+  test(`stale assignment cannot overwrite concurrent ${initialOwner ? 'unassignment' : 'assignment of an unassigned project'}`, { timeout: 5000 }, async t => {
+    const s = raceSetup({ ...project, client_id: initialOwner, client_access_enabled: false }, payload => payload.client_id === otherClientId);
+    t.after(s.release);
+    const pending = s.actions.assignProjectClientAction({}, form({ project_id: projectId, client_id: otherClientId }));
+    await s.blocked;
+    const winningOwner = initialOwner ? null : clientId;
+    assert.ok((await s.actions.assignProjectClientAction({}, form({ project_id: projectId, client_id: winningOwner ?? '' }))).success);
+    s.release();
+    const stale = await pending;
+    assert.ok(stale.error, 'the pending assignment must reject the changed project');
+    assert.equal(stale.success, undefined);
+    assert.equal(s.db.tables.client_projects[0].client_id, winningOwner);
+    assert.equal(s.db.tables.client_projects[0].client_access_enabled, false);
+  });
+}
+
+test('stale access is rejected when concurrent ownership changes away and back to the original client', { timeout: 5000 }, async t => {
+  const s = raceSetup({ ...project, client_access_enabled: false }, payload => payload.client_access_enabled === true);
+  t.after(s.release);
+  const pending = s.actions.setProjectAccessAction({}, form({ project_id: projectId, enabled: true }));
+  await s.blocked;
+  for (const owner of [otherClientId, clientId]) {
+    assert.ok((await s.actions.assignProjectClientAction({}, form({ project_id: projectId, client_id: owner }))).success);
+  }
+  s.release();
+  const stale = await pending;
+  assert.ok(stale.error, 'matching owner IDs cannot bypass the changed project version');
+  assert.equal(stale.success, undefined);
+  assert.equal(s.db.tables.client_projects[0].client_id, clientId);
+  assert.equal(s.db.tables.client_projects[0].client_access_enabled, false);
 });

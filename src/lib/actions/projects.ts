@@ -8,6 +8,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { validateProjectDestination } from '@/lib/projects/model.mjs'
 import { getCapabilityConfigurationIssue } from '@/lib/data/projects'
 import type { Project, ProjectClient } from '@/lib/data/projects'
+import type { TablesUpdate } from '@/lib/supabase/types'
 
 export type ProjectFormState = { error?: string; success?: string }
 type DB = Awaited<ReturnType<typeof createSupabaseServerClient>>
@@ -32,6 +33,12 @@ async function findProject(db: DB, id: string): Promise<Project | null> {
 async function findClient(db: DB, id: string): Promise<ProjectClient | null> {
   const { data, error } = await db.from('clients').select('id, name, email, status, project, portal_mode').eq('id', id).eq('project', 'wf-studio').eq('status', 'active').maybeSingle()
   return error ? null : data
+}
+function updateProjectSnapshot(db: DB, project: Project, payload: TablesUpdate<'client_projects'>) {
+  // Check the validated assignment and version in the UPDATE itself. The existing
+  // database trigger changes updated_at on every write, including owner A→B→A.
+  const query = db.from('client_projects').update(payload).eq('id', project.id).eq('updated_at', project.updated_at)
+  return project.client_id === null ? query.is('client_id', null) : query.eq('client_id', project.client_id)
 }
 function saved(id?: string): ProjectFormState {
   revalidatePath('/paneladmin/proyectos')
@@ -70,8 +77,9 @@ export async function assignProjectClientAction(_previous: ProjectFormState, for
   const project = await findProject(db, parsed.data.project_id)
   const clientId = parsed.data.client_id || null
   if (!project || (clientId && !await findClient(db, clientId))) return failure('Selecciona un cliente activo de WF Studio.')
-  const result = await db.from('client_projects').update({ client_id: clientId, ...(project.client_id !== clientId ? { client_access_enabled: false } : {}) }).eq('id', project.id).select('id').maybeSingle()
-  return result.error || !result.data ? failure() : saved(project.id)
+  const result = await updateProjectSnapshot(db, project, { client_id: clientId, ...(project.client_id !== clientId ? { client_access_enabled: false } : {}) }).select('id').maybeSingle()
+  if (result.error) return failure()
+  return result.data ? saved(project.id) : failure('El proyecto ha cambiado. Recarga la página antes de modificar su asignación.')
 }
 
 export async function setProjectAccessAction(_previous: ProjectFormState, form: FormData): Promise<ProjectFormState> {
@@ -83,8 +91,9 @@ export async function setProjectAccessAction(_previous: ProjectFormState, form: 
   if (!project) return failure()
   const enabled = parsed.data.enabled === 'true'
   if (enabled && (project.status !== 'active' || !project.client_id || !await findClient(db, project.client_id))) return failure('El acceso requiere un proyecto activo asignado a un cliente activo de WF Studio.')
-  const result = await db.from('client_projects').update({ client_access_enabled: enabled }).eq('id', project.id).select('id').maybeSingle()
-  return result.error || !result.data ? failure() : saved(project.id)
+  const result = await updateProjectSnapshot(db, project, { client_access_enabled: enabled }).select('id').maybeSingle()
+  if (result.error) return failure()
+  return result.data ? saved(project.id) : failure('El proyecto ha cambiado. Recarga la página antes de modificar su acceso.')
 }
 
 export async function setClientPortalModeAction(_previous: ProjectFormState, form: FormData): Promise<ProjectFormState> {
