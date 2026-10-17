@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
 
+import { getTurnstileConfig } from '@/lib/contact-protection.mjs'
+
 export const runtime = 'nodejs'
 
 const ALLOWED_ORIGINS = new Set([
@@ -27,10 +29,6 @@ function getAllowedOrigin(request: Request) {
   return origin
 }
 
-function getTurnstileSiteKey() {
-  return process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || process.env.TURNSTILE_SITE_KEY || ''
-}
-
 export async function OPTIONS(request: Request) {
   const origin = getAllowedOrigin(request)
 
@@ -51,20 +49,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'forbidden_origin' }, { status: 403 })
   }
 
-  const siteKey = getTurnstileSiteKey()
-
-  if (!siteKey) {
-    return NextResponse.json(
-      { error: 'turnstile_not_configured' },
-      {
-        status: 503,
-        headers: buildCorsHeaders(origin),
-      },
-    )
-  }
+  const turnstile = getTurnstileConfig()
 
   return NextResponse.json(
-    { turnstileSiteKey: siteKey },
+    {
+      turnstileEnabled: turnstile.enabled,
+      turnstileSiteKey: turnstile.siteKey,
+    },
     {
       headers: buildCorsHeaders(origin),
     },

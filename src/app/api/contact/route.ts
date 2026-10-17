@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { sendPublicContactEmail } from '@/lib/email'
-import { getRequiredServerEnv } from '@/lib/env'
+import {
+  createContactRateLimiter,
+  getTurnstileConfig,
+} from '@/lib/contact-protection.mjs'
 
 export const runtime = 'nodejs'
 
@@ -17,7 +20,7 @@ const contactSchema = z.object({
   company: z.string().trim().max(160).optional().default(''),
   message: z.string().trim().min(10).max(5000),
   website: z.string().trim().max(200).optional().default(''),
-  token: z.string().trim().min(1),
+  token: z.string().trim().optional().default(''),
   pageUrl: z.string().trim().url().max(500).optional().default(''),
 })
 
@@ -41,9 +44,15 @@ function getAllowedOrigin(request: Request) {
   return origin
 }
 
-async function verifyTurnstileToken(token: string, remoteIp: string | null) {
+const contactRateLimiter = createContactRateLimiter()
+
+async function verifyTurnstileToken(
+  token: string,
+  secretKey: string,
+  remoteIp: string | null,
+) {
   const formData = new FormData()
-  formData.append('secret', getRequiredServerEnv('TURNSTILE_SECRET_KEY'))
+  formData.append('secret', secretKey)
   formData.append('response', token)
 
   if (remoteIp) {
@@ -102,10 +111,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true }, { headers: corsHeaders })
     }
 
-    const isTurnstileValid = await verifyTurnstileToken(
-      token,
-      request.headers.get('x-forwarded-for'),
-    )
+    const remoteIp =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      `unknown:${email}`
+
+    if (!contactRateLimiter.allow(remoteIp)) {
+      return NextResponse.json(
+        { success: false, error: 'rate_limited' },
+        { status: 429, headers: corsHeaders },
+      )
+    }
+
+    const turnstile = getTurnstileConfig()
+    const isTurnstileValid =
+      !turnstile.enabled ||
+      (Boolean(token) &&
+        (await verifyTurnstileToken(token, turnstile.secretKey, remoteIp)))
 
     if (!isTurnstileValid) {
       return NextResponse.json(
