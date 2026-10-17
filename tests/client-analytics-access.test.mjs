@@ -57,6 +57,7 @@ function setup({
   projects = [configuredProject],
   capabilities = [activeAnalytics],
   configuredAnalytics = true,
+  useRealDashboard = false,
   result = analyticsResult(),
   error = null,
   locale = 'es',
@@ -77,7 +78,7 @@ function setup({
       getConfiguredUmamiSites: () => configuredSites,
       getUmamiConnections: () => ({ personal: { baseUrl: 'https://stats.example.test', password: 'server-secret' } }),
     },
-    '@/lib/analytics/umami-dashboard.mjs': {
+    '@/lib/analytics/umami-dashboard.mjs': useRealDashboard ? analyticsDashboard : {
       ...analyticsDashboard,
       async fetchUmamiDashboard(options) {
         analyticsCalls.push(options)
@@ -166,6 +167,28 @@ test('administrators retain every existing registry key without client project r
   }
 
   assert.deepEqual(s.analyticsCalls.map(call => call.projectKey), analyticsDashboard.ANALYTICS_PROJECTS.map(project => project.key))
+  assert.deepEqual(s.db.calls, [])
+})
+
+test('administrators retain the raw unknown static registry diagnostic and 404 status', async () => {
+  const s = setup({ role: 'admin', useRealDashboard: true })
+  const { response, payload } = await s.request('missing-static-key')
+
+  assert.equal(response.status, 404)
+  assert.deepEqual(payload, {
+    status: 'error',
+    message: 'Proyecto de estadísticas desconocido: missing-static-key',
+  })
+  assert.deepEqual(s.db.calls, [])
+})
+
+test('administrators retain the raw upstream Umami diagnostic and 502 status', async () => {
+  const diagnostic = 'Umami respondió HTTP 503: conexión personal no disponible'
+  const s = setup({ role: 'admin', error: new Error(diagnostic) })
+  const { response, payload } = await s.request('webfuengirola')
+
+  assert.equal(response.status, 502)
+  assert.deepEqual(payload, { status: 'error', message: diagnostic })
   assert.deepEqual(s.db.calls, [])
 })
 
