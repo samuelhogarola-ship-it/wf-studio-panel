@@ -4,6 +4,12 @@ export type Database = {
   __InternalSupabase: { PostgrestVersion: "14.5" }
   public: {
     Tables: {
+      blogger_site_memberships: {
+        Row: { id: string; user_id: string; site_key: string; created_by: string | null; created_at: string }
+        Insert: { id?: string; user_id: string; site_key: string; created_by?: string | null; created_at?: string }
+        Update: { user_id?: string; site_key?: string; created_by?: string | null }
+        Relationships: []
+      }
       client_resources: {
         Row: { id: string; client_id: string; kind: 'report' | 'update' | 'photo'; title: string; body: string; report_path: string | null; storage_path: string | null; content_type: string | null; created_by: string | null; created_at: string }
         Insert: { id?: string; client_id: string; kind: 'report' | 'update' | 'photo'; title: string; body?: string; report_path?: string | null; storage_path?: string | null; content_type?: string | null; created_by?: string | null; created_at?: string }

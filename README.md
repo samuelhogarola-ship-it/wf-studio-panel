@@ -199,6 +199,8 @@ npm run site:onboard -- --root "/ruta/web" --panel-root "/ruta/wf-studio-panel" 
 
 Añade `--blogger` cuando la web deba instalar Blogger Studio. Samuel Coach queda registrado con su editor protegido de producción en `https://www.samuelcoachdealeman.com/admin/blogger/`.
 
+El runtime de Blogger vive en este panel y trabaja por `siteKey`. Core General instala el contrato y la configuración de cada nueva web; Studio conserva el editor, la autenticación Supabase, las raíces persistentes y el webhook de publicación de cada tenant. En producción hay que montar las raíces de Samuel y Personal en el volumen del VPS mediante `BLOGGER_SITE_ROOTS_JSON` y configurar sus `BLOGGER_BUILD_HOOK_*`.
+
 ## Notas de funcionamiento
 
 - `clients.email` es la identidad funcional del cliente en v1.
