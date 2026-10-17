@@ -180,6 +180,18 @@ Fallback legado aceptado por código:
 
 `next.config.ts` activa `output: 'standalone'`; el Dockerfile ejecuta el `server.js` generado por Next.js.
 
+## Registro canónico de webs
+
+`src/config/sites.json` es la fuente única de webs, paneles, analítica y herramientas publicadas. La página **Proyectos** y las dos fachadas de Umami se derivan de ese archivo; no se mantienen listas paralelas.
+
+Cada alta o cambio se hace desde `core-general`, incluso si la web nació en otro repositorio o herramienta:
+
+```sh
+npm run site:onboard -- --root "/ruta/web" --panel-root "/ruta/wf-studio-panel" --key "mi-web" --name "Mi Web" --domain "mi-web.com"
+```
+
+Añade `--blogger` cuando la web deba instalar Blogger Studio. Samuel Coach queda registrado con su editor protegido de producción en `https://www.samuelcoachdealeman.com/admin/blogger/`.
+
 ## Notas de funcionamiento
 
 - `clients.email` es la identidad funcional del cliente en v1.

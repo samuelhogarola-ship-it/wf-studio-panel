@@ -1,0 +1,332 @@
+[
+  {
+    "schemaVersion": 1,
+    "key": "webfuengirola",
+    "name": "Web Fuengirola",
+    "domain": "webfuengirola.com",
+    "productionUrl": "https://webfuengirola.com",
+    "panel": {
+      "key": "wf-studio",
+      "path": "/paneladmin/dashboard"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "WEBFUENGIROLA",
+      "legacyDashboard": true
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "vivirenfuengirola",
+    "name": "Vivir en Fuengirola",
+    "domain": "vivirenfuengirola.com",
+    "productionUrl": "https://vivirenfuengirola.com",
+    "panel": {
+      "key": "vivir",
+      "path": "/paneladmin/vivir-en-fuengirola"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "VIVIRENFUENGIROLA",
+      "legacyDashboard": true
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "conocef",
+    "name": "Conoce Fuengirola",
+    "domain": "conocefuengirola.com",
+    "productionUrl": "https://conocefuengirola.com",
+    "panel": {
+      "key": "conoce",
+      "path": "/paneladmin/conoce-fuengirola"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "CONOCEF",
+      "legacyDashboard": true
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "topfuengirola",
+    "name": "Top Fuengirola",
+    "domain": "topfuengirola.com",
+    "productionUrl": "https://topfuengirola.com",
+    "panel": {
+      "key": "reports-only",
+      "path": "/paneladmin/informes"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "TOPFUENGIROLA",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "samuelcoachdealeman",
+    "name": "Samuel Coach de Alemán",
+    "domain": "samuelcoachdealeman.com",
+    "productionUrl": "https://www.samuelcoachdealeman.com",
+    "panel": {
+      "key": "samuel-coach",
+      "path": "/paneladmin/samuel-coach"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "SAMUELCOACHDEALEMAN",
+      "legacyDashboard": true
+    },
+    "blogger": {
+      "enabled": true,
+      "url": "https://www.samuelcoachdealeman.com/admin/blogger/",
+      "apiBase": "/api/posts",
+      "buildEndpoint": "/api/build",
+      "publicPostBase": "/f/"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "vikingfitness",
+    "name": "Viking Fitness",
+    "domain": "vikingfitness.es",
+    "productionUrl": "https://vikingfitness.es",
+    "panel": {
+      "key": "reports-only",
+      "path": "/paneladmin/informes"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "VIKINGFITNESS",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "personaltrainerfuengirola",
+    "name": "Personal Trainer Fuengirola",
+    "domain": "personaltrainerfuengirola.com",
+    "productionUrl": "https://personaltrainerfuengirola.com",
+    "panel": {
+      "key": "reports-only",
+      "path": "/paneladmin/informes"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "PERSONALTRAINERFUENGIROLA",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "gimnasionuevoestilo",
+    "name": "Gimnasio Nuevo Estilo",
+    "domain": "gimnasionuevoestilo.com",
+    "productionUrl": "https://gimnasionuevoestilo.com",
+    "panel": {
+      "key": "reports-only",
+      "path": "/paneladmin/informes"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "GIMNASIONUEVOESTILO",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "bionatura",
+    "name": "Bionatura",
+    "domain": "bionatura.es",
+    "productionUrl": "https://bionatura.es",
+    "panel": {
+      "key": "reports-only",
+      "path": "/paneladmin/informes"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "BIONATURA",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "sportmassagefuengirola",
+    "name": "Sport Massage Fuengirola",
+    "domain": "sportmassagefuengirola.com",
+    "productionUrl": "https://sportmassagefuengirola.com",
+    "panel": {
+      "key": "reports-only",
+      "path": "/paneladmin/informes"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "SPORTMASSAGEFUENGIROLA",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "deutschkompakt",
+    "name": "Deutschkompakt",
+    "domain": "deutschkompakt.com",
+    "productionUrl": "https://deutschkompakt.com",
+    "panel": {
+      "key": "reports-only",
+      "path": "/paneladmin/informes"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "DEUTSCHKOMPAKT",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "vokabellab",
+    "name": "VokabelLab",
+    "domain": "vokabellab.com",
+    "productionUrl": "https://vokabellab.com",
+    "panel": {
+      "key": "vokabel-world",
+      "path": "/paneladmin/vokabel-world"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "VOKABELLAB",
+      "legacyDashboard": true,
+      "legacyKey": "vokabelworld",
+      "legacyLabel": "Vokabel-World"
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "imkontext",
+    "name": "imKontext",
+    "domain": "imkontext.vokabellab.com",
+    "productionUrl": "https://imkontext.vokabellab.com",
+    "panel": {
+      "key": "vokabel-world",
+      "path": "/paneladmin/vokabel-world"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "IMKONTEXT",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "derdiedas",
+    "name": "Der Die Das",
+    "domain": "derdiedas.vokabellab.com",
+    "productionUrl": "https://derdiedas.vokabellab.com",
+    "panel": {
+      "key": "vokabel-world",
+      "path": "/paneladmin/vokabel-world"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "DERDIEDAS",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "superentrenador",
+    "name": "Superentrenador",
+    "domain": "superentrenador.com",
+    "productionUrl": "https://superentrenador.com",
+    "panel": {
+      "key": "superentrenador",
+      "path": "/paneladmin/superentrenador/estadisticas"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "SUPERENTRENADOR",
+      "legacyDashboard": true
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "coachstudio",
+    "name": "Coach Studio",
+    "domain": "coach.superentrenador.com",
+    "productionUrl": "https://coach.superentrenador.com",
+    "panel": {
+      "key": "superentrenador",
+      "path": "/paneladmin/superentrenador/estadisticas"
+    },
+    "analytics": {
+      "source": "personal",
+      "envSuffix": "COACHSTUDIO",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": false
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "key": "todoplastico",
+    "name": "TodoPlástico",
+    "domain": "todo-plastico.com",
+    "productionUrl": "https://todo-plastico.com",
+    "panel": {
+      "key": "todoplastico",
+      "path": "/paneladmin/todoplastico"
+    },
+    "analytics": {
+      "source": "agama",
+      "envSuffix": "TODOPLASTICO",
+      "legacyDashboard": true,
+      "legacyKey": "agama"
+    },
+    "blogger": {
+      "enabled": false
+    }
+  }
+]

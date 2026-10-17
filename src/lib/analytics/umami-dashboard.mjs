@@ -1,3 +1,5 @@
+import { getLegacyAnalyticsProjects } from '../sites/registry.mjs'
+
 const DAY_MS = 24 * 60 * 60 * 1000
 const PERIODS = new Set(['live', '7d', '30d', '90d', '6m', '12m'])
 const AUTH_CACHE_TTL_MS = 5 * 60 * 1000
@@ -26,20 +28,7 @@ export function createRequestCoordinator() {
   }
 }
 
-export const ANALYTICS_PROJECTS = [
-  { key: 'webfuengirola', label: 'Web Fuengirola', domain: 'webfuengirola.com', source: 'personal' },
-  { key: 'vivirenfuengirola', label: 'Vivir en Fuengirola', domain: 'vivirenfuengirola.com', source: 'personal' },
-  { key: 'conocef', label: 'Conoce Fuengirola', domain: 'conocefuengirola.com', source: 'personal' },
-  { key: 'samuelcoachdealeman', label: 'Samuel Coach de Alemán', domain: 'samuelcoachdealeman.com', source: 'personal' },
-  { key: 'vokabelworld', label: 'Vokabel-World', domain: 'vokabellab.com', source: 'personal' },
-  { key: 'superentrenador', label: 'Superentrenador', domain: 'superentrenador.com', source: 'personal' },
-  { key: 'agama', label: 'TodoPlástico', domain: 'todo-plastico.com', source: 'agama' },
-]
-
-const PROJECT_ENV_SUFFIX = {
-  vokabelworld: 'VOKABELLAB',
-  agama: 'TODOPLASTICO',
-}
+export const ANALYTICS_PROJECTS = getLegacyAnalyticsProjects()
 
 const METRIC_TYPES = {
   entries: ['entry'],
@@ -114,7 +103,7 @@ export function getAnalyticsProject(projectKey, env = process.env) {
   if (!project) throw new Error(`Proyecto de estadísticas desconocido: ${projectKey}`)
 
   const legacySuffix = project.key.toUpperCase()
-  const suffix = PROJECT_ENV_SUFFIX[project.key] || legacySuffix
+  const suffix = project.envSuffix || legacySuffix
   const websiteIdEnv = `UMAMI_WEBSITE_ID_${suffix}`
   const legacyWebsiteIdEnv = `STAT_REPORT_UMAMI_WEBSITE_ID_${legacySuffix}`
   const domainEnv = `UMAMI_DOMAIN_${suffix}`
