@@ -42,15 +42,10 @@ test("legacy analytics facade is derived from canonical sites without changing k
   );
 });
 
-test("project views consume the registry and no longer point Blogger to localhost", async () => {
-  const [projectsPage, samuelPage, appShell] = await Promise.all([
-    readFile(
-      new URL(
-        "../src/app/paneladmin/(protected)/proyectos/page.tsx",
-        import.meta.url,
-      ),
-      "utf8",
-    ),
+test("existing site views retain registry-backed protected Blogger and project navigation", async () => {
+  // Project inventory is database-backed now; its rendered behavior is covered
+  // in project-admin-ui.test.mjs. Site launchers still consume the registry.
+  const [samuelPage, appShell] = await Promise.all([
     readFile(
       new URL(
         "../src/app/paneladmin/(protected)/samuel-coach/page.tsx",
@@ -61,8 +56,6 @@ test("project views consume the registry and no longer point Blogger to localhos
     readFile(new URL("../src/components/layout/app-shell.tsx", import.meta.url), "utf8"),
   ]);
 
-  assert.match(projectsPage, /getSites/);
-  assert.doesNotMatch(projectsPage, /Esta sección está en desarrollo/);
   assert.match(samuelPage, /getSiteByKey/);
   assert.doesNotMatch(samuelPage, /127\.0\.0\.1|Blog Creator · local/);
   assert.match(appShell, /href: ['"]\/paneladmin\/proyectos['"]/);

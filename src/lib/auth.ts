@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 
-import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 type AuthIdentity = {
@@ -73,10 +72,10 @@ export async function requireClientAccess() {
   }
 
   const normalizedEmail = identity.email.trim().toLowerCase()
-  const adminClient = getSupabaseAdminClient()
-  const { data: client } = await adminClient
+  const supabase = await createSupabaseServerClient()
+  const { data: client } = await supabase
     .from('clients')
-    .select('id, email, status, name')
+    .select('id, email, status, name, portal_mode')
     .eq('project', CLIENT_PROJECT)
     .ilike('email', normalizedEmail)
     .maybeSingle()

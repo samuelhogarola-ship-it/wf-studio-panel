@@ -11,7 +11,7 @@ export function validateProjectDestination(rawUrl, canonicalDomain, production =
       !/[a-z]/.test(labels.at(-1)) || labels.at(-1) === 'localhost') return false;
 
   // WHATWG parsing repairs whitespace/backslashes; reject those instead.
-  if (!/^https?:\/\//i.test(rawUrl) || /[\s\\]/.test(rawUrl)) return false;
+  if (!/^https?:\/\/[^/?#]+(?:[/?#]|$)/i.test(rawUrl) || /[\s\\]/.test(rawUrl)) return false;
   try {
     const canonical = new URL(`https://${domain}`);
     if (canonical.hostname !== domain) return false; // Includes numeric/IP aliases.

@@ -27,6 +27,12 @@ test('rejects malformed, credential-bearing, non-web and foreign destinations', 
   }
 });
 
+test('rejects empty raw authorities repaired by WHATWG parsing', () => {
+  for (const url of ['https:///example.com/admin', 'https:////example.com', 'http:///example.com', 'https://?example.com', 'https://#example.com']) {
+    assert.equal(validateProjectDestination(url, 'example.com', false), false, url);
+  }
+});
+
 test('rejects IPs, localhost and invalid canonical domains even when hosts match', () => {
   for (const domain of ['localhost', 'foo.localhost', '127.0.0.1', '127.1', '2130706433',
     '0x7f000001', '[::1]', '192.168.1.1', '', null, 'https://example.com',
