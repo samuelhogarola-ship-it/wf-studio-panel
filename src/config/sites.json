@@ -92,9 +92,9 @@
     },
     "blogger": {
       "enabled": true,
-      "url": "https://www.samuelcoachdealeman.com/admin/blogger/",
-      "apiBase": "/api/posts",
-      "buildEndpoint": "/api/build",
+      "url": "https://admin.webfuengirola.com/paneladmin/blogger/samuelcoachdealeman",
+      "apiBase": "/api/blogger/samuelcoachdealeman/posts",
+      "buildEndpoint": "/api/blogger/samuelcoachdealeman/build",
       "publicPostBase": "/f/"
     }
   },
@@ -133,7 +133,11 @@
       "legacyDashboard": false
     },
     "blogger": {
-      "enabled": false
+      "enabled": true,
+      "url": "https://admin.webfuengirola.com/paneladmin/blogger/personaltrainerfuengirola",
+      "apiBase": "/api/blogger/personaltrainerfuengirola/posts",
+      "buildEndpoint": "/api/blogger/personaltrainerfuengirola/build",
+      "publicPostBase": "/blog/"
     }
   },
   {
