@@ -146,7 +146,13 @@ test('registration normalizes identity and creates only locked-down project defa
     capabilities.map(row => row.capability_key).sort(),
     ['analytics', 'blogger', 'bonuses_reports', 'domains', 'hosting', 'invoices', 'products'],
   )
-  assert.ok(capabilities.every(row => row.state === 'unavailable'))
+  assert.ok(capabilities.every(row =>
+    row.state === 'unavailable' && row.launch_url === null && row.validated_at === null && Object.keys(row.metadata).length === 0))
+  assert.equal(
+    db.calls.filter(call => call.table === 'project_capabilities' && call.operation === 'insert').length,
+    0,
+    'automatic provisioning relies on the atomic database trigger for a new project',
+  )
   const blogger = capabilities.find(row => row.capability_key === 'blogger')
   assert.deepEqual(
     {

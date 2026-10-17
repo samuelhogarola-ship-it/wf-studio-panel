@@ -47,6 +47,7 @@ export function loadProjectModule(relative, overrides = {}) {
 export const projectId = '11111111-1111-4111-8111-111111111111';
 export const clientId = '22222222-2222-4222-8222-222222222222';
 export const otherClientId = '33333333-3333-4333-8333-333333333333';
+const projectCapabilityKeys = ['products', 'domains', 'hosting', 'invoices', 'bonuses_reports', 'blogger', 'analytics'];
 export const client = { id: clientId, name: 'Ana', email: 'ana@example.com', status: 'active', project: 'wf-studio', portal_mode: 'legacy' };
 export const project = { id: projectId, client_id: clientId, slug: 'example', name: 'Example', domain: 'example.com', status: 'active', client_access_enabled: true, hosting_label: 'Managed', hosting_management_url: null, analytics_registry_key: null, created_at: '2026-10-01T00:00:00Z', updated_at: '2026-10-01T00:00:00Z' };
 export const capability = { id: '44444444-4444-4444-8444-444444444444', project_id: projectId, capability_key: 'blogger', state: 'available', launch_url: null, metadata: {}, validated_at: null, created_at: project.created_at, updated_at: project.updated_at };
@@ -98,6 +99,23 @@ export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
               if (existing) return Object.assign(existing, payload);
               const row = { id: projectId, ...payload };
               (tables[table] ??= []).push(row);
+              // Mirrors the database's AFTER INSERT project capability trigger.
+              if (table === 'client_projects' && call.operation === 'insert') {
+                for (const capabilityKey of projectCapabilityKeys) {
+                  if ((tables.project_capabilities ?? []).some(capability => capability.project_id === row.id && capability.capability_key === capabilityKey)) continue;
+                  (tables.project_capabilities ??= []).push({
+                    id: `default-${capabilityKey}`,
+                    project_id: row.id,
+                    capability_key: capabilityKey,
+                    state: 'unavailable',
+                    launch_url: null,
+                    metadata: {},
+                    validated_at: null,
+                    created_at: row.created_at ?? project.created_at,
+                    updated_at: row.updated_at ?? project.updated_at,
+                  });
+                }
+              }
               return row;
             });
           }
