@@ -65,14 +65,18 @@ export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
     let single = false;
     let limit;
     let ordering;
+    let range;
+    let countRequested = false;
     const query = {
-      select() { return query; },
+      select(_columns, options) { countRequested = options?.count === 'exact'; return query; },
       eq(key, value) { call.filters.push(row => row[key] === value); return query; },
+      neq(key, value) { call.filters.push(row => row[key] !== value); return query; },
       is(key, value) { call.filters.push(row => row[key] === value); return query; },
       ilike(key, value) { call.filters.push(row => row[key]?.toLowerCase() === value.toLowerCase()); return query; },
       in(key, values) { call.filters.push(row => values.includes(row[key])); return query; },
       order(key, options) { ordering = [key, options?.ascending !== false]; return query; },
       limit(value) { limit = value; return query; },
+      range(from, to) { range = [from, to]; return query; },
       maybeSingle() { single = true; return query; },
       single() { single = true; return query; },
       insert(payload) { call.operation = 'insert'; call.payload = payload; return query; },
@@ -98,9 +102,11 @@ export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
             });
           }
           if (ordering) rows.sort((a, b) => String(a[ordering[0]]).localeCompare(String(b[ordering[0]])) * (ordering[1] ? 1 : -1));
+          const count = countRequested ? rows.length : null;
           if (limit !== undefined) rows = rows.slice(0, limit);
+          if (range) rows = rows.slice(range[0], range[1] + 1);
           if (single && rows.length > 1) return Promise.resolve({ data: null, error: { message: 'Multiple rows for a single result' } }).then(resolve, reject);
-          return Promise.resolve({ data: structuredClone(single ? rows[0] ?? null : rows), error: null }).then(resolve, reject);
+          return Promise.resolve({ data: structuredClone(single ? rows[0] ?? null : rows), error: null, count }).then(resolve, reject);
         } catch (error) { return Promise.reject(error).then(resolve, reject); }
       },
     };

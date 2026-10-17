@@ -1,5 +1,7 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { requireClientAccess } from '@/lib/auth'
+import { getClientPortalContext } from '@/lib/data/projects'
 import { getClientDashboardData, getClientFacturasData } from '@/lib/data/client'
 import { formatDate, formatDuration } from '@/lib/utils'
 
@@ -23,6 +25,12 @@ function isExpired(renewalDate: string | null) {
 
 export default async function ClientDashboardPage() {
   const identity = await requireClientAccess()
+  if (identity.client.portal_mode !== 'legacy') {
+    const context = await getClientPortalContext()
+    redirect(context.projects.length === 1
+      ? `/cliente/proyectos/${encodeURIComponent(context.projects[0].slug)}`
+      : '/cliente/proyectos')
+  }
   const [data, invoices] = await Promise.all([
     getClientDashboardData(identity.client.id),
     getClientFacturasData(identity.client.id),

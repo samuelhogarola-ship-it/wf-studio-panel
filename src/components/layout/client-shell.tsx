@@ -5,106 +5,42 @@ import { usePathname } from 'next/navigation'
 import { type ReactNode } from 'react'
 
 import { type Locale, t } from '@/lib/i18n'
+import type { PortalNavigationItem } from '@/lib/projects/portal-navigation.mjs'
 import { LocaleToggle } from '@/components/layout/locale-toggle'
 import { cn } from '@/lib/utils'
 
-function getNavItems(locale: Locale) {
-  return [
-    { href: '/cliente/informes', label: t(locale, 'clientNav.informes'), icon: null },
-    { href: '/cliente/actualizaciones', label: t(locale, 'clientNav.actualizaciones'), icon: null },
-    { href: '/cliente/fotografias', label: t(locale, 'clientNav.fotografias'), icon: null },
-    {
-      href: '/cliente/dashboard',
-      label: t(locale, 'clientNav.dashboard'),
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
-        </svg>
-      ),
-    },
-    {
-      href: '/cliente/servicios',
-      label: t(locale, 'clientNav.servicios'),
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
-        </svg>
-      ),
-    },
-    {
-      href: '/cliente/pendientes',
-      label: t(locale, 'clientNav.pendientes'),
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-        </svg>
-      ),
-    },
-    {
-      href: '/cliente/facturas',
-      label: t(locale, 'clientNav.facturas'),
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
-        </svg>
-      ),
-    },
-    {
-      href: '/cliente/historial',
-      label: t(locale, 'clientNav.historial'),
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-        </svg>
-      ),
-    },
-    {
-      href: '/cliente/mensajeria',
-      label: t(locale, 'clientNav.mensajeria'),
-      icon: (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      ),
-    },
-  ]
-}
-
 export function ClientShell({
-  clientName,
-  clientEmail,
-  locale = 'es',
-  children,
+  clientName, clientEmail, navigation, locale = 'es', children,
 }: {
   clientName: string
   clientEmail: string
+  navigation: readonly PortalNavigationItem[]
   locale?: Locale
   children: ReactNode
 }) {
   const pathname = usePathname()
-  const navItems = getNavItems(locale)
+  // Fragment destinations represent sections, not the current page.
+  const isCurrent = (href: string) => href.startsWith('/') && !href.includes('#') &&
+    (pathname === href || pathname.startsWith(href + '/'))
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Sidebar desktop */}
       <aside className="hidden lg:flex w-56 flex-col border-r border-line bg-white">
         <div className="px-5 py-6 border-b border-line">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">WF-STUDIO</p>
           <p className="mt-1 text-sm font-bold text-foreground truncate">{clientName}</p>
         </div>
-        <nav className="flex-1 px-3 py-4 flex flex-col gap-0.5">
-          {navItems.map((item) => (
+        <nav aria-label={t(locale, 'clientNav.navigation')} className="flex-1 px-3 py-4 flex flex-col gap-0.5">
+          {navigation.map(item => (
             <Link
-              key={item.href}
+              key={item.id}
               href={item.href}
+              aria-current={isCurrent(item.href) ? 'page' : undefined}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition',
-                pathname === item.href || pathname.startsWith(item.href + '/')
-                  ? 'bg-brand text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                isCurrent(item.href) ? 'bg-brand text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
               )}
             >
-              {item.icon}
               {item.label}
             </Link>
           ))}
@@ -123,9 +59,7 @@ export function ClientShell({
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* Mobile header */}
         <header className="lg:hidden border-b border-line bg-white px-4 py-4 flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">WF-STUDIO</p>
@@ -142,23 +76,21 @@ export function ClientShell({
           </div>
         </header>
 
-        {/* Mobile nav */}
-        <div className="lg:hidden flex gap-1.5 overflow-x-auto px-4 py-3 border-b border-line bg-white">
-          {navItems.map((item) => (
+        <nav aria-label={t(locale, 'clientNav.navigation')} className="lg:hidden flex gap-1.5 overflow-x-auto px-4 py-3 border-b border-line bg-white">
+          {navigation.map(item => (
             <Link
-              key={item.href}
+              key={item.id}
               href={item.href}
+              aria-current={isCurrent(item.href) ? 'page' : undefined}
               className={cn(
-                'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition',
-                pathname === item.href || pathname.startsWith(item.href + '/')
-                  ? 'bg-brand text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
+                'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
+                isCurrent(item.href) ? 'bg-brand text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
               )}
             >
               {item.label}
             </Link>
           ))}
-        </div>
+        </nav>
 
         <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>

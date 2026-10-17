@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { z } from 'zod'
+import { cache } from 'react'
 import { requireAdmin, requireClientAccess } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type { CapabilityKey, Tables } from '@/lib/supabase/types'
@@ -110,12 +111,18 @@ export async function getAdminProject(id: string, locale: Locale = 'es') {
   }
 }
 
-/** No service role and no caller-supplied client ID: session RLS is authoritative. */
-export async function getClientPortalContext(locale: Locale = 'es') {
+/** Request-scoped only: layout, guards and project resolution share authorized reads. */
+const loadClientPortalData = cache(async () => {
   const identity = await requireClientAccess()
   const db = await createSupabaseServerClient()
   const projects = await loadProjects(db, identity.client.id, true)
   const mode = identity.client.portal_mode
+  return { ...identity, mode, projects }
+})
+
+/** No service role and no caller-supplied client ID: session RLS is authoritative. */
+export async function getClientPortalContext(locale: Locale = 'es') {
+  const { mode, projects, ...identity } = await loadClientPortalData()
   return { ...identity, mode, projects, navigation: buildPortalNavigation({ mode, projects, locale }) }
 }
 

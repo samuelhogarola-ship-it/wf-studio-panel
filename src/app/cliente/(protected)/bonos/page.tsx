@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requireClientAccess } from '@/lib/auth'
+import { requireClientCapability } from '@/lib/projects/client-access'
 import { getClientBonosData } from '@/lib/data/client'
 import { RequestForm } from '@/components/client/request-form'
 import { formatDate, formatDuration } from '@/lib/utils'
@@ -21,10 +21,9 @@ export default async function ClientBonosPage({
 }: {
   searchParams: Promise<{ new?: string }>
 }) {
-  const identity = await requireClientAccess()
-  const params = await searchParams
+  const identity = await requireClientCapability('bonuses_reports')
+  const [params, { packs, summaryMap }] = await Promise.all([searchParams, getClientBonosData(identity.client.id)])
   const showForm = params.new === '1'
-  const { packs, summaryMap } = await getClientBonosData(identity.client.id)
 
   return (
     <>

@@ -1,13 +1,15 @@
 import type { ReactNode } from 'react'
 
-import { requireClientAccess } from '@/lib/auth'
+import { getClientPortalContext } from '@/lib/data/projects'
 import { getLocale } from '@/lib/locale'
+import { buildPortalNavigation } from '@/lib/projects/portal-navigation.mjs'
 import { ClientShell } from '@/components/layout/client-shell'
 
 export default async function ClientProtectedLayout({ children }: { children: ReactNode }) {
-  const [identity, locale] = await Promise.all([requireClientAccess(), getLocale()])
+  const [context, locale] = await Promise.all([getClientPortalContext(), getLocale()])
+  const navigation = buildPortalNavigation({ mode: context.mode, projects: context.projects, locale })
   return (
-    <ClientShell clientName={identity.client.name} clientEmail={identity.email} locale={locale}>
+    <ClientShell clientName={context.client.name} clientEmail={context.email} locale={locale} navigation={navigation}>
       {children}
     </ClientShell>
   )

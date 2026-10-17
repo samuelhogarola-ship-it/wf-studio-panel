@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requireClientAccess } from '@/lib/auth'
+import { requireClientCapability } from '@/lib/projects/client-access'
 import { getClientHistorialData } from '@/lib/data/client'
 import { formatDate, formatDuration } from '@/lib/utils'
 
@@ -23,7 +23,7 @@ export default async function ClientHistorialPage({
 }: {
   searchParams: Promise<{ page?: string }>
 }) {
-  const identity = await requireClientAccess()
+  const identity = await requireClientCapability('bonuses_reports')
   const params = await searchParams
   const page = Math.max(0, parseInt(params.page ?? '0', 10) || 0)
 

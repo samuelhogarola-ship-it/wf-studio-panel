@@ -1,5 +1,30 @@
 export type Locale = 'es' | 'en'
 
+export const clientPortalTranslations = {
+  es: {
+    projects: 'Tus proyectos', choose: 'Elige un proyecto', empty: 'No hay proyectos accesibles.',
+    emptyDescription: 'Tu acceso está activo. Contacta con WF-Studio para configurar tus proyectos.',
+    back: 'Todos los proyectos', overview: 'Resumen del proyecto', active: 'Activo',
+    tools: 'Servicios y herramientas activos', noTools: 'No hay herramientas activas para este proyecto.',
+    open: 'Abrir', services: 'Ver servicios de la cuenta',
+    bloggerNote: 'Este editor protegido puede requerir un inicio de sesión independiente.',
+    account: 'Resumen de la cuenta', aggregated: 'Facturas y packs del conjunto de tu cuenta.',
+    pending: 'Datos pendientes', messages: 'Mensajería', invoices: 'Facturas pendientes', packs: 'Packs activos',
+    renewal: 'Renueva', closedPacks: 'Packs cerrados', noPacks: 'No hay packs cerrados registrados.',
+  },
+  en: {
+    projects: 'Your projects', choose: 'Choose a project', empty: 'No accessible projects.',
+    emptyDescription: 'Your account is active. Contact WF-Studio to configure your projects.',
+    back: 'All projects', overview: 'Project overview', active: 'Active',
+    tools: 'Active services and tools', noTools: 'No active tools for this project.',
+    open: 'Open', services: 'View account services',
+    bloggerNote: 'This protected editor may require a separate sign-in.',
+    account: 'Account overview', aggregated: 'Invoices and packs across your account.',
+    pending: 'Pending details', messages: 'Messages', invoices: 'Pending invoices', packs: 'Active packs',
+    renewal: 'Renews', closedPacks: 'Closed packs', noPacks: 'No closed packs recorded.',
+  },
+} as const
+
 export const projectTranslations = {
   es: {
     title: 'Proyectos', description: 'Inventario y acceso de clientes a sus proyectos.', register: 'Registrar proyecto', edit: 'Configuración del proyecto',
@@ -363,6 +388,7 @@ export const translations = {
     'print.payment.transfer': 'Transferencia bancaria',
 
     // Client shell nav
+    'clientNav.navigation': 'Navegación del portal',
     'clientNav.dashboard': 'Resumen',
     'clientNav.informes': 'Informes',
     'clientNav.actualizaciones': 'Actualizaciones',
@@ -725,6 +751,7 @@ export const translations = {
 
     // Client dashboard page
     // Client shell nav
+    'clientNav.navigation': 'Portal navigation',
     'clientNav.dashboard': 'Overview',
     'clientNav.informes': 'Reports',
     'clientNav.actualizaciones': 'Updates',
