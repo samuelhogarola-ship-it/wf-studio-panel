@@ -190,7 +190,11 @@
       "legacyDashboard": false
     },
     "blogger": {
-      "enabled": false
+      "enabled": true,
+      "url": "https://sportmassagefuengirola.com/admin/blogger/",
+      "apiBase": "/api/posts",
+      "buildEndpoint": "/api/build",
+      "publicPostBase": "/blog/"
     }
   },
   {

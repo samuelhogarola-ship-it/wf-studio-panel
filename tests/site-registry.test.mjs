@@ -20,6 +20,14 @@ test("canonical website registry covers every current site and configures Samuel
     "https://www.samuelcoachdealeman.com/admin/blogger/",
   );
   assert.equal(samuel.panel.key, "samuel-coach");
+
+  const sportMassage = getSiteByKey("sportmassagefuengirola");
+  assert.equal(sportMassage.blogger.enabled, true);
+  assert.equal(
+    sportMassage.blogger.url,
+    "https://sportmassagefuengirola.com/admin/blogger/",
+  );
+  assert.equal(sportMassage.blogger.publicPostBase, "/blog/");
 });
 
 test("legacy analytics facade is derived from canonical sites without changing keys", () => {
