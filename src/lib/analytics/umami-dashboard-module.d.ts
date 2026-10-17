@@ -42,6 +42,9 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
     message: string
   }
 
+  export type ClientAnalyticsDashboard = Omit<AnalyticsDashboard, 'project' | 'websiteId'>
+  export type ClientAnalyticsConfigurationError = Omit<AnalyticsConfigurationError, 'project'>
+
   export const ANALYTICS_PROJECTS: ReadonlyArray<{
     key: string
     label: string
@@ -52,6 +55,13 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
     abort(): void
   }
   export function normalizePeriod(period?: string): AnalyticsPeriod
+  export function toClientAnalyticsPayload(
+    dashboard: AnalyticsDashboard | AnalyticsConfigurationError,
+  ): ClientAnalyticsDashboard | ClientAnalyticsConfigurationError
+  export function toPublicAnalyticsError(error: unknown): {
+    status: 404 | 502
+    message: string
+  }
   export function getAnalyticsRange(period?: string, now?: Date): AnalyticsDashboard['range']
   export function getAnalyticsProject(projectKey: string, env?: NodeJS.ProcessEnv): AnalyticsDashboard['project']
   export function fetchUmamiDashboard(options: {

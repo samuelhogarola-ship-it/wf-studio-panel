@@ -152,7 +152,7 @@ export function ProjectAnalyticsPanel({
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 text-sm text-muted">{domain} · datos de Umami</p>
+            <p className="mt-1 text-sm text-muted">{domain} · datos de tráfico</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -198,7 +198,7 @@ export function ProjectAnalyticsPanel({
           </div>
         ) : null}
 
-        {error ? <StatusMessage title="No se pudo conectar con Umami" message={error} /> : null}
+        {error ? <StatusMessage title="No se pudieron cargar las estadísticas" message={error} /> : null}
         {dashboard?.status === 'configuration_error' ? (
           <StatusMessage title="Estadísticas pendientes de configuración" message={dashboard.message} />
         ) : null}
