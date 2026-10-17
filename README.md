@@ -48,6 +48,8 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 BLOGGER_GITHUB_TOKEN=
 BLOGGER_GITHUB_REPOSITORY=samuelhogarola-ship-it/sportmassage
 BLOGGER_GITHUB_BRANCH=main
+DEEPL_AUTH_KEY=
+DEEPL_API_URL=https://api.deepl.com/v2/translate
 CRON_SECRET=
 PENDING_REMINDERS_CRON_SECRET=
 TODO_PLASTICO_URL=
@@ -150,7 +152,7 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 
 > `NEXT_PUBLIC_*` se incrustan en el bundle cliente en build time — deben estar disponibles durante el build en Coolify, no solo en runtime.
 
-> Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador.
+> Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador. La publicación usa inglés como idioma base y puede generar variantes en español y finés mediante DeepL (`DEEPL_AUTH_KEY`); la clave también se mantiene únicamente en servidor.
 
 > El código mantiene compatibilidad secundaria con `TURNSTILE_SITE_KEY` como fallback legado para `/api/contact/config`, pero la convención principal de producción es `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 

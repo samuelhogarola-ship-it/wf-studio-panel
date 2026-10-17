@@ -1,5 +1,7 @@
 const API_BASE = "https://api.github.com";
 const SITE_REPOSITORY = "samuelhogarola-ship-it/sportmassage";
+const SUPPORTED_LANGUAGES = new Set(["en", "es", "fi"]);
+const DEEPL_LANGUAGES = { en: "EN-GB", es: "ES", fi: "FI" };
 
 export function githubContentPath(value) {
   const path = String(value || "").replace(/^\/+/, "");
@@ -18,6 +20,38 @@ export function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
+export function normalizeBlogLanguage(value, fallback = "en") {
+  const language = String(value || fallback).trim().toLowerCase();
+  if (!SUPPORTED_LANGUAGES.has(language)) throw new Error(`Unsupported blog language: ${language}`);
+  return language;
+}
+
+export function normalizePublicationLanguages(value) {
+  const languages = (Array.isArray(value) ? value : String(value || "en,es,fi").split(","))
+    .map((item) => normalizeBlogLanguage(item))
+    .filter((item, index, all) => all.indexOf(item) === index);
+  return languages.length ? languages : ["en", "es", "fi"];
+}
+
+export async function translateHtml(html, sourceLanguage, targetLanguage, fetchImpl = fetch) {
+  const key = process.env.DEEPL_AUTH_KEY?.trim();
+  if (!key) throw new Error("Missing DEEPL_AUTH_KEY");
+  const source = normalizeBlogLanguage(sourceLanguage);
+  const target = normalizeBlogLanguage(targetLanguage);
+  if (source === target) return String(html || "");
+  const endpoint = process.env.DEEPL_API_URL?.trim() || "https://api.deepl.com/v2/translate";
+  const response = await fetchImpl(endpoint, {
+    method: "POST",
+    headers: { Authorization: `DeepL-Auth-Key ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ text: [String(html || "")], source_lang: DEEPL_LANGUAGES[source], target_lang: DEEPL_LANGUAGES[target], tag_handling: "html", tag_handling_version: "v2" }),
+  });
+  if (!response.ok) throw new Error(`Translation provider failed: ${response.status}`);
+  const data = await response.json();
+  const result = data?.translations?.[0]?.text;
+  if (!result) throw new Error("Translation provider returned no text");
+  return result;
+}
+
 function tags(value) {
   return (Array.isArray(value) ? value : String(value || "").split(","))
     .map((item) => String(item).trim())
@@ -31,7 +65,7 @@ function card(meta) {
 export function buildPostHtml(meta, body) {
   const title = escapeHtml(meta.title);
   const description = escapeHtml(meta.description || "");
-  const lang = escapeHtml(meta.lang || "es");
+  const lang = escapeHtml(normalizeBlogLanguage(meta.lang || "en"));
   const author = escapeHtml(meta.author || "Sport Massage Fuengirola");
   const articleBody = meta.content_format === "html" ? String(body || "") : `<p>${escapeHtml(body || "")}</p>`;
   const canonical = `https://sportmassagefuengirola.com/blog/${encodeURIComponent(meta.slug)}/`;
@@ -53,7 +87,7 @@ export function buildPostHtml(meta, body) {
 }
 
 export function buildBlogIndexHtml(meta) {
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Blog · Sport Massage Fuengirola</title><meta name="description" content="Artículos sobre masaje, recuperación muscular y bienestar."><style>body{margin:0;background:#f5f1ea;color:#19323c;font:16px/1.7 system-ui,sans-serif}main{max-width:900px;margin:auto;padding:48px 24px}.blog-card{background:#fff;padding:24px;border-radius:16px;margin:16px 0}a{color:#0b6572}h1{font-size:clamp(2rem,5vw,3.5rem)}</style></head><body><main><p><a href="/">Sport Massage Fuengirola</a></p><h1>Blog</h1><p>Artículos sobre masaje, recuperación muscular y bienestar.</p>${card(meta)}</main></body></html>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Blog · Sport Massage Fuengirola</title><meta name="description" content="Articles about massage, muscle recovery and wellbeing."><style>body{margin:0;background:#f5f1ea;color:#19323c;font:16px/1.7 system-ui,sans-serif}main{max-width:900px;margin:auto;padding:48px 24px}.blog-card{background:#fff;padding:24px;border-radius:16px;margin:16px 0}a{color:#0b6572}h1{font-size:clamp(2rem,5vw,3.5rem)}</style></head><body><main><p><a href="/">Sport Massage Fuengirola</a></p><h1>Blog</h1><p>Articles about massage, muscle recovery and wellbeing.</p>${card(meta)}</main></body></html>`;
 }
 
 export function upsertBlogIndexHtml(existingHtml, meta) {
@@ -119,7 +153,7 @@ export async function listBloggerPosts() {
   const files = (Array.isArray(listing) ? listing : []).filter((entry) => entry.name.endsWith(".md"));
   return Promise.all(files.map(async (entry) => {
     const post = parseMarkdown((await readFile(repository, branch, entry.path))?.content || "");
-    return { slug: post.meta.slug || entry.name.replace(/\.md$/, ""), title: post.meta.title || entry.name, description: post.meta.description || "", date: post.meta.date || "", status: post.meta.status || "draft", isPublished: false };
+    return { slug: post.meta.slug || entry.name.replace(/\.md$/, ""), title: post.meta.title || entry.name, description: post.meta.description || "", date: post.meta.date || "", status: post.meta.status || "draft", words: post.body.split(/\s+/).filter(Boolean).length, images: [], isPublished: false };
   }));
 }
 
@@ -128,17 +162,28 @@ export async function readBloggerPost(slug) {
   const file = await readFile(repository, branch, `blog-posts/${slug}.md`);
   if (!file) return null;
   const parsed = parseMarkdown(file.content);
-  return { slug, meta: parsed.meta, body: parsed.body, format: parsed.meta.content_format || "html", isPublished: Boolean(await readFile(repository, branch, `blog/${slug}/index.html`)) };
+  return { slug, meta: parsed.meta, body: parsed.body, format: parsed.meta.content_format || "html", images: await listBloggerPostImages(slug), isPublished: Boolean(await readFile(repository, branch, `blog/${slug}/index.html`)) };
+}
+
+async function listBloggerPostImages(slug) {
+  const { repository, branch } = config();
+  try {
+    const listing = await githubRequest(`/repos/${repository}/contents/blog/${githubContentPath(slug)}/img?ref=${encodeURIComponent(branch)}`);
+    return (Array.isArray(listing) ? listing : []).filter((entry) => /\.(png|jpe?g|webp|gif|svg)$/i.test(entry.name)).map((entry) => ({ file: entry.name, url: `/blog/${slug}/img/${entry.name}`, alt: "", description: "", canDelete: true }));
+  } catch (error) {
+    if (String(error.message).includes("404")) return [];
+    throw error;
+  }
 }
 
 export async function saveBloggerPost(slug, input) {
   const { repository, branch } = config();
   const nextSlug = String(input.slug || slug || input.title || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   if (!nextSlug) throw new Error("Post slug is required");
-  const meta = { title: input.title, slug: nextSlug, description: input.description, date: input.date || new Date().toISOString().slice(0, 10), author: input.author || "Sport Massage Fuengirola", lang: input.lang || "es", tags: Array.isArray(input.tags) ? input.tags.join(", ") : input.tags || "", status: input.status || "draft", content_format: input.content_format === "markdown" ? "markdown" : "html" };
+  const meta = { title: input.title, slug: nextSlug, description: input.description, date: input.date || new Date().toISOString().slice(0, 10), author: input.author || "Sport Massage Fuengirola", lang: normalizeBlogLanguage(input.lang || "en"), publish_languages: normalizePublicationLanguages(input.publish_languages), tags: Array.isArray(input.tags) ? input.tags.join(", ") : input.tags || "", status: input.status || "draft", content_format: input.content_format === "markdown" ? "markdown" : "html" };
   const existing = await readFile(repository, branch, `blog-posts/${nextSlug}.md`);
   await writeFile(repository, branch, `blog-posts/${nextSlug}.md`, serializeMarkdown(meta, input.body), `blog: save ${nextSlug}`, existing?.sha);
-  return { slug: nextSlug, meta, body: input.body || "", format: meta.content_format, isPublished: false };
+  return { slug: nextSlug, meta, body: input.body || "", format: meta.content_format, images: await listBloggerPostImages(nextSlug), isPublished: false };
 }
 
 async function writeFile(repository, branch, path, content, message, sha) {
@@ -160,8 +205,43 @@ export async function publishBloggerPost(meta, body) {
     readFile(repository, branch, htmlPath),
     readFile(repository, branch, indexPath),
   ]);
+  const sourceLanguage = normalizeBlogLanguage(meta.lang || "en");
+  const publishLanguages = normalizePublicationLanguages(meta.publish_languages);
+  const variants = await Promise.all(publishLanguages.map(async (language) => ({ language, body: language === sourceLanguage ? body : await translateHtml(body, sourceLanguage, language) })));
   await writeFile(repository, branch, sourcePath, markdown, `blog: save ${meta.slug}`, source?.sha);
-  await writeFile(repository, branch, htmlPath, buildPostHtml(meta, body), `blog: publish ${meta.slug}`, html?.sha);
+  await writeFile(repository, branch, htmlPath, buildPostHtml({ ...meta, lang: sourceLanguage }, body), `blog: publish ${meta.slug}`, html?.sha);
+  for (const variant of variants) {
+    if (variant.language === sourceLanguage) continue;
+    const variantPath = `blog/${meta.slug}/${variant.language}/index.html`;
+    const existingVariant = await readFile(repository, branch, variantPath);
+    await writeFile(repository, branch, variantPath, buildPostHtml({ ...meta, lang: variant.language }, variant.body), `blog: publish ${meta.slug} ${variant.language}`, existingVariant?.sha);
+  }
   await writeFile(repository, branch, indexPath, upsertBlogIndexHtml(index?.content, meta), `blog: update index for ${meta.slug}`, index?.sha);
   return { slug: meta.slug, url: `/blog/${meta.slug}/`, repository, branch };
+}
+
+function imagePath(slug, fileName) {
+  const safeSlug = String(slug || "").toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const safeFile = String(fileName || "").split(/[\\/]/).pop().toLowerCase().replace(/[^a-z0-9._-]/g, "-");
+  if (!safeSlug || !safeFile || !/\.(png|jpe?g|webp|gif|svg)$/i.test(safeFile)) throw new Error("Invalid image path");
+  return { path: `blog/${safeSlug}/img/${safeFile}`, file: safeFile };
+}
+
+export async function saveBloggerPostImage(slug, fileName, data, metadata = {}) {
+  const { repository, branch } = config();
+  const target = imagePath(slug, fileName);
+  const raw = String(data || "").replace(/^data:[^;]+;base64,/, "");
+  if (!raw || raw.length > 8 * 1024 * 1024) throw new Error("Image is empty or too large");
+  const existing = await readFile(repository, branch, target.path);
+  await githubRequest(`/repos/${repository}/contents/${githubContentPath(target.path)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: `blog: upload ${slug}/${target.file}`, content: raw, branch, ...(existing?.sha ? { sha: existing.sha } : {}) }) });
+  return { file: target.file, url: `/blog/${slug}/img/${target.file}`, alt: String(metadata.alt || ""), description: String(metadata.description || "") };
+}
+
+export async function deleteBloggerPostImage(slug, fileName) {
+  const { repository, branch } = config();
+  const target = imagePath(slug, fileName);
+  const existing = await readFile(repository, branch, target.path);
+  if (!existing) return false;
+  await githubRequest(`/repos/${repository}/contents/${githubContentPath(target.path)}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: `blog: delete ${slug}/${target.file}`, sha: existing.sha, branch }) });
+  return true;
 }

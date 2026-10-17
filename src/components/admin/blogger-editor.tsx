@@ -1,14 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-
-type Post = { slug: string; meta?: Record<string, string>; body?: string; title?: string; description?: string; isPublished?: boolean }
-
 export function BloggerEditor() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [post, setPost] = useState<Post>({ meta: { lang: 'es', date: new Date().toISOString().slice(0, 10), author: 'Sport Massage Fuengirola', content_format: 'html' }, body: '' })
-  const [status, setStatus] = useState('Cargando…')
+  return <iframe title="Blogger · Sport Massage Fuengirola" src="/blogger/" className="h-[calc(100vh-12rem)] min-h-[760px] w-full rounded-xl border border-line bg-white" />
 
+  /*
   async function load() {
     const response = await fetch('/api/posts', { cache: 'no-store' })
     const data = await response.json()
@@ -62,4 +57,5 @@ export function BloggerEditor() {
       </div>
     </section>
   </div>
+  */
 }
