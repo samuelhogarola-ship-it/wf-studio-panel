@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { authorizeBloggerSite } from '@/lib/blogger/authorize'
 import { listPosts, savePost } from '@/lib/blogger/content-store.mjs'
+import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
 
 async function authorize(siteKey: string) {
   return authorizeBloggerSite(siteKey)
@@ -18,6 +19,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ sit
 
 export async function POST(request: Request, { params }: { params: Promise<{ siteKey: string }> }) {
   try {
+    assertTrustedMutation(request, { requireJson: true })
     const { siteKey } = await params
     const { root, site } = await authorize(siteKey)
     return NextResponse.json(await savePost(root, null, await request.json(), { defaultAuthor: site.name, defaultLanguage: 'es' }, storeOptions(siteKey, site)), { status: 201 })

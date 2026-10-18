@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
 const root = new URL('../', import.meta.url)
-const migrationUrl = new URL('supabase/migrations/202610170001_client_portal_platform.sql', root)
+const migrationUrl = new URL('supabase/migrations/202610170002_client_portal_platform.sql', root)
 const sql = () => readFile(migrationUrl, 'utf8').catch(error => {
   assert.fail(`Client portal migration must exist (${error.code})`)
 })
@@ -22,7 +22,15 @@ test('model constrains the exact portal, project, capability key and state value
   assert.match(capabilities, /check \(capability_key in \('products', 'domains', 'hosting', 'invoices', 'bonuses_reports', 'blogger', 'analytics'\)\)/)
   assert.match(capabilities, /state text not null default 'unavailable' check \(state in \('unavailable', 'available', 'active'\)\)/)
   assert.match(capabilities, /unique \(project_id, capability_key\)/)
+  assert.match(capabilities, /metadata - array\['provisioning_confirmed', 'display_label', 'source'\]/)
   assert.match(capabilities, /capability_key <> 'blogger' or state <> 'active' or \(launch_url is not null and validated_at is not null/)
+})
+
+test('every migration has a unique sortable version', async () => {
+  const { readdir } = await import('node:fs/promises')
+  const names = await readdir(new URL('supabase/migrations/', root))
+  const versions = names.map(name => name.match(/^(\d+)_/)?.[1]).filter(Boolean)
+  assert.equal(new Set(versions).size, versions.length)
 })
 
 test('projects have nullable ownership, portal controls, timestamps and normalized unique identities', async () => {

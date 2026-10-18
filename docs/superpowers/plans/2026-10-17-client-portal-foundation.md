@@ -31,7 +31,7 @@
 ### Task 1: Project and capability data model
 
 **Files:**
-- Create: `supabase/migrations/202610170001_client_portal_platform.sql`
+- Create: `supabase/migrations/202610170002_client_portal_platform.sql`
 - Create: `tests/client-projects-migration.test.mjs`
 - Modify: `src/lib/supabase/types.ts`
 
@@ -59,7 +59,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/202610170001_client_portal_platform.sql src/lib/supabase/types.ts tests/client-projects-migration.test.mjs
+git add supabase/migrations/202610170002_client_portal_platform.sql src/lib/supabase/types.ts tests/client-projects-migration.test.mjs
 git commit -m "feat: add client project capability model"
 ```
 

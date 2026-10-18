@@ -4,7 +4,7 @@ import { useActionState } from 'react'
 import { upsertProjectCapabilityAction, type ProjectFormState } from '@/lib/actions/projects'
 import type { Project, ProjectCapability } from '@/lib/data/projects'
 import type { CapabilityKey } from '@/lib/supabase/types'
-import { validateProjectDestination } from '@/lib/projects/model.mjs'
+import { validateBloggerProjectDestination, validateProjectDestination } from '@/lib/projects/model.mjs'
 import { projectTranslations, type Locale } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -32,7 +32,9 @@ function CapabilityCard({ project, capabilityKey, capability, locale }: { projec
         <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="provisioning_confirmed" value="true" defaultChecked={Boolean(confirmed)} />{copy.provisioning}</label>
         <p className="text-xs text-muted">{copy.bloggerNote}</p>
       </> : null}
-      {capability?.launch_url && validateProjectDestination(capability.launch_url, project.domain, true) ? <a href={capability.launch_url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand underline">{copy.open} ↗</a> : null}
+      {capability?.launch_url && (capabilityKey === 'blogger'
+        ? validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)
+        : validateProjectDestination(capability.launch_url, project.domain, true)) ? <a href={capability.launch_url} target="_blank" rel="noopener noreferrer" className="text-sm text-brand underline">{copy.open} ↗</a> : null}
       <FormMessage {...state} /><Button type="submit" disabled={pending}>{pending ? copy.saving : copy.save}</Button>
     </form>
   </Card>

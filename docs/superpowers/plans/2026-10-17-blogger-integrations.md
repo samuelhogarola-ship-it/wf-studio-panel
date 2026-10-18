@@ -31,7 +31,7 @@
 ### Task 1: Studio one-time launch protocol
 
 **Files (WF Studio):**
-- Create: `supabase/migrations/202610170002_tool_launch_tickets.sql`
+- Create: `supabase/migrations/202610170004_tool_launch_tickets.sql`
 - Create: `src/lib/tools/launch-tickets.mjs`
 - Create: `src/lib/tools/launch-tickets-module.d.ts`
 - Create: `src/app/api/tools/blogger/[siteKey]/launch/route.ts`

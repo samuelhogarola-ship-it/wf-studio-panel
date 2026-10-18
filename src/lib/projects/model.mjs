@@ -23,3 +23,16 @@ export function validateProjectDestination(rawUrl, canonicalDomain, production =
     return false;
   }
 }
+
+export function validateBloggerProjectDestination(rawUrl, canonicalDomain, siteKey) {
+  if (validateProjectDestination(rawUrl, canonicalDomain, true)) return true;
+  if (typeof rawUrl !== 'string' || typeof siteKey !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(siteKey)) return false;
+  try {
+    const url = new URL(rawUrl);
+    return url.origin === 'https://admin.webfuengirola.com' &&
+      url.pathname === `/paneladmin/blogger/${siteKey}` && !url.search && !url.hash &&
+      !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}

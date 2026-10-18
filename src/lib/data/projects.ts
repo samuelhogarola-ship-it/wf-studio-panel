@@ -5,7 +5,7 @@ import { cache } from 'react'
 import { requireAdmin, requireClientAccess } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type { CapabilityKey, Tables } from '@/lib/supabase/types'
-import { validateProjectDestination } from '@/lib/projects/model.mjs'
+import { validateBloggerProjectDestination, validateProjectDestination } from '@/lib/projects/model.mjs'
 import { buildPortalNavigation } from '@/lib/projects/portal-navigation.mjs'
 import { getConfiguredUmamiSites, getUmamiConnections } from '@/lib/analytics/umami-core.mjs'
 import type { Locale } from '@/lib/i18n'
@@ -29,7 +29,9 @@ export function hasProjectAnalytics(project: Project): boolean {
 }
 
 export function getCapabilityConfigurationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'validated_at'>): ProjectWarning | null {
-  if (capability.launch_url && !validateProjectDestination(capability.launch_url, project.domain, true)) return 'destination'
+  if (capability.launch_url && !(capability.capability_key === 'blogger'
+    ? validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)
+    : validateProjectDestination(capability.launch_url, project.domain, true))) return 'destination'
   if (capability.capability_key === 'hosting' && project.hosting_management_url &&
     !validateProjectDestination(project.hosting_management_url, project.domain, true)) return 'destination'
   if (capability.capability_key === 'blogger' && (!capability.launch_url || !capability.validated_at)) return 'blogger'

@@ -12,7 +12,7 @@ import {
 } from './helpers/project-harness.mjs'
 
 const migrationUrl = new URL(
-  '../supabase/migrations/202610170003_tool_launch_tickets.sql',
+  '../supabase/migrations/202610170004_tool_launch_tickets.sql',
   import.meta.url,
 )
 const launchRoutePath = 'src/app/api/tools/blogger/[siteKey]/launch/route.ts'

@@ -5,8 +5,8 @@ import { readFile, readdir } from 'node:fs/promises'
 const root = new URL('../', import.meta.url)
 const migrations = new URL('supabase/migrations/', root)
 const namespaceMigration = new URL('202607100001_clients_unique_per_project.sql', migrations)
-const platformMigration = new URL('202610170001_client_portal_platform.sql', migrations)
-const integrityMigration = new URL('202610170002_client_portal_integrity.sql', migrations)
+const platformMigration = new URL('202610170002_client_portal_platform.sql', migrations)
+const integrityMigration = new URL('202610170003_client_portal_integrity.sql', migrations)
 
 async function readIntegrityMigration() {
   return readFile(integrityMigration, 'utf8').catch(error => {
@@ -35,7 +35,7 @@ test('WF Studio account policies resolve duplicate-email namespaces through the 
   ])
 
   const ordered = filenames.sort()
-  assert.ok(ordered.indexOf('202610170002_client_portal_integrity.sql') > ordered.indexOf('202610170001_client_portal_platform.sql'))
+  assert.ok(ordered.indexOf('202610170003_client_portal_integrity.sql') > ordered.indexOf('202610170002_client_portal_platform.sql'))
   assert.match(namespace, /unique index if not exists clients_project_email_lower_unique_idx\s+on public\.clients \(project, lower\(email\)\)/i)
   const portalLookup = functionBody(platform, 'current_portal_client_id')
   for (const expression of [

@@ -1,4 +1,4 @@
-import { validateProjectDestination } from './model.mjs';
+import { validateBloggerProjectDestination } from './model.mjs';
 
 const labels = {
   es: {
@@ -46,8 +46,8 @@ export function buildPortalNavigation({ mode, projects = [], locale = 'es' }) {
       if (key === 'blogger') {
         const capability = project.capabilities.find(capability =>
           capability.capability_key === key && capability.state === 'active');
-        if (!capability.validated_at || !validateProjectDestination(capability.launch_url, project.domain, true)) continue;
-        href = capability.launch_url;
+        if (!capability.validated_at || !validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)) continue;
+        href = `${base}/blogger`;
       }
       items.push({
         id: `${project.id}:${key}`, href, label: `${text[key]} · ${project.name}`,

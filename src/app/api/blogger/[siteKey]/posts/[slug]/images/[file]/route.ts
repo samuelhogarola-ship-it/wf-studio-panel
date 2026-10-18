@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import { authorizeBloggerSite } from '@/lib/blogger/authorize'
 import { deletePostImage, saveImageMetadata } from '@/lib/blogger/content-store.mjs'
+import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
 
 export async function PUT(request: Request, { params }: { params: Promise<{ siteKey: string; slug: string; file: string }> }) {
   try {
+    assertTrustedMutation(request, { requireJson: true })
     const { siteKey, slug, file } = await params
     const { root, site } = await authorizeBloggerSite(siteKey)
     return NextResponse.json(await saveImageMetadata(root, slug, decodeURIComponent(file), await request.json(), { publicDir: site.blogger.contentDir, publicPostBase: site.blogger.publicPostBase, productionUrl: site.productionUrl, previewBase: `/api/blogger/${siteKey}/posts` }))
@@ -12,8 +14,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ site
   }
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ siteKey: string; slug: string; file: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ siteKey: string; slug: string; file: string }> }) {
   try {
+    assertTrustedMutation(request)
     const { siteKey, slug, file } = await params
     const { root, site } = await authorizeBloggerSite(siteKey)
     return NextResponse.json(await deletePostImage(root, slug, decodeURIComponent(file), { publicDir: site.blogger.contentDir, publicPostBase: site.blogger.publicPostBase, productionUrl: site.productionUrl, previewBase: `/api/blogger/${siteKey}/posts` }))

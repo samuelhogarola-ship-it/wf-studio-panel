@@ -34,7 +34,10 @@ create table if not exists public.project_capabilities (
   capability_key text not null check (capability_key in ('products', 'domains', 'hosting', 'invoices', 'bonuses_reports', 'blogger', 'analytics')),
   state text not null default 'unavailable' check (state in ('unavailable', 'available', 'active')),
   launch_url text,
-  metadata jsonb not null default '{}'::jsonb check (jsonb_typeof(metadata) = 'object'),
+  metadata jsonb not null default '{}'::jsonb check (
+    jsonb_typeof(metadata) = 'object'
+    and metadata - array['provisioning_confirmed', 'display_label', 'source'] = '{}'::jsonb
+  ),
   validated_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

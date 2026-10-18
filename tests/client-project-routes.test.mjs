@@ -115,7 +115,7 @@ test('server layout provides identical desktop/mobile actions, labels and access
   const navs = [...html.matchAll(/<nav\b[^>]*>([\s\S]*?)<\/nav>/g)].map(match => match[1]);
   assert.equal(navs.length, 2);
   const actions = nav => [...nav.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/g)].map(match => [match[1], match[2].replace(/<[^>]*>/g, '')]);
-  const expected = [['/cliente/dashboard', 'Resumen'], ['/cliente/pendientes', 'Pendientes'], ['/cliente/mensajeria', 'Mensajería'], ['/cliente/facturas', 'Facturas'], ['https://example.com/admin/blogger/', 'Blogger · Example']];
+  const expected = [['/cliente/dashboard', 'Resumen'], ['/cliente/pendientes', 'Pendientes'], ['/cliente/mensajeria', 'Mensajería'], ['/cliente/facturas', 'Facturas'], ['/cliente/proyectos/example/blogger', 'Blogger · Example']];
   assert.deepEqual(actions(navs[0]), expected);
   assert.deepEqual(actions(navs[1]), expected);
   assert.equal((html.match(/aria-current="page"/g) ?? []).length, 2);
@@ -190,14 +190,13 @@ test('services show only categories enabled anywhere on accessible client projec
   assert.doesNotMatch(html, /Hidden hosting|Hidden hours|Hidden tasks|Hidden product/);
 });
 
-test('project overview identifies its website and validated Blogger destination with separate sign-in notice', async () => {
+test('project overview identifies its website and opens Blogger inside the authorized portal', async () => {
   const s = setup({ capabilities: [cap('blogger', { launch_url: 'https://example.com/admin/blogger/', validated_at: project.created_at })], locale: 'en' });
   const html = render(await s.page('proyectos/[slug]', { params: Promise.resolve({ slug: 'example' }) }));
   assert.match(html, /Example/);
   assert.match(html, /example\.com/);
   assert.match(html, /Blogger/);
-  assert.match(html, /href="https:\/\/example.com\/admin\/blogger\/"/);
-  assert.match(html, /separate sign-in/);
+  assert.match(html, /href="\/cliente\/proyectos\/example\/blogger"/);
   assert.doesNotMatch(html, /\/cliente\/(facturas|packs|bonos|historial|informes|servicios)/);
 });
 

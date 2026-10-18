@@ -46,17 +46,32 @@ test('deduplicates client-owned invoices and reports/packs across projects', () 
   assert.equal(new Set(items.map(item => item.id)).size, items.length);
 });
 
-test('Blogger preserves validated direct URLs and statistics identify each project', () => {
+test('Blogger stays inside the authorized client portal and statistics identify each project', () => {
   const url = 'https://www.example.com/admin/blog/?next=%2fposts#edit';
   const items = dynamic([
     project({ capabilities: [capability('blogger', 'active', { launch_url: url, validated_at: '2026-10-17T10:00:00Z' }), capability('analytics')] }),
     project({ id: 'p2', slug: 'second/site', name: 'Second Site', capabilities: [capability('analytics')] }),
   ]);
   assert.deepEqual(items.slice(3).map(({ href, label, projectId }) => ({ href, label, projectId })), [
-    { href: url, label: 'Blogger · First Site', projectId: 'p1' },
+    { href: '/cliente/proyectos/first-site/blogger', label: 'Blogger · First Site', projectId: 'p1' },
     { href: '/cliente/proyectos/first-site/estadisticas', label: 'Estadísticas · First Site', projectId: 'p1' },
     { href: '/cliente/proyectos/second%2Fsite/estadisticas', label: 'Estadísticas · Second Site', projectId: 'p2' },
   ]);
+});
+
+test('Blogger accepts only the exact Studio editor assigned to the same project key', () => {
+  const configured = project({ capabilities: [capability('blogger', 'active', {
+    launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/first-site',
+    validated_at: '2026-10-17T10:00:00Z',
+  })] });
+  assert.equal(dynamic([configured]).at(-1).href, '/cliente/proyectos/first-site/blogger');
+  for (const launch_url of [
+    'https://admin.webfuengirola.com/paneladmin/blogger/other-site',
+    'https://admin.webfuengirola.com.evil.example/paneladmin/blogger/first-site',
+    'https://admin.webfuengirola.com/paneladmin/blogger/first-site?next=evil',
+  ]) {
+    assert.equal(dynamic([project({ capabilities: [capability('blogger', 'active', { launch_url, validated_at: 'today' })] })]).length, 3);
+  }
 });
 
 test('hides missing, unvalidated and unsafe Blogger destinations', () => {
