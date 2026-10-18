@@ -137,6 +137,7 @@
       "url": "https://admin.webfuengirola.com/paneladmin/blogger/personaltrainerfuengirola",
       "apiBase": "/api/blogger/personaltrainerfuengirola/posts",
       "buildEndpoint": "/api/blogger/personaltrainerfuengirola/build",
+      "contentDir": "blog",
       "publicPostBase": "/blog/"
     }
   },
