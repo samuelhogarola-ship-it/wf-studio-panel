@@ -8,6 +8,7 @@ const SITE_DOMAINS = new Map([
   ["conocef", "conocefuengirola.com"],
   ["topfuengirola", "topfuengirola.com"],
   ["samuelcoachdealeman", "samuelcoachdealeman.com"],
+  ["agama", "agama.com.mx"],
   ["vikingfitness", "vikingfitness.es"],
   ["personaltrainerfuengirola", "personaltrainerfuengirola.com"],
   ["gimnasionuevoestilo", "gimnasionuevoestilo.com"],
@@ -23,6 +24,7 @@ const SITE_DOMAINS = new Map([
 ]);
 const SITE_PRODUCTION_HOST_OVERRIDES = new Map([
   ["samuelcoachdealeman", "www.samuelcoachdealeman.com"],
+  ["agama", "www.agama.com.mx"],
 ]);
 
 function isIpLiteral(value) {

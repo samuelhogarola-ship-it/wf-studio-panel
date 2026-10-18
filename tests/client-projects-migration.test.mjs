@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises'
 
 const root = new URL('../', import.meta.url)
 const migrationUrl = new URL('supabase/migrations/202610170002_client_portal_platform.sql', root)
+const agamaForwardMigrationUrl = new URL('supabase/migrations/202610180001_agama_client_project.sql', root)
 const sql = () => readFile(migrationUrl, 'utf8').catch(error => {
   assert.fail(`Client portal migration must exist (${error.code})`)
 })
@@ -100,6 +101,20 @@ test('registry seed is idempotent for either identity and never activates Blogge
   assert.doesNotMatch(seed, /'active'|do update/i)
   assert.doesNotMatch(source, /(?:update|delete from|alter table) public\.(?:invoices|packs|services|client_resources)\b/i)
   assert.doesNotMatch(source, /update public\.clients/i)
+})
+
+test('aGama forward migration promotes trigger defaults only for the project inserted in that run', async () => {
+  const source = await readFile(agamaForwardMigrationUrl, 'utf8')
+  const inserted = source.match(/with inserted_project as \(([\s\S]*?)\),\s*capability_keys/i)?.[1]
+  assert.ok(inserted, 'forward migration must retain the newly inserted project id')
+  assert.match(inserted, /insert into public\.client_projects/)
+  assert.match(inserted, /where not exists/)
+  assert.match(inserted, /returning id/)
+  assert.match(source, /from inserted_project p\s+cross join capability_keys k/i)
+  assert.match(source, /on conflict \(project_id, capability_key\) do update\s+set state = 'available'/i)
+  assert.match(source, /where public\.project_capabilities\.state = 'unavailable'/i)
+  assert.match(source, /public\.project_capabilities\.launch_url is null/i)
+  assert.match(source, /public\.project_capabilities\.validated_at is null/i)
 })
 
 test('Supabase types expose project and capability rows, relationships, exact unions and immutable audit writes', async () => {

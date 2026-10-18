@@ -180,6 +180,7 @@ with seed(slug, name, domain) as (values
   ('conocef', 'Conoce Fuengirola', 'conocefuengirola.com'),
   ('topfuengirola', 'Top Fuengirola', 'topfuengirola.com'),
   ('samuelcoachdealeman', 'Samuel Coach de Alemán', 'samuelcoachdealeman.com'),
+  ('agama', 'aGama', 'agama.com.mx'),
   ('vikingfitness', 'Viking Fitness', 'vikingfitness.es'),
   ('personaltrainerfuengirola', 'Personal Trainer Fuengirola', 'personaltrainerfuengirola.com'),
   ('gimnasionuevoestilo', 'Gimnasio Nuevo Estilo', 'gimnasionuevoestilo.com'),
@@ -207,6 +208,7 @@ with seed(slug, domain) as (values
   ('conocef', 'conocefuengirola.com'),
   ('topfuengirola', 'topfuengirola.com'),
   ('samuelcoachdealeman', 'samuelcoachdealeman.com'),
+  ('agama', 'agama.com.mx'),
   ('vikingfitness', 'vikingfitness.es'),
   ('personaltrainerfuengirola', 'personaltrainerfuengirola.com'),
   ('gimnasionuevoestilo', 'gimnasionuevoestilo.com'),
@@ -225,7 +227,7 @@ with seed(slug, domain) as (values
 insert into public.project_capabilities (project_id, capability_key, state)
 select p.id, k.capability_key,
   case when k.capability_key = 'blogger' and seed.slug not in (
-    'samuelcoachdealeman', 'webfuengirola', 'todoplastico', 'vikingfitness', 'sportmassagefuengirola'
+    'samuelcoachdealeman', 'webfuengirola', 'todoplastico', 'vikingfitness', 'sportmassagefuengirola', 'agama'
   ) then 'unavailable' else 'available' end
 from seed join public.client_projects p
   on lower(btrim(p.slug)) = seed.slug or lower(btrim(p.domain)) = seed.domain

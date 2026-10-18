@@ -10,10 +10,10 @@ import {
   validateSite,
 } from "../src/lib/sites/registry.mjs";
 
-test("canonical website registry covers every current site and configures Samuel Blogger", () => {
+test("canonical website registry covers every current site and configures Samuel and Agama Blogger", () => {
   const sites = getSites();
-  assert.equal(sites.length, 17);
-  assert.equal(new Set(sites.map(({ key }) => key)).size, 17);
+  assert.equal(sites.length, 18);
+  assert.equal(new Set(sites.map(({ key }) => key)).size, 18);
 
   const samuel = getSiteByKey("samuelcoachdealeman");
   assert.equal(samuel.blogger.enabled, true);
@@ -25,6 +25,17 @@ test("canonical website registry covers every current site and configures Samuel
   assert.equal(samuel.blogger.adapter, "supabase-api");
   assert.deepEqual(samuel.blogger.capabilities, ["posts", "media", "publish"]);
   assert.equal(getBloggerHandoff(samuel), null);
+
+  const agama = getSiteByKey("agama");
+  assert.equal(agama.domain, "agama.com.mx");
+  assert.equal(agama.blogger.enabled, true);
+  assert.equal(agama.blogger.runtime, "central-multisite");
+  assert.equal(
+    agama.blogger.url,
+    "https://admin.webfuengirola.com/paneladmin/blogger/agama",
+  );
+  assert.equal(agama.blogger.contentDir, "entrada-de-blog");
+  assert.equal(agama.blogger.publicPostBase, "/entrada-de-blog/");
 
   const sportMassage = getSiteByKey("sportmassagefuengirola");
   assert.equal(sportMassage.blogger.enabled, true);

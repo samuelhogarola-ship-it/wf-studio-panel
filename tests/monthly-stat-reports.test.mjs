@@ -105,11 +105,12 @@ test("configured report sites include all panels and keep missing website ids vi
     STAT_REPORT_UMAMI_WEBSITE_ID_SUPERENTRENADOR: "super-id",
   });
 
-  assert.equal(sites.length, 17);
+  assert.equal(sites.length, 18);
   assert.equal(sites.find((site) => site.key === "webfuengirola")?.source, "personal");
   assert.equal(sites.find((site) => site.key === "webfuengirola")?.websiteId, "wf-id");
   assert.equal(sites.find((site) => site.key === "superentrenador")?.websiteId, "super-id");
   assert.equal(sites.find((site) => site.key === "todoplastico")?.source, "agama");
+  assert.equal(sites.find((site) => site.key === "agama")?.source, "agama");
   assert.equal(sites.find((site) => site.key === "todoplastico")?.websiteId, undefined);
 });
 

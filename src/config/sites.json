@@ -107,6 +107,31 @@
   },
   {
     "schemaVersion": 1,
+    "key": "agama",
+    "name": "aGama",
+    "domain": "agama.com.mx",
+    "productionUrl": "https://www.agama.com.mx",
+    "panel": {
+      "key": "reports-only",
+      "path": "/paneladmin/informes"
+    },
+    "analytics": {
+      "source": "agama",
+      "envSuffix": "AGAMA",
+      "legacyDashboard": false
+    },
+    "blogger": {
+      "enabled": true,
+      "runtime": "central-multisite",
+      "url": "https://admin.webfuengirola.com/paneladmin/blogger/agama",
+      "apiBase": "/api/blogger/agama/posts",
+      "buildEndpoint": "/api/blogger/agama/build",
+      "contentDir": "entrada-de-blog",
+      "publicPostBase": "/entrada-de-blog/"
+    }
+  },
+  {
+    "schemaVersion": 1,
     "key": "vikingfitness",
     "name": "Viking Fitness",
     "domain": "vikingfitness.es",
