@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { getOptionalIdentity } from '@/lib/auth'
 import { listBloggerPosts, saveBloggerPost } from '@/lib/blogger/publisher.mjs'
+import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
 
 export const runtime = 'nodejs'
 
@@ -21,6 +22,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  try { assertTrustedMutation(request, { requireJson: true }) } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'forbidden' }, { status: (error as { status?: number }).status ?? 403 })
+  }
   if (!(await adminOnly())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   try {
     return NextResponse.json(await saveBloggerPost(null, await request.json()), { status: 201 })

@@ -120,6 +120,9 @@ export function validateSite(site) {
   const allowedOrigins = allowedSiteOrigins(site, domain, production.origin);
   if (site.blogger?.enabled) {
     if (!site.blogger.url) throw new Error(`Registro de sitios: Blogger de ${site.key} no tiene acceso directo`);
+    if (!['central-multisite', 'central-legacy', 'external'].includes(site.blogger.runtime)) {
+      throw new Error(`Registro de sitios: Blogger de ${site.key} no tiene runtime válido`);
+    }
     parseHttpsUrl(site.blogger.url, "Blogger", site, new Set([...allowedOrigins, STUDIO_ORIGIN]));
   }
   const handoffMetadata = site.blogger?.adapter !== undefined || site.blogger?.capabilities !== undefined;

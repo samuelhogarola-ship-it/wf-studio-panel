@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 
 import { AdminShell } from '@/components/layout/app-shell'
+import { getBloggerEditorTarget } from '@/lib/blogger/editor.mjs'
 import { requireAdmin } from '@/lib/auth'
 import { getLocale } from '@/lib/locale'
 import { getSiteByKey } from '@/lib/sites/registry.mjs'
@@ -10,5 +11,9 @@ export default async function BloggerPage({ params }: { params: Promise<{ siteKe
   const { siteKey } = await params
   const site = getSiteByKey(siteKey)
   if (!site.blogger.enabled) notFound()
-  return <AdminShell title={`Blogger · ${site.name}`} description="Publicación estática" currentPath="/paneladmin/proyectos" userEmail={identity.email} locale={await getLocale()}><iframe title={`Blogger · ${site.name}`} src={`/blogger/editor/index.html?siteKey=${encodeURIComponent(siteKey)}`} className="h-[calc(100vh-12rem)] min-h-[760px] w-full rounded-xl border border-line bg-white" /></AdminShell>
+  const target = getBloggerEditorTarget(site)
+  if (!target) notFound()
+  return <AdminShell title={`Blogger · ${site.name}`} description="Publicación estática" currentPath="/paneladmin/proyectos" userEmail={identity.email} locale={await getLocale()}>{target.kind === 'iframe'
+    ? <iframe title={`Blogger · ${site.name}`} src={target.href} className="h-[calc(100vh-12rem)] min-h-[760px] w-full rounded-xl border border-line bg-white" />
+    : <a href={target.href} rel="noopener noreferrer" className="inline-flex rounded-lg bg-brand px-4 py-3 font-bold text-white">Abrir Blogger · {site.name} ↗</a>}</AdminShell>
 }

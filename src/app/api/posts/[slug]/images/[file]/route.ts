@@ -2,10 +2,14 @@ import { NextResponse } from 'next/server'
 
 import { getOptionalIdentity } from '@/lib/auth'
 import { deleteBloggerPostImage } from '@/lib/blogger/publisher.mjs'
+import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
 
 export const runtime = 'nodejs'
 
-export async function DELETE(_request: Request, context: { params: Promise<{ slug: string; file: string }> }) {
+export async function DELETE(request: Request, context: { params: Promise<{ slug: string; file: string }> }) {
+  try { assertTrustedMutation(request) } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'forbidden' }, { status: (error as { status?: number }).status ?? 403 })
+  }
   const identity = await getOptionalIdentity()
   if (identity?.role !== 'admin') return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { slug, file } = await context.params
@@ -19,6 +23,9 @@ export async function DELETE(_request: Request, context: { params: Promise<{ slu
 }
 
 export async function PUT(request: Request, context: { params: Promise<{ slug: string; file: string }> }) {
+  try { assertTrustedMutation(request, { requireJson: true }) } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'forbidden' }, { status: (error as { status?: number }).status ?? 403 })
+  }
   const identity = await getOptionalIdentity()
   if (identity?.role !== 'admin') return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const { slug, file } = await context.params
