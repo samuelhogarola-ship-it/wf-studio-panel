@@ -36,6 +36,12 @@ export type Database = {
           { foreignKeyName: "tool_launch_tickets_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
         ]
       }
+      blogger_site_memberships: {
+        Row: { id: string; user_id: string; site_key: string; created_by: string | null; created_at: string }
+        Insert: { id?: string; user_id: string; site_key: string; created_by?: string | null; created_at?: string }
+        Update: { user_id?: string; site_key?: string; created_by?: string | null }
+        Relationships: []
+      }
       client_resources: {
         Row: { id: string; client_id: string; kind: 'report' | 'update' | 'photo'; title: string; body: string; report_path: string | null; storage_path: string | null; content_type: string | null; created_by: string | null; created_at: string }
         Insert: { id?: string; client_id: string; kind: 'report' | 'update' | 'photo'; title: string; body?: string; report_path?: string | null; storage_path?: string | null; content_type?: string | null; created_by?: string | null; created_at?: string }

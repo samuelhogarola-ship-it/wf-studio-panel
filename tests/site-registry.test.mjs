@@ -19,12 +19,20 @@ test("canonical website registry covers every current site and configures Samuel
   assert.equal(samuel.blogger.enabled, true);
   assert.equal(
     samuel.blogger.url,
-    "https://www.samuelcoachdealeman.com/admin/blogger/",
+    "https://admin.webfuengirola.com/paneladmin/blogger/samuelcoachdealeman",
   );
   assert.equal(samuel.panel.key, "samuel-coach");
   assert.equal(samuel.blogger.adapter, "supabase-api");
   assert.deepEqual(samuel.blogger.capabilities, ["posts", "media", "publish"]);
   assert.equal(getBloggerHandoff(samuel), null);
+
+  const sportMassage = getSiteByKey("sportmassagefuengirola");
+  assert.equal(sportMassage.blogger.enabled, true);
+  assert.equal(
+    sportMassage.blogger.url,
+    "https://sportmassagefuengirola.com/admin/blogger/",
+  );
+  assert.equal(sportMassage.blogger.publicPostBase, "/blog/");
 });
 
 test("Blogger handoff registry accepts only complete same-site HTTPS destinations", () => {
@@ -182,6 +190,31 @@ test("Blogger destinations reject credentials, non-default ports and unapproved 
       () => validateSite({ ...configured, blogger: { ...configured.blogger, launchUrl } }),
       /Blogger|HTTPS|origen|registro|públic/i,
       launchUrl,
+    );
+  }
+});
+
+test("the Blogger console accepts only the exact trusted Studio origin", () => {
+  const base = structuredClone(getSiteByKey("samuelcoachdealeman"));
+  assert.equal(
+    validateSite({
+      ...base,
+      blogger: {
+        ...base.blogger,
+        url: "https://admin.webfuengirola.com/paneladmin/blogger/samuelcoachdealeman",
+      },
+    }).blogger.url,
+    "https://admin.webfuengirola.com/paneladmin/blogger/samuelcoachdealeman",
+  );
+
+  for (const url of [
+    "https://admin.webfuengirola.com.evil.example/paneladmin/blogger/samuelcoachdealeman",
+    "https://user@admin.webfuengirola.com/paneladmin/blogger/samuelcoachdealeman",
+    "https://admin.webfuengirola.com:8443/paneladmin/blogger/samuelcoachdealeman",
+  ]) {
+    assert.throws(
+      () => validateSite({ ...base, blogger: { ...base.blogger, url } }),
+      /Blogger|HTTPS|origen|registro/i,
     );
   }
 });

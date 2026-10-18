@@ -46,6 +46,11 @@ TURNSTILE_SECRET_KEY=
 RESEND_API_KEY=
 RESEND_FROM_EMAIL=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+BLOGGER_GITHUB_TOKEN=
+BLOGGER_GITHUB_REPOSITORY=samuelhogarola-ship-it/sportmassage
+BLOGGER_GITHUB_BRANCH=main
+DEEPL_AUTH_KEY=
+DEEPL_API_URL=https://api.deepl.com/v2/translate
 CRON_SECRET=
 PENDING_REMINDERS_CRON_SECRET=
 TODO_PLASTICO_URL=
@@ -115,8 +120,8 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 | `SUPABASE_SECRET_KEY`                  | Service role key; solo servidor, también persiste los informes mensuales           |
 | `PROJECT_PROVISIONING_SECRET`          | Secreto Bearer solo servidor para registrar webs mediante `/api/projects/provision` |
 | `APP_URL`                              | URL canónica del panel para magic links, callbacks y metadatos                     |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`       | Site key pública de Cloudflare Turnstile para `/api/contact/config`                |
-| `TURNSTILE_SECRET_KEY`                 | Secret key privada de Cloudflare Turnstile para validar el token en `/api/contact` |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`       | Site key pública opcional de Cloudflare Turnstile; configurar junto al secret      |
+| `TURNSTILE_SECRET_KEY`                 | Secret opcional de Turnstile; configurar junto a la site key                       |
 | `RESEND_API_KEY`                       | API key de Resend para emails                                                      |
 | `RESEND_FROM_EMAIL`                    | Email remitente verificado en Resend                                               |
 | `NEXT_PUBLIC_APP_URL`                  | URL pública expuesta al cliente; mantenerla igual que `APP_URL`                    |
@@ -149,7 +154,9 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 
 > `NEXT_PUBLIC_*` se incrustan en el bundle cliente en build time — deben estar disponibles durante el build en Coolify, no solo en runtime.
 
-> El código mantiene compatibilidad secundaria con `TURNSTILE_SITE_KEY` como fallback legado para `/api/contact/config`, pero la convención principal de producción es `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+> Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador. La publicación usa inglés como idioma base y puede generar variantes en español y finés mediante DeepL (`DEEPL_AUTH_KEY`); la clave también se mantiene únicamente en servidor.
+
+> Turnstile es opcional. Si no se configuran ni la site key ni el secret, el formulario conserva origen permitido, validación Zod, honeypot y envío de email sin ejecutar Turnstile. Si se activa, deben configurarse ambas claves. El código mantiene compatibilidad secundaria con `TURNSTILE_SITE_KEY` como fallback legado para la site key, pero la convención principal de producción es `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
 > Analytics usa dos orígenes aislados: TodoPlástico pertenece a Agama y los otros 13 sitios al Umami personal. Las lecturas se cachean 300 segundos y un fallo de una instancia no oculta los datos de la otra. `STAT_REPORT_UMAMI_URL`, `STAT_REPORT_UMAMI_USERNAME`, `STAT_REPORT_UMAMI_PASSWORD` y `STAT_REPORT_UMAMI_WEBSITE_ID_*` siguen admitidos únicamente como fallback del origen personal durante la transición.
 
@@ -183,8 +190,8 @@ Variables realmente usadas por ese flujo:
 
 | Variable                         | Endpoint              | Qué pasa si falta                                                                                     |
 | -------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `/api/contact/config` | Responde `503 turnstile_not_configured`                                                               |
-| `TURNSTILE_SECRET_KEY`           | `/api/contact`        | La validación server-side de Turnstile falla; con token no vacío puede terminar en `500 server_error` |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `/api/contact/config` | Si tampoco existe el fallback legado `TURNSTILE_SITE_KEY` y también falta el secret, responde `200 {turnstileEnabled:false}`; si falta toda site key pero existe el secret, responde `503 turnstile_misconfigured` |
+| `TURNSTILE_SECRET_KEY`           | `/api/contact`        | Si también falta la site key, acepta token vacío y omite Turnstile; si falta solo esta, responde `503 turnstile_misconfigured` |
 | `RESEND_API_KEY`                 | `/api/contact`        | El envío por Resend falla                                                                             |
 | `RESEND_FROM_EMAIL`              | `/api/contact`        | El envío por Resend falla                                                                             |
 | `STAT_REPORT_EMAIL_TO`           | `/api/monthly-stat-reports` | Sin este valor ni `RESEND_TO_EMAIL`, responde `503 stat_report_not_configured`                   |
@@ -192,6 +199,7 @@ Variables realmente usadas por ese flujo:
 Fallback legado aceptado por código:
 
 - `TURNSTILE_SITE_KEY` sigue funcionando solo como respaldo secundario si todavía no se ha migrado a `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
+- Con ambas claves presentes, `/api/contact/config` responde `turnstileEnabled: true` y la site key pública; `/api/contact` exige y verifica el token. El secret nunca se devuelve al cliente.
 
 ### Nota sobre `outputFileTracingRoot`
 
@@ -208,6 +216,8 @@ npm run site:onboard -- --root "/ruta/web" --panel-root "/ruta/wf-studio-panel" 
 ```
 
 Añade `--blogger` cuando la web deba instalar Blogger Studio. Samuel Coach queda registrado con su editor protegido de producción en `https://www.samuelcoachdealeman.com/admin/blogger/`.
+
+El runtime de Blogger vive en este panel y trabaja por `siteKey`. Core General instala el contrato y la configuración de cada nueva web; Studio conserva el editor, la autenticación Supabase, las raíces persistentes y el webhook de publicación de cada tenant. En producción hay que montar las raíces de Samuel y Personal en el volumen del VPS mediante `BLOGGER_SITE_ROOTS_JSON` y configurar sus `BLOGGER_BUILD_HOOK_*`.
 
 ## Notas de funcionamiento
 

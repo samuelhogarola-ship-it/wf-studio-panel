@@ -1,6 +1,7 @@
 import registry from "../../config/sites.json" with { type: "json" };
 
 const LOCAL_SUFFIXES = new Set(["localhost", "local", "internal", "lan", "home", "test", "invalid", "example"]);
+const STUDIO_ORIGIN = "https://admin.webfuengirola.com";
 const SITE_DOMAINS = new Map([
   ["webfuengirola", "webfuengirola.com"],
   ["vivirenfuengirola", "vivirenfuengirola.com"],
@@ -119,7 +120,7 @@ export function validateSite(site) {
   const allowedOrigins = allowedSiteOrigins(site, domain, production.origin);
   if (site.blogger?.enabled) {
     if (!site.blogger.url) throw new Error(`Registro de sitios: Blogger de ${site.key} no tiene acceso directo`);
-    parseHttpsUrl(site.blogger.url, "Blogger", site, allowedOrigins);
+    parseHttpsUrl(site.blogger.url, "Blogger", site, new Set([...allowedOrigins, STUDIO_ORIGIN]));
   }
   const handoffMetadata = site.blogger?.adapter !== undefined || site.blogger?.capabilities !== undefined;
   if (handoffMetadata) {
