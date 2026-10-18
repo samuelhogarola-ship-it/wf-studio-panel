@@ -37,22 +37,22 @@ test("every WF Studio panel maps to at least one Umami site", () => {
   }
 });
 
-test("TodoPlastico is isolated on agama and every other site uses personal", () => {
+test("aGama and TodoPlastico share the isolated agama analytics source", () => {
   const sites = getConfiguredUmamiSites({});
   const todoPlastico = sites.find((site) => site.key === "todoplastico");
 
   assert.equal(todoPlastico?.source, "agama");
   assert.deepEqual(
     sites.filter((site) => site.source === "agama").map((site) => site.key),
-    ["todoplastico"],
+    ["agama", "todoplastico"],
   );
   assert.equal(sites.filter((site) => site.source === "personal").length, 16);
 });
 
-test("registry exposes all seventeen sites with their exact panel grouping", () => {
+test("registry exposes all eighteen sites with their exact panel grouping", () => {
   const sites = getConfiguredUmamiSites({});
 
-  assert.equal(sites.length, 17);
+  assert.equal(sites.length, 18);
   assert.deepEqual(
     getPanelUmamiSites("vokabel-world", sites).map((site) => site.key),
     ["vokabellab", "imkontext", "derdiedas"],
@@ -333,6 +333,7 @@ test("environment example documents both Umami instances and every website ID wi
     "CONOCEF",
     "TOPFUENGIROLA",
     "SAMUELCOACHDEALEMAN",
+    "AGAMA",
     "VIKINGFITNESS",
     "PERSONALTRAINERFUENGIROLA",
     "GIMNASIONUEVOESTILO",
