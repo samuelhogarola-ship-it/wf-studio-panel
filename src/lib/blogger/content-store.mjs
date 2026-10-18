@@ -610,6 +610,10 @@ function extractArticleHtml(html) {
   return (
     readTag(
       html,
+      /<div class="article-body">([\s\S]*?)<\/div>\s*<\/main>/i,
+    ) ||
+    readTag(
+      html,
       /<div class="blog-post-card">([\s\S]*?)<\/div>\s*<\/article>/i,
     ) ||
     readTag(html, /<article[^>]*>([\s\S]*?)<\/article>/i) ||
