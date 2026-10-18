@@ -8,7 +8,7 @@ test('routes each Blogger runtime to its configured editor without mixing storag
     kind: 'iframe', href: '/blogger/editor/index.html?siteKey=samuel',
   })
   assert.deepEqual(getBloggerEditorTarget({ key: 'sport', blogger: { runtime: 'central-legacy', url: 'https://sport.example/admin/blogger/' } }), {
-    kind: 'iframe', href: '/blogger/',
+    kind: 'iframe', href: '/blogger/index.html',
   })
   assert.deepEqual(getBloggerEditorTarget({ key: 'external', blogger: { runtime: 'external', url: 'https://external.example/admin/blogger/' } }), {
     kind: 'external', href: 'https://external.example/admin/blogger/',
