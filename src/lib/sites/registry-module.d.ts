@@ -19,6 +19,7 @@ declare module "@/lib/sites/registry.mjs" {
       url?: string;
       apiBase?: string;
       buildEndpoint?: string;
+      contentDir?: string;
       publicPostBase?: string;
     };
   };
