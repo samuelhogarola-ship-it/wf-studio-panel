@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import { authorizeBloggerSite } from '@/lib/blogger/authorize'
 import { savePostImage } from '@/lib/blogger/content-store.mjs'
+import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
 
 export async function POST(request: Request, { params }: { params: Promise<{ siteKey: string; slug: string }> }) {
   try {
+    assertTrustedMutation(request, { requireJson: true })
     const { siteKey, slug } = await params
     const { root, site } = await authorizeBloggerSite(siteKey)
     const input = await request.json()

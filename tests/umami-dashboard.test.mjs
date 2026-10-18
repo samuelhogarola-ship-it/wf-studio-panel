@@ -22,6 +22,48 @@ import {
   getAnalyticsRange,
   normalizePeriod,
 } from '../src/lib/analytics/umami-dashboard.mjs'
+import * as analyticsDashboard from '../src/lib/analytics/umami-dashboard.mjs'
+
+test('client analytics serialization removes registry and Umami configuration details', () => {
+  const range = { key: '30d', label: 'Últimos 30 días', startAt: 1, endAt: 2, unit: 'day' }
+  const project = {
+    key: 'private-registry-key',
+    label: 'Private label',
+    domain: 'private.example',
+    websiteIdEnv: 'UMAMI_WEBSITE_ID_PRIVATE',
+    websiteId: 'private-site-id',
+  }
+  const safeDashboard = analyticsDashboard.toClientAnalyticsPayload?.({
+    status: 'ok', project, websiteId: 'private-site-id', range,
+    generatedAt: '2026-10-17T12:00:00.000Z', activeVisitors: 0,
+    summary: {}, series: { pageviews: [], visitors: [] }, metrics: {},
+  })
+  const safeConfiguration = analyticsDashboard.toClientAnalyticsPayload?.({
+    status: 'configuration_error', project, range,
+    message: 'Configura UMAMI_PASSWORD=secret en Coolify.',
+  })
+
+  assert.deepEqual(safeDashboard, {
+    status: 'ok', range, generatedAt: '2026-10-17T12:00:00.000Z', activeVisitors: 0,
+    summary: {}, series: { pageviews: [], visitors: [] }, metrics: {},
+  })
+  assert.deepEqual(safeConfiguration, {
+    status: 'configuration_error', range,
+    message: 'Las estadísticas todavía no están disponibles.',
+  })
+  assert.doesNotMatch(JSON.stringify([safeDashboard, safeConfiguration]), /private|UMAMI|secret|Coolify/)
+})
+
+test('public analytics errors disclose neither upstream messages nor unknown registry keys', () => {
+  assert.deepEqual(
+    analyticsDashboard.toPublicAnalyticsError?.(new Error('Umami HTTP 503 at https://internal?token=secret')),
+    { status: 502, message: 'No se pudieron cargar las estadísticas.' },
+  )
+  assert.deepEqual(
+    analyticsDashboard.toPublicAnalyticsError?.(new Error('Proyecto de estadísticas desconocido: private-key')),
+    { status: 404, message: 'Estadísticas no disponibles.' },
+  )
+})
 
 test('TTL cache reuses complete dashboard loads and retries failures', async () => {
   let now = 1_000

@@ -1,4 +1,4 @@
-import { requireClientAccess } from '@/lib/auth'
+import { requireClientCapability } from '@/lib/projects/client-access'
 import { getClientFacturasData } from '@/lib/data/client'
 import { formatDate } from '@/lib/utils'
 
@@ -11,7 +11,7 @@ const PAYMENT_LABELS: Record<string, string> = {
 }
 
 export default async function ClientFacturasPage() {
-  const identity = await requireClientAccess()
+  const identity = await requireClientCapability('invoices')
   const invoices = await getClientFacturasData(identity.client.id)
 
   const pendingTotal = invoices

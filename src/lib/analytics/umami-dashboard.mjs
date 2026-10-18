@@ -54,6 +54,29 @@ export function normalizePeriod(period) {
   return PERIODS.has(period) ? period : '30d'
 }
 
+export function toClientAnalyticsPayload(dashboard) {
+  if (dashboard?.status === 'configuration_error') {
+    return {
+      status: 'configuration_error',
+      range: dashboard.range,
+      message: 'Las estadísticas todavía no están disponibles.',
+    }
+  }
+
+  const safeDashboard = { ...dashboard }
+  delete safeDashboard.project
+  delete safeDashboard.websiteId
+  return safeDashboard
+}
+
+export function toPublicAnalyticsError(error) {
+  const message = error instanceof Error ? error.message : ''
+  if (message.startsWith('Proyecto de estadísticas desconocido')) {
+    return { status: 404, message: 'Estadísticas no disponibles.' }
+  }
+  return { status: 502, message: 'No se pudieron cargar las estadísticas.' }
+}
+
 function subtractUtcMonths(date, months) {
   const result = new Date(date.getTime())
   const originalDay = result.getUTCDate()

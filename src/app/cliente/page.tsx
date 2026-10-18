@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import { ClientLoginForm } from '@/components/auth/client-login-form'
 import { FormMessage } from '@/components/ui/form-message'
 import { getOptionalIdentity } from '@/lib/auth'
+import { getClientPortalContext } from '@/lib/data/projects'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
 
@@ -38,11 +39,14 @@ export default async function ClientLoginPage({ searchParams }: ClientLoginPageP
   }
 
   if (identity?.role === 'client') {
-    redirect('/cliente/dashboard')
+    const context = await getClientPortalContext()
+    if (context.mode === 'legacy') redirect('/cliente/dashboard')
+    redirect(context.projects.length === 1
+      ? `/cliente/proyectos/${encodeURIComponent(context.projects[0].slug)}`
+      : '/cliente/proyectos')
   }
 
-  const locale = await getLocale()
-  const params = searchParams ? await searchParams : undefined
+  const [locale, params] = await Promise.all([getLocale(), searchParams])
   const loginError = getLoginErrorMessage(params?.error, params?.redirectedFrom)
 
   return (

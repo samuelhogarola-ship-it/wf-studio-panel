@@ -1,5 +1,7 @@
 import Link from 'next/link'
 import { requireClientAccess } from '@/lib/auth'
+import { redirect } from 'next/navigation'
+import { clientHasActiveCapability } from '@/lib/data/projects'
 import { getClientServicesData } from '@/lib/data/client'
 import { RequestForm } from '@/components/client/request-form'
 import { formatDate, formatDuration } from '@/lib/utils'
@@ -225,10 +227,20 @@ export default async function ClientServiciosPage({
   searchParams: Promise<{ new?: string; open?: string }>
 }) {
   const identity = await requireClientAccess()
-  const params = await searchParams
+  const legacy = identity.client.portal_mode === 'legacy'
+  const [products, domains, hosting, bonuses] = legacy ? [true, true, true, true] : await Promise.all([
+    clientHasActiveCapability('products'), clientHasActiveCapability('domains'),
+    clientHasActiveCapability('hosting'), clientHasActiveCapability('bonuses_reports'),
+  ])
+  if (!products && !domains && !hosting && !bonuses) redirect('/cliente/proyectos')
+  const [params, data] = await Promise.all([searchParams, getClientServicesData(identity.client.id)])
   const showForm = params.new === '1'
   const openId = params.open ?? null
-  const { packs } = await getClientServicesData(identity.client.id)
+  const packs = data.packs.filter(pack => legacy || (
+    pack.pack_type === 'domain' ? domains : pack.pack_type === 'hosting' ? hosting :
+    pack.pack_type === 'hours' || pack.pack_type === 'tasks' ? bonuses :
+    ['service', 'subscription', 'membership'].includes(pack.pack_type) && products
+  ))
 
   const hoursPacks = packs.filter((p) => p.pack_type === 'hours')
   const renewablePacks = packs.filter((p) => RENEWABLE_TYPES.has(p.pack_type))

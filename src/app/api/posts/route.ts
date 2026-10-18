@@ -1,17 +1,20 @@
 import { NextResponse } from 'next/server'
 
-import { getOptionalIdentity } from '@/lib/auth'
+import { authorizeSportBlogger } from '@/lib/blogger/legacy-authorize'
 import { listBloggerPosts, saveBloggerPost } from '@/lib/blogger/publisher.mjs'
+import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
 
 export const runtime = 'nodejs'
 
-async function adminOnly() {
-  const identity = await getOptionalIdentity()
-  return identity?.role === 'admin'
+async function authorize() {
+  try { await authorizeSportBlogger(); return null } catch (error) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: (error as { status?: number }).status ?? 403 })
+  }
 }
 
 export async function GET() {
-  if (!(await adminOnly())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  const denied = await authorize()
+  if (denied) return denied
   try {
     return NextResponse.json({ posts: await listBloggerPosts() })
   } catch (error) {
@@ -21,7 +24,11 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!(await adminOnly())) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  try { assertTrustedMutation(request, { requireJson: true }) } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'forbidden' }, { status: (error as { status?: number }).status ?? 403 })
+  }
+  const denied = await authorize()
+  if (denied) return denied
   try {
     return NextResponse.json(await saveBloggerPost(null, await request.json()), { status: 201 })
   } catch (error) {

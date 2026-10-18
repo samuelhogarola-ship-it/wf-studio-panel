@@ -1,64 +1,44 @@
-import Link from "next/link";
+import Link from 'next/link'
+import { AdminShell } from '@/components/layout/app-shell'
+import { Card } from '@/components/ui/card'
+import { ProjectForm } from '@/components/admin/project-form'
+import { ProjectFilters } from '@/components/admin/project-filters'
+import { requireAdmin } from '@/lib/auth'
+import { getAdminProjects } from '@/lib/data/projects'
+import { getLocale } from '@/lib/locale'
+import { projectTranslations } from '@/lib/i18n'
 
-import { AdminShell } from "@/components/layout/app-shell";
-import { Card } from "@/components/ui/card";
-import { requireAdmin } from "@/lib/auth";
-import { getLocale } from "@/lib/locale";
-import { getSites } from "@/lib/sites/registry.mjs";
-
-export default async function Page() {
-  const identity = await requireAdmin();
-  const locale = await getLocale();
-  const sites = getSites();
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const identity = await requireAdmin()
+  const locale = await getLocale()
+  const copy = projectTranslations[locale]
+  const params = await searchParams
+  const value = (key: string) => typeof params[key] === 'string' ? params[key] as string : ''
+  const filters = { q: value('q'), client: value('client'), status: value('status'), capability: value('capability') }
+  const { projects, clients } = await getAdminProjects({ query: filters.q, clientId: filters.client, status: filters.status, capability: filters.capability })
   return (
     <AdminShell
-      title="Proyectos"
-      description="Gestión de proyectos de WF-Studio"
+      title={copy.title}
+      description={copy.description}
       currentPath="/paneladmin/proyectos"
       userEmail={identity.email}
       locale={locale}
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {sites.map((site) => (
-          <Card key={site.key} className="flex flex-col gap-4 p-5">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-brand">
-                {site.domain}
-              </p>
-              <h2 className="mt-2 text-xl font-black tracking-tight text-foreground">
-                {site.name}
-              </h2>
-              <p className="mt-2 text-sm text-muted">
-                Panel: {site.panel.key} · Analítica: {site.analytics.source}
-              </p>
-            </div>
-            <div className="mt-auto flex flex-wrap gap-2">
-              <a
-                href={site.productionUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded border border-line px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Abrir web ↗
-              </a>
-              <Link
-                href={site.panel.path}
-                className="rounded border border-line px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Abrir panel
-              </Link>
-              {site.blogger.enabled ? (
-                <Link
-                  href={`/paneladmin/proyectos/${site.key}/blogger`}
-                  className="rounded bg-brand px-3 py-2 text-sm font-bold text-white"
-                >
-                  Blogger
-                </Link>
-              ) : null}
-            </div>
-          </Card>
-        ))}
+      <div className="grid gap-6">
+        <ProjectFilters clients={clients} filters={filters} locale={locale} />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {projects.map(project => <Card key={project.id} className="grid gap-3 p-5">
+            <h2 className="text-xl font-bold"><Link href={`/paneladmin/proyectos/${project.id}`} className="text-brand underline">{project.name}</Link></h2>
+            <p>{project.domain}</p>
+            <p className="text-sm text-muted">{copy.client}: {project.client?.name ?? copy.unassigned} · {copy.hosting}: {project.hosting_label ?? '—'}</p>
+            <p className="text-sm">{copy.statusLabels[project.status]} · {project.client_access_enabled ? copy.enabled : copy.disabled} · {project.client?.portal_mode ?? 'legacy'}</p>
+            {project.warnings.length ? <ul className="grid gap-1 text-xs text-amber-800">{project.warnings.map(warning => <li key={warning}>{copy.warnings[warning]}</li>)}</ul> : null}
+          </Card>)}
+        </div>
+        {!projects.length ? <p className="text-muted">{copy.empty}</p> : null}
+        <ProjectForm locale={locale} />
+        <Link href="/paneladmin/clientes" className="text-brand underline">{copy.invite}</Link>
       </div>
     </AdminShell>
-  );
+  )
 }

@@ -5,6 +5,7 @@ declare module "@/lib/sites/registry.mjs" {
     name: string;
     domain: string;
     productionUrl: string;
+    allowedOrigins?: string[];
     repository?: string;
     panel: { key: string; path: string };
     analytics: {
@@ -16,17 +17,24 @@ declare module "@/lib/sites/registry.mjs" {
     };
     blogger: {
       enabled: boolean;
+      runtime?: 'central-multisite' | 'central-legacy' | 'external';
       url?: string;
       apiBase?: string;
       buildEndpoint?: string;
       contentDir?: string;
       publicPostBase?: string;
+      launchUrl?: string;
+      healthUrl?: string;
+      adapter?: string;
+      capabilities?: string[];
     };
   };
 
   export const SITE_REGISTRY: readonly RegisteredSite[];
   export function getSites(): readonly RegisteredSite[];
   export function getSiteByKey(key: string): RegisteredSite;
+  export function validateSite(site: RegisteredSite): RegisteredSite;
+  export function getBloggerHandoff(site: RegisteredSite): RegisteredSite['blogger'] | null;
   export function getLegacyAnalyticsProjects(): ReadonlyArray<{
     key: string;
     label: string;

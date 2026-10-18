@@ -1,5 +1,63 @@
 export type Locale = 'es' | 'en'
 
+export const clientPortalTranslations = {
+  es: {
+    projects: 'Tus proyectos', choose: 'Elige un proyecto', empty: 'No hay proyectos accesibles.',
+    emptyDescription: 'Tu acceso está activo. Contacta con WF-Studio para configurar tus proyectos.',
+    back: 'Todos los proyectos', overview: 'Resumen del proyecto', active: 'Activo',
+    tools: 'Servicios y herramientas activos', noTools: 'No hay herramientas activas para este proyecto.',
+    open: 'Abrir', services: 'Ver servicios de la cuenta',
+    bloggerNote: 'Este editor protegido puede requerir un inicio de sesión independiente.',
+    account: 'Resumen de la cuenta', aggregated: 'Facturas, packs y servicios del conjunto de tu cuenta.',
+    pending: 'Datos pendientes', messages: 'Mensajería', invoices: 'Facturas pendientes', packs: 'Packs activos',
+    renewal: 'Renueva', closedPacks: 'Packs cerrados', noPacks: 'No hay packs cerrados registrados.',
+  },
+  en: {
+    projects: 'Your projects', choose: 'Choose a project', empty: 'No accessible projects.',
+    emptyDescription: 'Your account is active. Contact WF-Studio to configure your projects.',
+    back: 'All projects', overview: 'Project overview', active: 'Active',
+    tools: 'Active services and tools', noTools: 'No active tools for this project.',
+    open: 'Open', services: 'View account services',
+    bloggerNote: 'This protected editor may require a separate sign-in.',
+    account: 'Account overview', aggregated: 'Invoices, packs and services across your account.',
+    pending: 'Pending details', messages: 'Messages', invoices: 'Pending invoices', packs: 'Active packs',
+    renewal: 'Renews', closedPacks: 'Closed packs', noPacks: 'No closed packs recorded.',
+  },
+} as const
+
+export const projectTranslations = {
+  es: {
+    title: 'Proyectos', description: 'Inventario y acceso de clientes a sus proyectos.', register: 'Registrar proyecto', edit: 'Configuración del proyecto',
+    name: 'Nombre', slug: 'Identificador estable', domain: 'Dominio canónico', status: 'Estado', client: 'Cliente', hosting: 'Hosting', hostingUrl: 'Destino de gestión de hosting', analyticsKey: 'Clave del registro de analítica',
+    save: 'Guardar', saving: 'Guardando…', search: 'Buscar proyectos', filter: 'Filtrar', all: 'Todos', unassigned: 'Sin asignar', capability: 'Capacidad activa', empty: 'No hay proyectos con estos filtros.',
+    statusLabels: { draft: 'Borrador', active: 'Activo', archived: 'Archivado' },
+    capabilities: { products: 'Productos y servicios', domains: 'Dominios', hosting: 'Hosting', invoices: 'Facturas', bonuses_reports: 'Bonos e informes', blogger: 'Blogger', analytics: 'Estadísticas' },
+    states: { unavailable: 'No disponible', available: 'Disponible', active: 'Activo' },
+    destination: 'Destino protegido', lastValidation: 'Última validación', never: 'Sin validar', open: 'Abrir destino',
+    provisioning: 'Confirmo que el blog público, artículos, imágenes, categorías, SEO, sitemap y editor protegido están conectados.',
+    bloggerNote: 'La activación registra esta confirmación. El destino puede requerir un inicio de sesión independiente. Desactivar el acceso no retira artículos publicados.',
+    access: 'Acceso del cliente', assign: 'Asignar cliente', reassignment: 'Cambiar de cliente desactiva el acceso; actívalo explícitamente después.', enabled: 'Acceso habilitado', disabled: 'Acceso deshabilitado', applyAccess: 'Guardar acceso', mode: 'Modo del portal del cliente', legacy: 'Heredado', dynamic: 'Dinámico', applyMode: 'Guardar modo', modeNote: 'El modo dinámico requiere al menos un proyecto activo con acceso habilitado.',
+    preview: 'Vista previa del acceso actual del cliente', noAccess: 'Sin acceso: asigna un cliente activo.', noProjects: 'Sin proyectos accesibles.', invite: 'Invitar cliente', back: 'Volver a proyectos',
+    audit: 'Historial de capacidades', auditEmpty: 'Sin cambios registrados.', actor: 'Administrador', system: 'Sistema',
+    warnings: { destination: 'Destino incorrecto: requiere HTTPS y el dominio del proyecto.', blogger: 'Blogger: falta destino, validación o confirmación del aprovisionamiento.', analytics: 'Analítica: falta un registro del mismo dominio, ID del sitio o conexión configurada.', assignment: 'Acceso habilitado sin cliente asignado.' },
+  },
+  en: {
+    title: 'Projects', description: 'Project inventory and client access.', register: 'Register project', edit: 'Project settings',
+    name: 'Name', slug: 'Stable identifier', domain: 'Canonical domain', status: 'Status', client: 'Client', hosting: 'Hosting', hostingUrl: 'Hosting management destination', analyticsKey: 'Analytics registry key',
+    save: 'Save', saving: 'Saving…', search: 'Search projects', filter: 'Filter', all: 'All', unassigned: 'Unassigned', capability: 'Active capability', empty: 'No projects match these filters.',
+    statusLabels: { draft: 'Draft', active: 'Active', archived: 'Archived' },
+    capabilities: { products: 'Products and services', domains: 'Domains', hosting: 'Hosting', invoices: 'Invoices', bonuses_reports: 'Hours and reports', blogger: 'Blogger', analytics: 'Statistics' },
+    states: { unavailable: 'Unavailable', available: 'Available', active: 'Active' },
+    destination: 'Protected destination', lastValidation: 'Last validation', never: 'Not validated', open: 'Open destination',
+    provisioning: 'I confirm that the public blog, articles, images, categories, SEO, sitemap and protected editor are connected.',
+    bloggerNote: 'Activation records this confirmation. The destination may require a separate sign-in. Disabling access does not unpublish articles.',
+    access: 'Client access', assign: 'Assign client', reassignment: 'Changing the client disables access; explicitly enable it afterwards.', enabled: 'Access enabled', disabled: 'Access disabled', applyAccess: 'Save access', mode: 'Client portal mode', legacy: 'Legacy', dynamic: 'Dynamic', applyMode: 'Save mode', modeNote: 'Dynamic mode requires at least one active project with access enabled.',
+    preview: 'Preview of current client access', noAccess: 'No access: assign an active client.', noProjects: 'No accessible projects.', invite: 'Invite client', back: 'Back to projects',
+    audit: 'Capability history', auditEmpty: 'No changes recorded.', actor: 'Administrator', system: 'System',
+    warnings: { destination: 'Invalid destination: HTTPS and the project domain are required.', blogger: 'Blogger: missing destination, validation or provisioning confirmation.', analytics: 'Analytics: missing same-domain registry entry, website ID or configured connection.', assignment: 'Access is enabled without an assigned client.' },
+  },
+} as const
+
 export const defaultLocale: Locale = 'es'
 
 export const translations = {
@@ -330,6 +388,7 @@ export const translations = {
     'print.payment.transfer': 'Transferencia bancaria',
 
     // Client shell nav
+    'clientNav.navigation': 'Navegación del portal',
     'clientNav.dashboard': 'Resumen',
     'clientNav.informes': 'Informes',
     'clientNav.actualizaciones': 'Actualizaciones',
@@ -692,6 +751,7 @@ export const translations = {
 
     // Client dashboard page
     // Client shell nav
+    'clientNav.navigation': 'Portal navigation',
     'clientNav.dashboard': 'Overview',
     'clientNav.informes': 'Reports',
     'clientNav.actualizaciones': 'Updates',
