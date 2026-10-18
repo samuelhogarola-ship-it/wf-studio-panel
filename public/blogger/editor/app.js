@@ -151,7 +151,7 @@ for (const button of document.querySelectorAll(".toolbar [data-command]")) {
     document.execCommand(button.dataset.command);
     fields.body.value =
       state.bodyFormat === "html"
-        ? visualEditor.innerHTML
+        ? serializeVisualHtml(visualEditor.innerHTML)
         : richHtmlToMarkdown(visualEditor.innerHTML);
     renderPreview();
     markDirty();
@@ -414,7 +414,7 @@ function renderImages(images) {
       image.canDelete === false
         ? ""
         : '<button class="delete-image" type="button">Borrar</button>';
-    item.innerHTML = `<img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || "")}"><span><strong>${escapeHtml(image.file)}</strong>${image.isFeatured ? "<small>Principal</small>" : ""}</span>${deleteButton}`;
+    item.innerHTML = `<img src="${escapeHtml(image.previewUrl || image.url)}" alt="${escapeHtml(image.alt || "")}"><span><strong>${escapeHtml(image.file)}</strong>${image.isFeatured ? "<small>Principal</small>" : ""}</span>${deleteButton}`;
     item.addEventListener("click", (event) => {
       if (event.target.closest(".delete-image")) return;
       selectImage(image.file);
@@ -443,7 +443,7 @@ function renderImages(images) {
 function readForm() {
   fields.body.value =
     state.bodyFormat === "html"
-      ? visualEditor.innerHTML
+      ? serializeVisualHtml(visualEditor.innerHTML)
       : richHtmlToMarkdown(visualEditor.innerHTML);
   return {
     title: fields.title.value,
@@ -479,7 +479,7 @@ function applyFormat(button) {
     }
     fields.body.value =
       state.bodyFormat === "html"
-        ? visualEditor.innerHTML
+        ? serializeVisualHtml(visualEditor.innerHTML)
         : richHtmlToMarkdown(visualEditor.innerHTML);
     renderPreview();
     markDirty();
@@ -588,7 +588,9 @@ function insertInlineImage(image) {
   figure.draggable = true;
   figure.contentEditable = "false";
   const img = document.createElement("img");
-  img.src = image.url;
+  img.src = image.previewUrl || image.url;
+  if (image.previewUrl && image.previewUrl !== image.url)
+    img.dataset.publicSrc = image.url;
   img.alt = image.alt || fields.title.value || image.file;
   img.draggable = false;
   figure.append(img);
@@ -863,7 +865,7 @@ function handleImageDrop(event) {
 function syncVisualEditor() {
   fields.body.value =
     state.bodyFormat === "html"
-      ? visualEditor.innerHTML
+      ? serializeVisualHtml(visualEditor.innerHTML)
       : richHtmlToMarkdown(visualEditor.innerHTML);
   renderPreview();
   markDirty();
@@ -984,13 +986,23 @@ function richHtmlToMarkdown(html) {
     .querySelectorAll("img")
     .forEach((node) =>
       node.replaceWith(
-        `![${node.getAttribute("alt") || ""}](${node.getAttribute("src") || ""})`,
+        `![${node.getAttribute("alt") || ""}](${node.dataset.publicSrc || node.getAttribute("src") || ""})`,
       ),
     );
   root
     .querySelectorAll("li")
     .forEach((node) => node.replaceWith(`- ${node.textContent}\n`));
   return root.innerText.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function serializeVisualHtml(html) {
+  const root = document.createElement("div");
+  root.innerHTML = html;
+  root.querySelectorAll("img[data-public-src]").forEach((node) => {
+    node.setAttribute("src", node.dataset.publicSrc);
+    node.removeAttribute("data-public-src");
+  });
+  return root.innerHTML;
 }
 
 function selectImage(file) {

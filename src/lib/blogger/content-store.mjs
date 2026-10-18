@@ -34,15 +34,16 @@ export function assertSafeSlug(slug) {
 }
 
 export function sanitizeImageName(fileName) {
+  const rawName = String(fileName || "");
   const base = path
-    .basename(String(fileName || ""))
+    .basename(rawName)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  if (!base || base.includes("..") || !IMAGE_EXT_RE.test(base)) {
+  if (!base || path.basename(rawName) !== rawName || base.includes("..") || !IMAGE_EXT_RE.test(base)) {
     throw Object.assign(
       new Error("Imagen invalida: usa jpg, png, webp, avif, gif o svg."),
       { status: 400 },
@@ -290,7 +291,8 @@ export async function listPostImages(rootDir, slug, options = {}) {
     const fileStat = await stat(filePath);
     images.push({
       file,
-      url: `${store.publicPostBase}${slug}/img/${file}`,
+      url: publicAssetUrl(store, slug, file),
+      previewUrl: previewAssetUrl(store, slug, file),
       bytes: fileStat.size,
       alt: metadata[file]?.alt || "",
       description: metadata[file]?.description || "",
@@ -320,7 +322,19 @@ export async function savePostImage(rootDir, slug, fileName, base64Data, options
     alt: "",
     description: "",
   }, store);
-  return { file: safeName, url: `${store.publicPostBase}${slug}/img/${safeName}` };
+  return {
+    file: safeName,
+    url: publicAssetUrl(store, slug, safeName),
+    previewUrl: previewAssetUrl(store, slug, safeName),
+  };
+}
+
+export async function readPostImage(rootDir, slug, fileName, options = {}) {
+  const store = normalizeStoreOptions(options);
+  assertSafeSlug(slug);
+  const safeName = sanitizeImageName(fileName);
+  const data = await readFile(path.join(rootDir, store.publicDir, slug, "img", safeName));
+  return { data, contentType: imageContentType(safeName) };
 }
 
 export async function deletePostImage(rootDir, slug, fileName, options = {}) {
@@ -537,12 +551,18 @@ function normalizeFeaturedImage(slug, value, title = "", store = normalizeStoreO
   try {
     new URL(raw);
   } catch {
-    if (raw.startsWith("img/")) url = `${store.publicPostBase}${slug}/${raw}`;
+    if (raw.startsWith("img/")) {
+      const file = path.basename(raw);
+      url = publicAssetUrl(store, slug, file);
+    }
   }
 
   return {
     file: path.basename(url) || "imagen-principal",
     url,
+    previewUrl: raw.startsWith("img/")
+      ? previewAssetUrl(store, slug, path.basename(raw))
+      : url,
     bytes: 0,
     alt: title,
     description: "Imagen principal del post",
@@ -570,7 +590,33 @@ function normalizeStoreOptions(options = {}) {
   }
   const publicPostBase = `/${String(options.publicPostBase || `/${publicDir}/`)
     .replace(/^\/+|\/+$/g, "")}/`;
-  return { publicDir, publicPostBase };
+  const productionUrl = String(options.productionUrl || "").replace(/\/+$/, "");
+  const previewBase = String(options.previewBase || "").replace(/\/+$/, "");
+  return { publicDir, publicPostBase, productionUrl, previewBase };
+}
+
+function publicAssetUrl(store, slug, file) {
+  const relative = `${store.publicPostBase}${slug}/img/${file}`;
+  return store.productionUrl ? new URL(relative, `${store.productionUrl}/`).toString() : relative;
+}
+
+function previewAssetUrl(store, slug, file) {
+  return store.previewBase
+    ? `${store.previewBase}/${encodeURIComponent(slug)}/images/${encodeURIComponent(file)}/preview`
+    : publicAssetUrl(store, slug, file);
+}
+
+function imageContentType(fileName) {
+  const extension = path.extname(fileName).toLowerCase();
+  return ({
+    ".avif": "image/avif",
+    ".gif": "image/gif",
+    ".jpeg": "image/jpeg",
+    ".jpg": "image/jpeg",
+    ".png": "image/png",
+    ".svg": "image/svg+xml",
+    ".webp": "image/webp",
+  })[extension] || "application/octet-stream";
 }
 
 function extractGeneratedMeta(html, slug) {

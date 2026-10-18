@@ -4,6 +4,9 @@ export function buildHookRequest(siteKey, env = process.env) {
   const secret = env[`BLOGGER_BUILD_SECRET_${suffix}`];
   if (!url) throw Object.assign(new Error(`Falta el webhook de publicación para ${siteKey}.`), { status: 503 });
   if (!secret) throw Object.assign(new Error(`Falta el secreto de publicación para ${siteKey}.`), { status: 503 });
+  if (/\r|\n/.test(secret)) {
+    throw Object.assign(new Error('El secreto de publicación configurado no es válido.'), { status: 503 });
+  }
   return {
     url,
     headers: {

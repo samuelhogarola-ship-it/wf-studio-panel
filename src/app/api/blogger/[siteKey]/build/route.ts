@@ -11,6 +11,10 @@ export async function POST(_request: Request, { params }: { params: Promise<{ si
     if (!response.ok) return NextResponse.json({ error: `El webhook de ${siteKey} respondió ${response.status}.` }, { status: 502 })
     return NextResponse.json({ ok: true, siteKey })
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'No se pudo publicar.' }, { status: (error as { status?: number }).status ?? 500 })
+    const status = (error as { status?: number }).status
+    const message = status === 503 && error instanceof Error
+      ? error.message
+      : `No se pudo contactar con el publicador de ${siteKey}.`
+    return NextResponse.json({ error: message }, { status: status ?? 502 })
   }
 }

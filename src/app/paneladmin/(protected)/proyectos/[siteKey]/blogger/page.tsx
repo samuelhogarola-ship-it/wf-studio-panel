@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation'
 
-import { BloggerEditor } from '@/components/admin/blogger-editor'
 import { AdminShell } from '@/components/layout/app-shell'
 import { requireAdmin } from '@/lib/auth'
 import { getLocale } from '@/lib/locale'
@@ -11,5 +10,5 @@ export default async function Page({ params }: { params: Promise<{ siteKey: stri
   const { siteKey } = await params
   const site = getSiteByKey(siteKey)
   if (!site.blogger.enabled) notFound()
-  return <AdminShell title={`Blogger · ${site.name}`} description="Publicación estática" currentPath="/paneladmin/proyectos" userEmail={identity.email} locale={await getLocale()}><BloggerEditor /></AdminShell>
+  return <AdminShell title={`Blogger · ${site.name}`} description="Publicación estática" currentPath="/paneladmin/proyectos" userEmail={identity.email} locale={await getLocale()}><iframe title={`Blogger · ${site.name}`} src={`/blogger/editor/index.html?siteKey=${encodeURIComponent(siteKey)}`} className="h-[calc(100vh-12rem)] min-h-[760px] w-full rounded-xl border border-line bg-white" /></AdminShell>
 }
