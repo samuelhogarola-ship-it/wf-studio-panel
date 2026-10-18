@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { getOptionalIdentity } from '@/lib/auth'
+import { authorizeSportBlogger } from '@/lib/blogger/legacy-authorize'
 import { deleteBloggerPostImage } from '@/lib/blogger/publisher.mjs'
 import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
 
@@ -10,8 +10,9 @@ export async function DELETE(request: Request, context: { params: Promise<{ slug
   try { assertTrustedMutation(request) } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'forbidden' }, { status: (error as { status?: number }).status ?? 403 })
   }
-  const identity = await getOptionalIdentity()
-  if (identity?.role !== 'admin') return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  try { await authorizeSportBlogger() } catch (error) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: (error as { status?: number }).status ?? 403 })
+  }
   const { slug, file } = await context.params
   try {
     await deleteBloggerPostImage(slug, file)
@@ -26,8 +27,9 @@ export async function PUT(request: Request, context: { params: Promise<{ slug: s
   try { assertTrustedMutation(request, { requireJson: true }) } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'forbidden' }, { status: (error as { status?: number }).status ?? 403 })
   }
-  const identity = await getOptionalIdentity()
-  if (identity?.role !== 'admin') return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  try { await authorizeSportBlogger() } catch (error) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: (error as { status?: number }).status ?? 403 })
+  }
   const { slug, file } = await context.params
   const payload = await request.json().catch(() => ({})) as { alt?: string; description?: string; isFeatured?: boolean }
   return NextResponse.json({ file, url: `/blog/${slug}/img/${file}`, alt: payload.alt || '', description: payload.description || '', isFeatured: Boolean(payload.isFeatured), canDelete: true })

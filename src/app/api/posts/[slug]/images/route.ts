@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { getOptionalIdentity } from '@/lib/auth'
+import { authorizeSportBlogger } from '@/lib/blogger/legacy-authorize'
 import { saveBloggerPostImage } from '@/lib/blogger/publisher.mjs'
 import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
 
@@ -10,8 +10,9 @@ export async function POST(request: Request, context: { params: Promise<{ slug: 
   try { assertTrustedMutation(request, { requireJson: true }) } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'forbidden' }, { status: (error as { status?: number }).status ?? 403 })
   }
-  const identity = await getOptionalIdentity()
-  if (identity?.role !== 'admin') return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  try { await authorizeSportBlogger() } catch (error) {
+    return NextResponse.json({ error: 'unauthorized' }, { status: (error as { status?: number }).status ?? 403 })
+  }
   const { slug } = await context.params
   const payload = await request.json().catch(() => ({})) as { fileName?: string; data?: string; alt?: string; description?: string }
   if (!payload.fileName || !payload.data) return NextResponse.json({ error: 'file_required' }, { status: 400 })

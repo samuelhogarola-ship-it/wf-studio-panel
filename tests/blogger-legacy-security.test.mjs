@@ -14,6 +14,7 @@ test('every legacy Sport Blogger mutation uses the shared same-origin guard', as
   for (const route of routes) {
     const source = await readFile(new URL(`../${route}`, import.meta.url), 'utf8')
     assert.match(source, /assertTrustedMutation/)
+    assert.match(source, /authorizeSportBlogger/)
     assert.match(source, /export async function (?:POST|PUT|DELETE)/)
   }
 })
