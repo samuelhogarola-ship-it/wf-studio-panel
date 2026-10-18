@@ -35,6 +35,7 @@ export function assertSafeSlug(slug) {
 
 export function sanitizeImageName(fileName) {
   const rawName = String(fileName || "");
+  const hasEncodedTraversal = /%(?:2e|2f|5c)/i.test(rawName);
   const base = path
     .basename(rawName)
     .normalize("NFD")
@@ -43,7 +44,7 @@ export function sanitizeImageName(fileName) {
     .replace(/[^a-z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  if (!base || path.basename(rawName) !== rawName || base.includes("..") || !IMAGE_EXT_RE.test(base)) {
+  if (!base || hasEncodedTraversal || path.basename(rawName) !== rawName || base.includes("..") || !IMAGE_EXT_RE.test(base)) {
     throw Object.assign(
       new Error("Imagen invalida: usa jpg, png, webp, avif, gif o svg."),
       { status: 400 },
@@ -654,10 +655,7 @@ function extractGeneratedMeta(html, slug) {
 
 function extractArticleHtml(html) {
   return (
-    readTag(
-      html,
-      /<div class="article-body">([\s\S]*?)<\/div>\s*<\/main>/i,
-    ) ||
+    readElementContentsByClass(html, "div", "article-body") ||
     readTag(
       html,
       /<div class="blog-post-card">([\s\S]*?)<\/div>\s*<\/article>/i,
@@ -665,6 +663,23 @@ function extractArticleHtml(html) {
     readTag(html, /<article[^>]*>([\s\S]*?)<\/article>/i) ||
     ""
   );
+}
+
+function readElementContentsByClass(html, tagName, className) {
+  const source = String(html || "");
+  const openingTag = new RegExp(`<${tagName}\\b[^>]*\\bclass=["'][^"']*\\b${className}\\b[^"']*["'][^>]*>`, "i");
+  const start = openingTag.exec(source);
+  if (!start) return "";
+  const contentStart = start.index + start[0].length;
+  const tags = new RegExp(`<\\/?${tagName}\\b[^>]*>`, "gi");
+  tags.lastIndex = contentStart;
+  let depth = 1;
+  for (let match = tags.exec(source); match; match = tags.exec(source)) {
+    if (/^<\//.test(match[0])) depth -= 1;
+    else if (!/\/>$/.test(match[0])) depth += 1;
+    if (depth === 0) return source.slice(contentStart, match.index).trim();
+  }
+  return "";
 }
 
 function htmlToText(html) {

@@ -8,3 +8,7 @@ export function getBloggerSite(siteKey) {
   const root = roots[siteKey] || path.join(process.env.BLOGGER_SITES_ROOT || '/data/blogger', siteKey);
   return { site, root: path.resolve(root) };
 }
+
+export function resolvePublicPostBase(site) {
+  return new URL(site.blogger.publicPostBase, `${site.productionUrl.replace(/\/+$/, '')}/`).toString();
+}

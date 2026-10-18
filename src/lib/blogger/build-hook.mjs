@@ -7,12 +7,51 @@ export function buildHookRequest(siteKey, env = process.env) {
   if (/\r|\n/.test(secret)) {
     throw Object.assign(new Error('El secreto de publicación configurado no es válido.'), { status: 503 });
   }
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    throw Object.assign(new Error('El webhook de publicación configurado no es válido.'), { status: 503 });
+  }
+  if (env.NODE_ENV === 'production' && parsedUrl.protocol !== 'https:') {
+    throw Object.assign(new Error('El webhook de publicación configurado no es válido.'), { status: 503 });
+  }
   return {
-    url,
+    url: parsedUrl.toString(),
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${secret}`,
     },
     body: JSON.stringify({ siteKey }),
   };
+}
+
+export async function executeBuildHook(siteKey, { env = process.env, fetchImpl = fetch } = {}) {
+  try {
+    const request = buildHookRequest(siteKey, env);
+    const response = await fetchImpl(request.url, {
+      method: 'POST',
+      headers: request.headers,
+      body: request.body,
+      cache: 'no-store',
+      redirect: 'manual',
+    });
+    if (!response.ok) {
+      return {
+        status: 502,
+        body: { error: `El publicador de ${siteKey} respondió ${response.status}.` },
+      };
+    }
+    return { status: 200, body: { ok: true, siteKey } };
+  } catch (error) {
+    const isConfigurationError = error?.status === 503;
+    return {
+      status: isConfigurationError ? 503 : 502,
+      body: {
+        error: isConfigurationError
+          ? `La publicación de ${siteKey} no está configurada.`
+          : `No se pudo contactar con el publicador de ${siteKey}.`,
+      },
+    };
+  }
 }
