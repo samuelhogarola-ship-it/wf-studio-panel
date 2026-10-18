@@ -173,7 +173,7 @@ Variables realmente usadas por ese flujo:
 
 | Variable                         | Endpoint              | Qué pasa si falta                                                                                     |
 | -------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `/api/contact/config` | Si también falta el secret, responde `200 {turnstileEnabled:false}`; si falta solo esta, responde `503 turnstile_misconfigured` |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `/api/contact/config` | Si tampoco existe el fallback legado `TURNSTILE_SITE_KEY` y también falta el secret, responde `200 {turnstileEnabled:false}`; si falta toda site key pero existe el secret, responde `503 turnstile_misconfigured` |
 | `TURNSTILE_SECRET_KEY`           | `/api/contact`        | Si también falta la site key, acepta token vacío y omite Turnstile; si falta solo esta, responde `503 turnstile_misconfigured` |
 | `RESEND_API_KEY`                 | `/api/contact`        | El envío por Resend falla                                                                             |
 | `RESEND_FROM_EMAIL`              | `/api/contact`        | El envío por Resend falla                                                                             |

@@ -115,6 +115,21 @@ test('enabled Turnstile requires and verifies the token before sending email', a
   assert.equal(sent, 1);
 });
 
+test('Turnstile verification uses a bounded abort signal', async () => {
+  const env = { NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'public-site-key', TURNSTILE_SECRET_KEY: 'private-secret' };
+  let verificationSignal;
+  const response = await handleContactPost(request('POST', { ...validPayload, token: 'valid-token' }), {
+    env,
+    fetchImpl: async (_url, options) => {
+      verificationSignal = options.signal;
+      return Response.json({ success: true });
+    },
+    sendEmail: async () => {},
+  });
+  assert.equal(response.status, 200);
+  assert.ok(verificationSignal instanceof AbortSignal);
+});
+
 for (const env of [
   { NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'public-only' },
   { TURNSTILE_SECRET_KEY: 'private-only' },

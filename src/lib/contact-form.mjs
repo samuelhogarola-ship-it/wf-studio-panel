@@ -4,6 +4,7 @@ const ALLOWED_ORIGINS = new Set([
   'https://webfuengirola.com',
   'https://www.webfuengirola.com',
 ]);
+const TURNSTILE_TIMEOUT_MS = 8_000;
 
 const contactSchema = z.object({
   name: z.string().trim().min(2).max(120),
@@ -72,6 +73,7 @@ async function verifyTurnstileToken(token, remoteIp, secret, fetchImpl = fetch) 
     method: 'POST',
     body: formData,
     cache: 'no-store',
+    signal: AbortSignal.timeout(TURNSTILE_TIMEOUT_MS),
   });
   if (!response.ok) return false;
   const payload = await response.json();

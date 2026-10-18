@@ -16,7 +16,13 @@ import {
   saveImageMetadata,
   savePost,
   savePostImage,
+  validateExistingImageName,
 } from '../src/lib/blogger/content-store.mjs';
+
+test('existing image validation preserves the stored filename', () => {
+  assert.equal(validateExistingImageName('Foto-Legacy.JPG'), 'Foto-Legacy.JPG');
+  assert.throws(() => validateExistingImageName('../Foto-Legacy.JPG'), /Imagen invalida/);
+});
 
 test('Personal Trainer build hook carries its tenant secret', () => {
   const request = buildHookRequest('personaltrainerfuengirola', {
@@ -151,6 +157,14 @@ test('content store reads and writes the site-specific public blog directory', a
   const preview = await readPostImage(root, 'nuevo-post', 'foto.webp', options);
   assert.equal(preview.data.toString('utf8'), 'image');
   assert.equal(preview.contentType, 'image/webp');
+  await writeFile(path.join(root, 'blog', 'nuevo-post', 'img', 'Foto-Legacy.JPG'), 'legacy-image');
+  const legacyPreview = await readPostImage(root, 'nuevo-post', 'Foto-Legacy.JPG', options);
+  assert.equal(legacyPreview.data.toString('utf8'), 'legacy-image');
+  assert.equal(legacyPreview.contentType, 'image/jpeg');
+  await saveImageMetadata(root, 'nuevo-post', 'Foto-Legacy.JPG', { alt: 'Imagen antigua' }, options);
+  assert.equal((await listPostImages(root, 'nuevo-post', options)).find((image) => image.file === 'Foto-Legacy.JPG')?.alt, 'Imagen antigua');
+  await deletePostImage(root, 'nuevo-post', 'Foto-Legacy.JPG', options);
+  await assert.rejects(() => readPostImage(root, 'nuevo-post', 'Foto-Legacy.JPG', options), /ENOENT/);
   await assert.rejects(() => readPostImage(root, 'nuevo-post', '../foto.webp', options), /Imagen invalida/);
 });
 

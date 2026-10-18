@@ -54,6 +54,25 @@ export function sanitizeImageName(fileName) {
   return base;
 }
 
+export function validateExistingImageName(fileName) {
+  const rawName = String(fileName || "");
+  const hasEncodedTraversal = /%(?:2e|2f|5c)/i.test(rawName);
+  if (
+    !rawName
+    || hasEncodedTraversal
+    || /[\\/\0]/.test(rawName)
+    || path.basename(rawName) !== rawName
+    || rawName.includes("..")
+    || !IMAGE_EXT_RE.test(rawName)
+  ) {
+    throw Object.assign(
+      new Error("Imagen invalida: usa jpg, png, webp, avif, gif o svg."),
+      { status: 400 },
+    );
+  }
+  return rawName;
+}
+
 export function parsePostMarkdown(content) {
   const match = String(content || "").match(FRONTMATTER_RE);
   if (!match) {
@@ -333,7 +352,7 @@ export async function savePostImage(rootDir, slug, fileName, base64Data, options
 export async function readPostImage(rootDir, slug, fileName, options = {}) {
   const store = normalizeStoreOptions(options);
   assertSafeSlug(slug);
-  const safeName = sanitizeImageName(fileName);
+  const safeName = validateExistingImageName(fileName);
   const data = await readFile(path.join(rootDir, store.publicDir, slug, "img", safeName));
   return { data, contentType: imageContentType(safeName) };
 }
@@ -341,7 +360,7 @@ export async function readPostImage(rootDir, slug, fileName, options = {}) {
 export async function deletePostImage(rootDir, slug, fileName, options = {}) {
   const store = normalizeStoreOptions(options);
   assertSafeSlug(slug);
-  const safeName = sanitizeImageName(fileName);
+  const safeName = validateExistingImageName(fileName);
   await rm(path.join(rootDir, store.publicDir, slug, "img", safeName), { force: true });
   const metadata = await readImageMetadata(rootDir, slug, store);
   delete metadata[safeName];
@@ -352,7 +371,7 @@ export async function deletePostImage(rootDir, slug, fileName, options = {}) {
 export async function saveImageMetadata(rootDir, slug, fileName, input, options = {}) {
   const store = normalizeStoreOptions(options);
   assertSafeSlug(slug);
-  const safeName = sanitizeImageName(fileName);
+  const safeName = validateExistingImageName(fileName);
   const metadata = await readImageMetadata(rootDir, slug, store);
   const next = {
     alt: String(input.alt || "").trim(),
