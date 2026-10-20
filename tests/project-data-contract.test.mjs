@@ -46,6 +46,38 @@ test('detail includes capability audit and exact navigation across all assigned 
   assert.equal(await s.data().getAdminProject('missing'), null);
 });
 
+test('favorites preserve administrator position while resolving only current non-archived project capabilities', async () => {
+  const secondProjectId = '55555555-5555-4555-8555-555555555555';
+  const archivedProjectId = '66666666-6666-4666-8666-666666666666';
+  const missingProjectId = '77777777-7777-4777-8777-777777777777';
+  const secondProject = { ...project, id: secondProjectId, slug: 'second', name: 'Second', domain: 'second.example.com' };
+  const s = setup({
+    admin_project_favorites: [
+      { admin_user_id: 'admin-id', project_id: projectId, position: 20, created_at: '2026-10-03T00:00:00Z', saved_capabilities: [{ state: 'available' }] },
+      { admin_user_id: 'admin-id', project_id: secondProjectId, position: 10, created_at: '2026-10-04T00:00:00Z' },
+      { admin_user_id: 'admin-id', project_id: archivedProjectId, position: 1, created_at: '2026-10-01T00:00:00Z' },
+      { admin_user_id: 'admin-id', project_id: missingProjectId, position: 2, created_at: '2026-10-02T00:00:00Z' },
+      { admin_user_id: 'another-admin', project_id: projectId, position: 0, created_at: '2026-09-01T00:00:00Z' },
+    ],
+    client_projects: [project, secondProject, { ...project, id: archivedProjectId, slug: 'archived', status: 'archived' }],
+    project_capabilities: [
+      { ...capability, state: 'active', validated_at: project.created_at },
+      { ...capability, id: '88888888-8888-4888-8888-888888888888', project_id: secondProjectId, capability_key: 'analytics', state: 'available' },
+    ],
+  });
+
+  const favorites = await s.data().getAdminFavoriteProjects('admin-id');
+
+  assert.deepEqual(favorites.map(favorite => favorite.id), [secondProjectId, projectId]);
+  assert.deepEqual(favorites.map(favorite => favorite.capabilities.map(item => [item.capability_key, item.state])), [
+    [['analytics', 'available']],
+    [['blogger', 'active']],
+  ]);
+  assert.equal(await s.data().isAdminProjectFavorite('admin-id', projectId), true);
+  assert.equal(await s.data().isAdminProjectFavorite('another-admin', secondProjectId), false);
+  assert.ok(s.events.every(event => event === 'session-db'));
+});
+
 test('client repository uses session identity and denies guessed, archived, hidden and foreign projects', async () => {
   const s = setup({ client_projects: [project, { ...project, id: 'foreign', slug: 'foreign', client_id: otherClientId }, { ...project, id: 'hidden', slug: 'hidden', client_access_enabled: false }, { ...project, id: 'archived', slug: 'archived', status: 'archived' }], project_capabilities: [{ ...capability, state: 'active', launch_url: 'https://example.com/admin/', validated_at: project.created_at }] });
   assert.deepEqual((await s.data().getClientPortalContext()).projects.map(p => p.slug), ['example']);

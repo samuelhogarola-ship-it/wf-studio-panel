@@ -73,6 +73,44 @@ async function loadClients(db: SessionDatabase): Promise<ProjectClient[]> {
   return data ?? []
 }
 
+export async function getAdminFavoriteProjects(adminUserId: string): Promise<ProjectWithCapabilities[]> {
+  const db = await createSupabaseServerClient()
+  const { data: favoriteRows, error: favoritesError } = await db.from('admin_project_favorites')
+    .select('project_id, position, created_at').eq('admin_user_id', adminUserId)
+  if (favoritesError) throw new Error('No se pudieron cargar los proyectos favoritos.')
+  if (!favoriteRows?.length) return []
+
+  const favorites = [...favoriteRows].sort((left, right) => {
+    if (left.position === null && right.position !== null) return 1
+    if (left.position !== null && right.position === null) return -1
+    return (left.position ?? 0) - (right.position ?? 0) || left.created_at.localeCompare(right.created_at)
+  })
+  const { data: projects, error: projectsError } = await db.from('client_projects').select('*')
+    .in('id', favorites.map(favorite => favorite.project_id)).neq('status', 'archived')
+  if (projectsError) throw new Error('No se pudieron cargar los proyectos favoritos.')
+  if (!projects?.length) return []
+
+  const { data: capabilities, error: capabilitiesError } = await db.from('project_capabilities').select('*')
+    .in('project_id', projects.map(project => project.id))
+  if (capabilitiesError) throw new Error('No se pudieron cargar las capacidades.')
+  const projectsById = new Map(projects.map(project => [project.id, {
+    ...project,
+    capabilities: (capabilities ?? []).filter(capability => capability.project_id === project.id),
+  }]))
+  return favorites.flatMap(favorite => {
+    const project = projectsById.get(favorite.project_id)
+    return project ? [project] : []
+  })
+}
+
+export async function isAdminProjectFavorite(adminUserId: string, projectId: string): Promise<boolean> {
+  const db = await createSupabaseServerClient()
+  const { data, error } = await db.from('admin_project_favorites').select('project_id')
+    .eq('admin_user_id', adminUserId).eq('project_id', projectId).maybeSingle()
+  if (error) throw new Error('No se pudo comprobar el proyecto favorito.')
+  return Boolean(data)
+}
+
 export async function getAdminProjects(filters: { query?: string; clientId?: string; status?: string; capability?: string } = {}) {
   await requireAdmin()
   const db = await createSupabaseServerClient()
