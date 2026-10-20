@@ -1,4 +1,4 @@
-import { validateBloggerProjectDestination } from './model.mjs';
+import { buildProjectTools } from './tools.mjs';
 
 const labels = {
   es: {
@@ -32,23 +32,22 @@ export function buildPortalNavigation({ mode, projects = [], locale = 'es' }) {
   const visible = projects.filter(project => project.status === 'active' && project.client_access_enabled === true);
   const hasActive = (project, key) => (project.capabilities ?? []).some(capability =>
     capability.capability_key === key && capability.state === 'active');
+  const projectTools = new Map(visible.map(project => [
+    project.id,
+    new Map(buildProjectTools({ project, viewer: 'client' }).map(tool => [tool.id, tool])),
+  ]));
   const items = ['dashboard', 'pendientes', 'mensajeria'].map(accountItem);
-  if (visible.some(project => hasActive(project, 'invoices'))) items.push(accountItem('facturas'));
-  if (visible.some(project => hasActive(project, 'bonuses_reports'))) {
+  if (visible.some(project => projectTools.get(project.id).has('invoices'))) items.push(accountItem('facturas'));
+  if (visible.some(project => projectTools.get(project.id).has('reports'))) {
     items.push(...['bonos', 'packs', 'historial', 'informes'].map(accountItem));
   }
 
   for (const project of visible) {
     const base = `/cliente/proyectos/${encodeURIComponent(project.slug)}`;
     for (const key of ['products', 'domains', 'hosting', 'blogger', 'analytics']) {
-      if (!hasActive(project, key)) continue;
-      let href = key === 'analytics' ? `${base}/estadisticas` : `${base}#${key}`;
-      if (key === 'blogger') {
-        const capability = project.capabilities.find(capability =>
-          capability.capability_key === key && capability.state === 'active');
-        if (!capability.validated_at || !validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)) continue;
-        href = `${base}/blogger`;
-      }
+      const tool = projectTools.get(project.id).get(key);
+      if (key === 'products' ? !hasActive(project, key) : !tool) continue;
+      const href = key === 'products' ? `${base}#${key}` : tool.href;
       items.push({
         id: `${project.id}:${key}`, href, label: `${text[key]} · ${project.name}`,
         projectId: project.id, projectSlug: project.slug, capability: key,
