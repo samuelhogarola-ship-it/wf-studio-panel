@@ -46,27 +46,16 @@ test("canonical website registry covers every current site and configures Samuel
   assert.equal(sportMassage.blogger.publicPostBase, "/blog/");
 });
 
-test("aGama analytics uses only its canonical registry identity and environment suffix", () => {
+test("aGama analytics exposes only its canonical runtime lookup schema", () => {
   const agama = getSiteByKey("agama");
 
-  assert.deepEqual(
-    {
-      key: agama.key,
-      domain: agama.domain,
-      source: agama.analytics.source,
-      envSuffix: agama.analytics.envSuffix,
-    },
-    {
-      key: "agama",
-      domain: "agama.com.mx",
-      source: "agama",
-      envSuffix: "AGAMA",
-    },
-  );
-
-  for (const key of ["websiteId", "password", "secret", "token"]) {
-    assert.equal(Object.hasOwn(agama.analytics, key), false, `${key} must remain runtime-only`);
-  }
+  assert.equal(agama.key, "agama");
+  assert.equal(agama.domain, "agama.com.mx");
+  assert.deepEqual(agama.analytics, {
+    source: "agama",
+    envSuffix: "AGAMA",
+    legacyDashboard: false,
+  });
 });
 
 test("Blogger handoff registry accepts only complete same-site HTTPS destinations", () => {
