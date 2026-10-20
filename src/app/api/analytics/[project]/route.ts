@@ -6,8 +6,11 @@ import {
   toClientAnalyticsPayload,
   toPublicAnalyticsError,
 } from '@/lib/analytics/umami-dashboard.mjs'
+import {
+  resolveAdminAnalyticsTarget,
+  resolveClientAnalyticsTarget,
+} from '@/lib/analytics/project-access'
 import { getOptionalIdentity } from '@/lib/auth'
-import { getAccessibleClientProject } from '@/lib/data/projects'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,21 +29,11 @@ export async function GET(
   const summaryOnly = url.searchParams.get('summary') === '1'
 
   try {
-    let projectKey = project
-    if (identity.role === 'client') {
-      const clientProject = await getAccessibleClientProject(project)
-      const activeAnalytics = clientProject?.capabilities.some(capability =>
-        capability.capability_key === 'analytics' && capability.state === 'active')
-      if (!clientProject || !activeAnalytics || !clientProject.analytics_registry_key) {
-        return NextResponse.json(
-          { status: 'error', message: 'Estadísticas no disponibles.' },
-          { status: 404 },
-        )
-      }
-      projectKey = clientProject.analytics_registry_key
-    }
+    const target = identity.role === 'admin'
+      ? await resolveAdminAnalyticsTarget(project)
+      : await resolveClientAnalyticsTarget(project)
 
-    const dashboard = await fetchUmamiDashboard({ projectKey, period, summaryOnly })
+    const dashboard = await fetchUmamiDashboard({ projectKey: target.registryKey, period, summaryOnly })
     return NextResponse.json(identity.role === 'client' ? toClientAnalyticsPayload(dashboard) : dashboard, {
       headers: { 'Cache-Control': 'private, no-store, max-age=0' },
     })

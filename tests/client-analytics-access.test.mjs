@@ -71,6 +71,7 @@ function setup({
   const mocks = {
     '@/lib/auth': {
       getOptionalIdentity: async () => optionalIdentity,
+      requireAdmin: async () => ({ userId: 'admin-id', email: 'admin@example.com', role: 'admin' }),
       requireClientAccess: async () => identity,
     },
     '@/lib/supabase/server': { createSupabaseServerClient: async () => db },
@@ -158,38 +159,34 @@ test('authentication happens before project or analytics reads', async () => {
   assert.deepEqual(s.analyticsCalls, [])
 })
 
-test('administrators retain every existing registry key without client project reads', async () => {
+test('administrator analytics requests resolve the exact project registry key', async () => {
   const s = setup({ role: 'admin' })
+  const { response } = await s.request(configuredProject.id)
 
-  for (const key of analyticsDashboard.ANALYTICS_PROJECTS.map(project => project.key)) {
-    const { response } = await s.request(key)
-    assert.equal(response.status, 200, key)
-  }
-
-  assert.deepEqual(s.analyticsCalls.map(call => call.projectKey), analyticsDashboard.ANALYTICS_PROJECTS.map(project => project.key))
-  assert.deepEqual(s.db.calls, [])
+  assert.equal(response.status, 200)
+  assert.deepEqual(s.analyticsCalls.map(call => call.projectKey), ['webfuengirola'])
 })
 
-test('administrators retain the raw unknown static registry diagnostic and 404 status', async () => {
+test('administrator requests reject unknown project ids before analytics access', async () => {
   const s = setup({ role: 'admin', useRealDashboard: true })
-  const { response, payload } = await s.request('missing-static-key')
+  const missingProjectId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  const { response, payload } = await s.request(missingProjectId)
 
   assert.equal(response.status, 404)
   assert.deepEqual(payload, {
     status: 'error',
-    message: 'Proyecto de estadísticas desconocido: missing-static-key',
+    message: `Proyecto de estadísticas desconocido: ${missingProjectId}`,
   })
-  assert.deepEqual(s.db.calls, [])
+  assert.deepEqual(s.analyticsCalls, [])
 })
 
 test('administrators retain the raw upstream Umami diagnostic and 502 status', async () => {
   const diagnostic = 'Umami respondió HTTP 503: conexión personal no disponible'
   const s = setup({ role: 'admin', error: new Error(diagnostic) })
-  const { response, payload } = await s.request('webfuengirola')
+  const { response, payload } = await s.request(configuredProject.id)
 
   assert.equal(response.status, 502)
   assert.deepEqual(payload, { status: 'error', message: diagnostic })
-  assert.deepEqual(s.db.calls, [])
 })
 
 test('upstream failures and client configuration errors never expose operational details', async () => {
