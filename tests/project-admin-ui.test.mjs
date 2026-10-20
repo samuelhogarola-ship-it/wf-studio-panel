@@ -65,3 +65,56 @@ test('unknown project detail returns a non-revealing 404', async () => {
   const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;
   await assert.rejects(() => Page({ params: Promise.resolve({ id: 'unknown' }) }), /^Error: 404$/);
 });
+
+test('administrator home renders favorite projects as validated launcher cards above product panels', async () => {
+  const favorite = {
+    admin_user_id: 'admin-id',
+    project_id: projectId,
+    position: 1,
+    created_at: '2026-10-20T10:00:00Z',
+  };
+  const load = setup({
+    admin_project_favorites: [favorite],
+    project_capabilities: [
+      {
+        ...capability,
+        state: 'active',
+        launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+        validated_at: '2026-10-20T10:00:00Z',
+      },
+      { ...capability, id: 'analytics', capability_key: 'analytics', state: 'available' },
+    ],
+  }, {
+    react: { ...React, useActionState: () => [{}, () => {}, false] },
+  });
+  const Page = load('src/app/paneladmin/(protected)/inicio/page.tsx').default;
+
+  const html = render(await Page());
+  const favoriteSection = html.slice(html.indexOf('Favoritos'), html.indexOf('WF-Studio'));
+
+  assert.ok(html.indexOf('Favoritos') < html.indexOf('WF-Studio'));
+  assert.match(favoriteSection, /Example/);
+  assert.match(favoriteSection, /example\.com/);
+  assert.match(favoriteSection, /Ana/);
+  assert.match(favoriteSection, /Activo/);
+  assert.match(favoriteSection, /Acceso habilitado/);
+  assert.match(favoriteSection, new RegExp(`href="/paneladmin/proyectos/${projectId}"[^>]*>Abrir proyecto`));
+  assert.match(favoriteSection, /href="\/paneladmin\/blogger\/example"[^>]*>Blogger/);
+  assert.match(favoriteSection, /href="https:\/\/example\.com"[^>]*>Sitio web/);
+  assert.doesNotMatch(favoriteSection, /Estadísticas/);
+  assert.match(favoriteSection, /Quitar de Inicio/);
+  assert.match(favoriteSection, /href="\/paneladmin\/proyectos"[^>]*>Ver todos los proyectos/);
+});
+
+test('administrator home empty favorites state points to the canonical Projects catalog', async () => {
+  const load = setup({}, {
+    react: { ...React, useActionState: () => [{}, () => {}, false] },
+  });
+  const Page = load('src/app/paneladmin/(protected)/inicio/page.tsx').default;
+
+  const html = render(await Page());
+
+  assert.match(html, /Todavía no tienes proyectos favoritos/);
+  assert.match(html, /Añade proyectos desde el catálogo para tener sus herramientas a mano\./);
+  assert.match(html, /href="\/paneladmin\/proyectos"[^>]*>Ver todos los proyectos/);
+});

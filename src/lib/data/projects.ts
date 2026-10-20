@@ -15,6 +15,7 @@ export type Project = Tables<'client_projects'>
 export type ProjectCapability = Tables<'project_capabilities'>
 export type ProjectClient = Pick<Tables<'clients'>, 'id' | 'name' | 'email' | 'status' | 'project' | 'portal_mode'>
 export type ProjectWithCapabilities = Project & { capabilities: ProjectCapability[] }
+export type FavoriteProject = ProjectWithCapabilities & { client: ProjectClient | null }
 export type ProjectWarning = 'destination' | 'blogger' | 'analytics' | 'assignment'
 type SessionDatabase = Awaited<ReturnType<typeof createSupabaseServerClient>>
 
@@ -73,7 +74,7 @@ async function loadClients(db: SessionDatabase): Promise<ProjectClient[]> {
   return data ?? []
 }
 
-export async function getAdminFavoriteProjects(adminUserId: string): Promise<ProjectWithCapabilities[]> {
+export async function getAdminFavoriteProjects(adminUserId: string): Promise<FavoriteProject[]> {
   const db = await createSupabaseServerClient()
   const { data: favoriteRows, error: favoritesError } = await db.from('admin_project_favorites')
     .select('project_id, position, created_at').eq('admin_user_id', adminUserId)
@@ -93,8 +94,15 @@ export async function getAdminFavoriteProjects(adminUserId: string): Promise<Pro
   const { data: capabilities, error: capabilitiesError } = await db.from('project_capabilities').select('*')
     .in('project_id', projects.map(project => project.id))
   if (capabilitiesError) throw new Error('No se pudieron cargar las capacidades.')
+  const clientIds = [...new Set(projects.flatMap(project => project.client_id ? [project.client_id] : []))]
+  const clientsResult = clientIds.length
+    ? await db.from('clients').select('id, name, email, status, project, portal_mode').in('id', clientIds)
+    : { data: [], error: null }
+  if (clientsResult.error) throw new Error('No se pudieron cargar los clientes asignados.')
+  const clientsById = new Map((clientsResult.data ?? []).map(client => [client.id, client]))
   const projectsById = new Map(projects.map(project => [project.id, {
     ...project,
+    client: project.client_id ? clientsById.get(project.client_id) ?? null : null,
     capabilities: (capabilities ?? []).filter(capability => capability.project_id === project.id),
   }]))
   return favorites.flatMap(favorite => {

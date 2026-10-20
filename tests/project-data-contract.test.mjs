@@ -73,6 +73,7 @@ test('favorites preserve administrator position while resolving only current non
     [['analytics', 'available']],
     [['blogger', 'active']],
   ]);
+  assert.deepEqual(favorites.map(favorite => favorite.client?.name), ['Ana', 'Ana']);
   assert.equal(await s.data().isAdminProjectFavorite('admin-id', projectId), true);
   assert.equal(await s.data().isAdminProjectFavorite('another-admin', secondProjectId), false);
   assert.ok(s.events.every(event => event === 'session-db'));
