@@ -103,18 +103,30 @@ test('registry seed is idempotent for either identity and never activates Blogge
   assert.doesNotMatch(source, /update public\.clients/i)
 })
 
-test('aGama forward migration promotes trigger defaults only for the project inserted in that run', async () => {
+test('aGama forward migration inserts only an absent unassigned project and preserves existing ownership', async () => {
   const source = await readFile(agamaForwardMigrationUrl, 'utf8')
   const inserted = source.match(/with inserted_project as \(([\s\S]*?)\),\s*capability_keys/i)?.[1]
   assert.ok(inserted, 'forward migration must retain the newly inserted project id')
-  assert.match(inserted, /insert into public\.client_projects/)
-  assert.match(inserted, /where not exists/)
+  assert.match(inserted, /insert into public\.client_projects \(slug, name, domain, analytics_registry_key\)/i)
+  assert.match(inserted, /select 'agama', 'aGama', 'agama\.com\.mx', 'agama'/)
+  assert.match(inserted, /where not exists \([\s\S]*?lower\(btrim\(p\.slug\)\) = 'agama'[\s\S]*?lower\(btrim\(p\.domain\)\) = 'agama\.com\.mx'/i)
+  assert.match(inserted, /on conflict do nothing/i)
   assert.match(inserted, /returning id/)
-  assert.match(source, /from inserted_project p\s+cross join capability_keys k/i)
-  assert.match(source, /on conflict \(project_id, capability_key\) do update\s+set state = 'available'/i)
-  assert.match(source, /where public\.project_capabilities\.state = 'unavailable'/i)
-  assert.match(source, /public\.project_capabilities\.launch_url is null/i)
-  assert.match(source, /public\.project_capabilities\.validated_at is null/i)
+  assert.doesNotMatch(source, /update\s+public\.client_projects/i)
+  assert.doesNotMatch(inserted, /client_id|client_access_enabled/i)
+})
+
+test('aGama forward migration never downgrades or overwrites configured capability rows', async () => {
+  const source = await readFile(agamaForwardMigrationUrl, 'utf8')
+  const capabilityInsert = source.slice(source.indexOf('insert into public.project_capabilities'))
+  assert.match(capabilityInsert, /from inserted_project p\s+cross join capability_keys k/i)
+  assert.match(capabilityInsert, /on conflict \(project_id, capability_key\) do update\s+set state = 'available'/i)
+  assert.match(capabilityInsert, /where public\.project_capabilities\.state = 'unavailable'/i)
+  assert.match(capabilityInsert, /public\.project_capabilities\.launch_url is null/i)
+  assert.match(capabilityInsert, /public\.project_capabilities\.metadata = '\{\}'::jsonb/i)
+  assert.match(capabilityInsert, /public\.project_capabilities\.validated_at is null/i)
+  assert.doesNotMatch(capabilityInsert, /set\s+(?:launch_url|metadata|validated_at)\s*=/i)
+  assert.doesNotMatch(capabilityInsert, /set state = '(?:unavailable|active)'/i)
 })
 
 test('Supabase types expose project and capability rows, relationships, exact unions and immutable audit writes', async () => {
