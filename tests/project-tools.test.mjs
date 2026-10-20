@@ -71,6 +71,19 @@ test('available and unavailable tools remain visible but cannot launch for admin
   assert.deepEqual({ state: tools.hosting.state, href: tools.hosting.href }, { state: 'unavailable', href: null });
 });
 
+test('active domains and hosting stay inspectable for administrators without exposing dead actions', () => {
+  const input = project({ capabilities: [
+    capability('domains', 'active'),
+    capability('hosting', 'active'),
+  ] });
+
+  const adminTools = byId(buildProjectTools({ project: input, viewer: 'admin' }));
+  assert.deepEqual(
+    [adminTools.domains, adminTools.hosting].map(({ state, href }) => ({ state, href })),
+    [{ state: 'active', href: null }, { state: 'active', href: null }],
+  );
+});
+
 test('configuration issues fail closed and are visible only to administrators', () => {
   const input = project({ capabilities: [capability('analytics')] });
   const configurationIssues = { analytics: 'Falta la configuración del registro de analítica.' };

@@ -88,6 +88,29 @@ test('project tool grid labels every state and disables incomplete tools', () =>
   }
 });
 
+test('active domains and hosting render disabled actions instead of dead workspace fragments', () => {
+  const load = setup();
+  const { ProjectToolGrid } = load('src/components/admin/project-tool-grid.tsx');
+  const workspaceProject = {
+    ...project,
+    capabilities: [
+      { ...capability, id: 'domains', capability_key: 'domains', state: 'active' },
+      { ...capability, id: 'hosting', capability_key: 'hosting', state: 'active' },
+    ],
+  };
+
+  const html = render(React.createElement(ProjectToolGrid, { project: workspaceProject }));
+
+  for (const tool of ['domains', 'hosting']) {
+    const start = html.lastIndexOf('<article', html.indexOf(`data-project-tool="${tool}"`));
+    const toolCard = html.slice(start, html.indexOf('</article>', start));
+    assert.match(toolCard, /data-tool-state="active"/);
+    assert.match(toolCard, /<button[^>]*disabled/);
+    assert.match(toolCard, /Sin acceso operativo/);
+    assert.doesNotMatch(toolCard, new RegExp(`href="[^"]*#${tool}"`));
+  }
+});
+
 test('detail renders seven capability cards, provisioning warnings and attributable audit transitions', async () => {
   const load = setup({ project_capability_audit: [{ id: 'audit', project_id: projectId, capability_key: 'blogger', actor_id: 'admin-actor', operation: 'UPDATE', old_record: { state: 'available' }, new_record: { state: 'active' }, created_at: project.created_at }] });
   const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;

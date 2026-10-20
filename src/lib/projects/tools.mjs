@@ -21,7 +21,7 @@ function internalHref(id, project, viewer) {
     : `/cliente/proyectos/${slug}/estadisticas`;
   if (id === 'client') return project.client_id ? `/paneladmin/clientes/${encodeURIComponent(project.client_id)}` : null;
   if (id === 'domains' || id === 'hosting') return viewer === 'admin'
-    ? `/paneladmin/proyectos/${projectId}#${id}`
+    ? null
     : `/cliente/proyectos/${slug}#${id}`;
   if (id === 'invoices') return viewer === 'admin' ? '/paneladmin/facturas' : '/cliente/facturas';
   if (id === 'reports') return viewer === 'admin' ? '/paneladmin/informes' : '/cliente/informes';

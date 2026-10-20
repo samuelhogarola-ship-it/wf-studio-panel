@@ -11,8 +11,8 @@ const stateLabels = {
 } as const
 
 const actionLabels = {
-  es: { active: 'Abrir', available: 'Pendiente de activación', unavailable: 'No disponible', misconfigured: 'Revisar configuración' },
-  en: { active: 'Open', available: 'Pending activation', unavailable: 'Unavailable', misconfigured: 'Review configuration' },
+  es: { active: 'Sin acceso operativo', available: 'Pendiente de activación', unavailable: 'No disponible', misconfigured: 'Revisar configuración' },
+  en: { active: 'No operational access', available: 'Pending activation', unavailable: 'Unavailable', misconfigured: 'Review configuration' },
 } as const
 
 const compactToolIds = new Set<ProjectTool['id']>(['website', 'blogger', 'analytics'])
