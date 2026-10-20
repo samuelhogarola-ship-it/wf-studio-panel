@@ -9,6 +9,12 @@ export type Database = {
   __InternalSupabase: { PostgrestVersion: "14.5" }
   public: {
     Tables: {
+      admin_project_favorites: {
+        Row: { admin_user_id: string; project_id: string; position: number | null; created_at: string }
+        Insert: { admin_user_id: string; project_id: string; position?: number | null; created_at?: string }
+        Update: { admin_user_id?: string; project_id?: string; position?: number | null; created_at?: string }
+        Relationships: [{ foreignKeyName: "admin_project_favorites_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "client_projects"; referencedColumns: ["id"] }]
+      }
       client_projects: {
         Row: { id: string; client_id: string | null; slug: string; name: string; domain: string; status: ProjectStatus; client_access_enabled: boolean; hosting_label: string | null; hosting_management_url: string | null; analytics_registry_key: string | null; created_at: string; updated_at: string }
         Insert: { id?: string; client_id?: string | null; slug: string; name: string; domain: string; status?: ProjectStatus; client_access_enabled?: boolean; hosting_label?: string | null; hosting_management_url?: string | null; analytics_registry_key?: string | null; created_at?: string; updated_at?: string }
