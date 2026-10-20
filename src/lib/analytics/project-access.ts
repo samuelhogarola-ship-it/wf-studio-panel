@@ -13,8 +13,15 @@ export type AnalyticsTarget = {
   registryKey: string
 }
 
+export class AnalyticsTargetUnavailableError extends Error {
+  constructor(identifier: string) {
+    super(`Proyecto de estadísticas desconocido: ${identifier}`)
+    this.name = 'AnalyticsTargetUnavailableError'
+  }
+}
+
 function unavailable(identifier: string): never {
-  throw new Error(`Proyecto de estadísticas desconocido: ${identifier}`)
+  throw new AnalyticsTargetUnavailableError(identifier)
 }
 
 function resolveTarget(project: ProjectWithCapabilities | null, identifier: string): AnalyticsTarget {

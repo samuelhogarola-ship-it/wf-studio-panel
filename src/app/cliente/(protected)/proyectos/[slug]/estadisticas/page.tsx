@@ -2,7 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
-import { resolveClientAnalyticsTarget } from '@/lib/analytics/project-access'
+import {
+  AnalyticsTargetUnavailableError,
+  resolveClientAnalyticsTarget,
+} from '@/lib/analytics/project-access'
 import { getAccessibleClientProject } from '@/lib/data/projects'
 import { clientPortalTranslations, projectTranslations } from '@/lib/i18n'
 import { getLocale } from '@/lib/locale'
@@ -18,8 +21,9 @@ export default async function ClientProjectStatisticsPage({
   let target
   try {
     target = await resolveClientAnalyticsTarget(slug)
-  } catch {
-    notFound()
+  } catch (error) {
+    if (error instanceof AnalyticsTargetUnavailableError) notFound()
+    throw error
   }
   const project = await getAccessibleClientProject(target.projectSlug)
   if (!project) notFound()

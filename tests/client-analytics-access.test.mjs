@@ -61,6 +61,7 @@ function setup({
   result = analyticsResult(),
   error = null,
   locale = 'es',
+  clientAccessError = null,
 } = {}) {
   const db = database({ client_projects: projects, project_capabilities: capabilities })
   const analyticsCalls = []
@@ -72,7 +73,10 @@ function setup({
     '@/lib/auth': {
       getOptionalIdentity: async () => optionalIdentity,
       requireAdmin: async () => ({ userId: 'admin-id', email: 'admin@example.com', role: 'admin' }),
-      requireClientAccess: async () => identity,
+      requireClientAccess: async () => {
+        if (clientAccessError) throw clientAccessError
+        return identity
+      },
     },
     '@/lib/supabase/server': { createSupabaseServerClient: async () => db },
     '@/lib/analytics/umami-core.mjs': {
@@ -234,4 +238,14 @@ test('the statistics page returns the same 404 for inaccessible capability state
     const Page = s.load(pagePath).default
     await assert.rejects(() => Page({ params: Promise.resolve({ slug: 'my-site' }) }), { message: '404' })
   }
+})
+
+test('the statistics page preserves authentication redirects and infrastructure failures', async () => {
+  const s = setup({ clientAccessError: new Error('redirect:/acceso?next=%2Fcliente%2Fproyectos%2Fmy-site%2Festadisticas') })
+  const Page = s.load(pagePath).default
+
+  await assert.rejects(
+    () => Page({ params: Promise.resolve({ slug: 'my-site' }) }),
+    { message: 'redirect:/acceso?next=%2Fcliente%2Fproyectos%2Fmy-site%2Festadisticas' },
+  )
 })
