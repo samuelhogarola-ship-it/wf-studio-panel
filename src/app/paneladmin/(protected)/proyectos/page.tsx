@@ -19,7 +19,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
   const params = await searchParams
   const value = (key: string) => typeof params[key] === 'string' ? params[key] as string : ''
   const filters = { q: value('q'), client: value('client'), status: value('status'), capability: value('capability') }
-  const { projects, clients } = await getAdminProjects({ query: filters.q, clientId: filters.client, status: filters.status, capability: filters.capability })
+  const { projects, clients, registryIssues } = await getAdminProjects({ query: filters.q, clientId: filters.client, status: filters.status, capability: filters.capability })
   const favoriteStates = new Map(await Promise.all(projects.map(async project => [project.id, await isAdminProjectFavorite(identity.userId, project.id)] as const)))
   return (
     <AdminShell
@@ -30,6 +30,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       locale={locale}
     >
       <div className="grid gap-6">
+        {registryIssues.length ? <Card className="grid gap-3 border-amber-300 bg-amber-50 p-5" data-project-registry-issues>
+          <h2 className="text-lg font-bold text-amber-950">{locale === 'en' ? 'Site registry warnings' : 'Avisos del registro de sitios'}</h2>
+          <ul className="grid gap-1 text-sm text-amber-900">
+            {registryIssues.map((issue, index) => <li key={`${issue.kind}-${issue.projectId ?? issue.siteKey ?? index}`}>{issue.message}</li>)}
+          </ul>
+        </Card> : null}
         <ProjectFilters clients={clients} filters={filters} locale={locale} />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {projects.map(project => <Card key={project.id} className="grid gap-4 p-5" data-project={project.id}>

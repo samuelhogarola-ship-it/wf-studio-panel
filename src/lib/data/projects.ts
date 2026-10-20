@@ -7,6 +7,8 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type { CapabilityKey, Tables } from '@/lib/supabase/types'
 import { validateBloggerProjectDestination, validateProjectDestination } from '@/lib/projects/model.mjs'
 import { buildPortalNavigation } from '@/lib/projects/portal-navigation.mjs'
+import { reconcileProjectsWithRegistry } from '@/lib/projects/reconciliation.mjs'
+import { getSites } from '@/lib/sites/registry.mjs'
 import { getConfiguredUmamiSites, getUmamiConnections } from '@/lib/analytics/umami-core.mjs'
 import type { Locale } from '@/lib/i18n'
 
@@ -124,9 +126,11 @@ export async function getAdminProjects(filters: { query?: string; clientId?: str
   const db = await createSupabaseServerClient()
   const [projects, clients] = await Promise.all([loadProjects(db), loadClients(db)])
   const query = filters.query?.trim().toLowerCase()
+  const catalogProjects = projects.map(project => ({ ...project, client: clients.find(client => client.id === project.client_id) ?? null, warnings: getProjectWarnings(project) }))
   return {
     clients,
-    projects: projects.map(project => ({ ...project, client: clients.find(client => client.id === project.client_id) ?? null, warnings: getProjectWarnings(project) }))
+    registryIssues: reconcileProjectsWithRegistry(projects, getSites()),
+    projects: catalogProjects
       .filter(project => (!query || [project.name, project.domain, project.slug, project.client?.name, project.client?.email].some(value => value?.toLowerCase().includes(query))) &&
         (!filters.clientId || (filters.clientId === 'unassigned' ? !project.client_id : project.client_id === filters.clientId)) &&
         (!filters.status || project.status === filters.status) &&
