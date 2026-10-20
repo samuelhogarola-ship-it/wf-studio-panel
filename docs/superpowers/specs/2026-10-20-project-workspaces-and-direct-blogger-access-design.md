@@ -178,7 +178,7 @@ Order the page as follows:
 
 An active Blogger card opens `/paneladmin/blogger/[siteKey]`. An active analytics card opens the project analytics view. Actions that are merely available, unavailable or misconfigured are clearly labelled and do not pretend to launch.
 
-The existing aGama client model for reports, bonuses and related account services is preserved. This work does not replace or redesign those flows; it adds project-specific statistics and exposes the already working services from the unified workspace.
+The existing aGama client model for reports, bonuses and related account services is preserved. This work does not replace or redesign those flows; it adds project-specific statistics, keeps Blogger available as a project capability, and exposes both Blogger and the already working services from the unified workspace. When aGama Blogger is active, its client can open it from the project portal or from the dedicated direct Blogger route without seeing administrator navigation.
 
 ### 4.4 Client home
 
@@ -201,7 +201,7 @@ If the client follows a direct Blogger link, the editor opens immediately after 
 1. Add `admin_project_favorites` and its row-level security.
 2. Reconcile the known site registry with `client_projects` without overwriting existing assignments or states.
 3. Verify that Sport Massage, aGama and Samuel Coach have project records and the intended Blogger/analytics capability rows.
-4. Preserve aGama's existing reports, bonuses and client-service configuration; activate only its correctly bound project analytics where that capability is missing.
+4. Preserve aGama's existing reports, bonuses and client-service configuration; activate its correctly bound project analytics and Blogger capabilities where either entitlement is missing.
 5. Preserve Sofia's current account, Sport Massage assignment and active Blogger entitlement.
 6. Backfill no favorites automatically; Samuel chooses them from the catalog.
 7. Change the Sport Massage static entry only after the dedicated Studio route is deployed.
@@ -223,7 +223,7 @@ If the client follows a direct Blogger link, the editor opens immediately after 
 - Favorite cards and project workspaces expose only validated actions.
 - Samuel Coach has a direct Blogger shortcut on the administrator home.
 - The project workspace presents operational tools before technical configuration.
-- aGama retains its existing reports and bonuses while gaining correctly scoped project statistics.
+- aGama retains its existing reports and bonuses while gaining correctly scoped project statistics and authorized Blogger access.
 
 ### Client experience
 

@@ -66,7 +66,7 @@ Allowed results are client portal paths and `/acceso/blogger/<validated-segment>
 - Create: `tests/direct-blogger-access.test.mjs`
 - Modify: `tests/blogger-authorization.test.mjs`
 
-- [ ] Write failing route tests for: no session redirects to `/cliente?redirectedFrom=/acceso/blogger/<siteKey>`; authorized Sofia resolves Sport Massage; authorized aGama resolves only aGama; unauthorized client receives the controlled not-found/forbidden result; administrator access succeeds.
+- [ ] Write failing route tests for: no session redirects to `/cliente?redirectedFrom=/acceso/blogger/<siteKey>`; authorized Sofia resolves Sport Massage; the authorized aGama client resolves only the aGama editor from `/acceso/blogger/agama`; unauthorized client receives the controlled not-found/forbidden result; administrator access succeeds.
 - [ ] Add a failing shell test requiring only site identity, `Inicio`, and the existing Blogger editor—never `AdminShell`, global navigation, project configuration or other clients.
 - [ ] Run `node --test tests/direct-blogger-access.test.mjs tests/blogger-authorization.test.mjs` and confirm failure.
 - [ ] Implement explicit authentication in the route because `/acceso/*` is outside the existing `/cliente/*` middleware matcher. Retain the exact safe destination before redirecting to login.

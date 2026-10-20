@@ -1,10 +1,10 @@
-# Project Statistics and aGama Preservation Implementation Plan
+# Project Statistics and aGama Blogger Access Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Give administrators and authorized clients correctly scoped statistics for each project, activating aGama analytics without altering its existing reports, bonuses or other client services.
+**Goal:** Give administrators and authorized clients correctly scoped statistics for each project, and activate aGama analytics and Blogger access without altering its existing reports, bonuses or other client services.
 
-**Architecture:** Reuse the existing Umami adapter and `ProjectAnalyticsPanel`. Resolve an analytics target only after project authorization and registry validation, then expose separate thin admin and client routes over the same resolver. Capability activation remains explicit and is allowed only when the project has a valid registry binding and required environment configuration.
+**Architecture:** Reuse the existing Umami adapter, `ProjectAnalyticsPanel`, and centralized Blogger authorization. Resolve each tool target only after project authorization and registry validation, then expose thin admin and client routes over those shared checks. Capability activation remains explicit and is allowed only when the project has a valid registry binding and the tool's required configuration.
 
 **Tech Stack:** Next.js 15 App Router, React 19, TypeScript, Supabase/PostgreSQL, Umami API adapter, Node test runner.
 
@@ -21,7 +21,7 @@
 
 ## Review Focus
 
-- Compare aGama service rows before and after activation; only its analytics capability may change.
+- Compare aGama service rows before and after activation; only its analytics and Blogger capabilities may change.
 - Exercise cross-project and disabled-capability requests to prevent analytics data leakage.
 - Confirm both routes resolve the same canonical project key and no browser-provided Umami site ID is trusted.
 
@@ -37,7 +37,7 @@
 
 - [ ] Write failing/expanding tests that require the aGama registry entry to use key `agama`, domain `agama.com.mx`, and analytics source/env suffix `AGAMA` without containing a secret or website ID.
 - [ ] Add migration regression assertions that the existing aGama project migration only inserts absent rows, preserves assigned clients, and never downgrades or overwrites configured capability rows.
-- [ ] Add an explicit invariant fixture with active `bonuses_reports`, reports and other account data, then assert analytics activation changes none of those values.
+- [ ] Add an explicit invariant fixture with active `bonuses_reports`, reports and other account data, then assert analytics and Blogger activation changes none of those values.
 - [ ] Run `node --test tests/agama-project-statistics.test.mjs tests/client-projects-migration.test.mjs tests/site-registry.test.mjs` and confirm the new behavior is not yet fully represented.
 - [ ] Make only the minimum fixture/contract changes needed to express the preserved aGama model; do not change product behavior in this task.
 - [ ] Re-run the focused tests.
@@ -90,7 +90,7 @@ resolveClientAnalyticsTarget(projectSlug: string): Promise<AnalyticsTarget>;
 - [ ] Run the focused tests and confirm they pass.
 - [ ] Commit with `git commit -m "feat: add statistics to admin project workspaces"`.
 
-## Task 4: Add a safe analytics activation guard
+## Task 4: Add safe analytics and Blogger activation guards
 
 **Files:**
 
@@ -100,22 +100,24 @@ resolveClientAnalyticsTarget(projectSlug: string): Promise<AnalyticsTarget>;
 - Modify: `tests/project-admin-ui.test.mjs`
 
 - [ ] Write failing action tests proving analytics cannot transition to `active` when `analytics_registry_key` is absent, the registry site is unknown, or required Umami configuration is unavailable.
-- [ ] Add a failing success test proving only the selected project's `analytics` capability row changes when configuration is valid.
+- [ ] Write failing action tests proving Blogger cannot transition to `active` when its project-to-site binding or Blogger runtime configuration is invalid.
+- [ ] Add failing success tests proving only the selected project's requested `analytics` or `blogger` capability row changes when that tool's configuration is valid.
 - [ ] Run the focused tests and confirm failure.
-- [ ] Add the activation guard using `hasProjectAnalytics(project)` and the existing mutation boundary. Return a useful administrator error while leaving all rows untouched on failure.
-- [ ] Display that validation result beside the analytics capability control.
+- [ ] Add the activation guards using `hasProjectAnalytics(project)`, the existing Blogger registry validation, and the existing mutation boundary. Return a useful administrator error while leaving all rows untouched on failure.
+- [ ] Display the corresponding validation result beside each capability control.
 - [ ] Run `node --test tests/project-data-contract.test.mjs tests/project-admin-ui.test.mjs tests/agama-project-statistics.test.mjs` and confirm aGama's reports/bonuses fixture is unchanged.
-- [ ] Commit with `git commit -m "fix: validate project analytics activation"`.
+- [ ] Commit with `git commit -m "fix: validate project tool activation"`.
 
-## Task 5: Validate and activate aGama statistics in the target environment
+## Task 5: Validate and activate aGama statistics and Blogger in the target environment
 
 **Files:** No secrets or hard-coded production IDs are added to Git.
 
 - [ ] Inspect only masked presence/absence for the aGama Umami variables expected by the registry (`UMAMI_*_AGAMA` as defined by the existing environment loader); never print their values.
 - [ ] If variables are missing, stop this production step and tell Samuel exactly which variable names he must add himself. Do not retrieve or reuse passwords/tokens.
-- [ ] With valid configuration, use the normal authenticated administrator capability action to set only aGama `analytics` to `active` and record the existing audit entry.
-- [ ] Read back aGama's project and capability rows; compare its reports/bonuses and other capability states with the pre-change fixture/snapshot.
-- [ ] Log in as the authorized aGama client and confirm `Estadísticas` appears while informes and bonos still work.
+- [ ] With valid configuration, use the normal authenticated administrator capability action to set only aGama `analytics` and `blogger` to `active`, recording the existing audit entries.
+- [ ] Read back aGama's project and capability rows; compare its reports/bonuses and every capability other than analytics/Blogger with the pre-change fixture/snapshot.
+- [ ] Log in as the authorized aGama client and confirm `Estadísticas` and `Blogger` appear while informes and bonos still work.
+- [ ] Open aGama Blogger from its project portal and from `/acceso/blogger/agama`; both paths must resolve the aGama editor and neither may render administrator navigation.
 - [ ] Confirm another client cannot load aGama statistics and aGama cannot load another project's metrics.
 - [ ] Commit no environment or production-data material.
 
@@ -128,5 +130,5 @@ resolveClientAnalyticsTarget(projectSlug: string): Promise<AnalyticsTarget>;
 - [ ] Run `npm run typecheck`.
 - [ ] Run `npm run build`.
 - [ ] Manually verify one administrator project and two separate client projects against mocked or non-production analytics data.
-- [ ] Inspect `git diff --check`, `git status --short`, and the final diff for secrets and unintended aGama service changes.
+- [ ] Inspect `git diff --check`, `git status --short`, and the final diff for secrets and unintended aGama service changes outside analytics/Blogger entitlement.
 - [ ] Push the dedicated branch and open a Pull Request against `main`; attach the PR to the task.
