@@ -1,8 +1,8 @@
 # WF Studio Project Workspaces and Direct Blogger Access
 
-**Date:** 2026-10-20  
+**Date:** 2026-10-20
 **Status:** Approved for implementation
-**Primary repository:** `wf-studio-panel`  
+**Primary repository:** `wf-studio-panel`
 **Related website repository:** `sportmassage`
 
 ## 1. Purpose
