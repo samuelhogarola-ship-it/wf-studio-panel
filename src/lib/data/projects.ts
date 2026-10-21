@@ -8,7 +8,8 @@ import type { CapabilityKey, Tables } from '@/lib/supabase/types'
 import { validateBloggerProjectDestination, validateProjectDestination } from '@/lib/projects/model.mjs'
 import { buildPortalNavigation } from '@/lib/projects/portal-navigation.mjs'
 import { reconcileProjectsWithRegistry } from '@/lib/projects/reconciliation.mjs'
-import { getSites } from '@/lib/sites/registry.mjs'
+import { getBloggerEditorTarget } from '@/lib/blogger/editor.mjs'
+import { getSiteByKey, getSites } from '@/lib/sites/registry.mjs'
 import { getConfiguredUmamiSites, getUmamiConnections } from '@/lib/analytics/umami-core.mjs'
 import type { Locale } from '@/lib/i18n'
 
@@ -31,6 +32,19 @@ export function hasProjectAnalytics(project: Project): boolean {
   return Boolean(connection?.baseUrl && connection?.password)
 }
 
+/** Requires the project's stable slug and domain to resolve to an enabled editor runtime. */
+export function hasProjectBlogger(project: Project): boolean {
+  try {
+    const site = getSiteByKey(project.slug)
+    return site.key === project.slug &&
+      canonicalDomain(site.domain) === canonicalDomain(project.domain) &&
+      site.blogger?.enabled === true &&
+      Boolean(getBloggerEditorTarget(site))
+  } catch {
+    return false
+  }
+}
+
 export function getCapabilityConfigurationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'validated_at'>): ProjectWarning | null {
   if (capability.launch_url && !(capability.capability_key === 'blogger'
     ? validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)
@@ -40,6 +54,11 @@ export function getCapabilityConfigurationIssue(project: Project, capability: Pi
   if (capability.capability_key === 'blogger' && (!capability.launch_url || !capability.validated_at)) return 'blogger'
   if (capability.capability_key === 'analytics' && !hasProjectAnalytics(project)) return 'analytics'
   return null
+}
+
+export function getCapabilityActivationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'validated_at'>): ProjectWarning | null {
+  if (capability.capability_key === 'blogger' && !hasProjectBlogger(project)) return 'blogger'
+  return getCapabilityConfigurationIssue(project, capability)
 }
 
 export function getProjectWarnings(project: ProjectWithCapabilities): ProjectWarning[] {

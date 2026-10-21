@@ -244,6 +244,41 @@ test('forms expose explicit capability state, provisioning and separate assignme
   assert.match(access, /dynamic/);
 });
 
+test('capability controls show their own configuration validation result', () => {
+  const load = setup();
+  const { ProjectCapabilitiesForm } = load('src/components/admin/project-capabilities-form.tsx');
+  const html = render(React.createElement(ProjectCapabilitiesForm, {
+    project,
+    capabilities: [
+      { ...capability, capability_key: 'blogger', launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example' },
+      { ...capability, id: 'analytics', capability_key: 'analytics' },
+    ],
+    validationIssues: { blogger: 'blogger', analytics: null },
+    locale: 'en',
+  }));
+  const blogger = html.slice(html.indexOf('data-capability="blogger"'), html.indexOf('data-capability="analytics"'));
+  const analytics = html.slice(html.indexOf('data-capability="analytics"'));
+
+  assert.match(blogger, /data-capability-validation="invalid"/);
+  assert.match(blogger, /Blogger: missing destination, validation or provisioning confirmation/);
+  assert.match(analytics, /data-capability-validation="valid"/);
+  assert.match(analytics, /Configuration ready/);
+});
+
+test('project detail supplies server-derived validation to every capability control', async () => {
+  const load = setup({
+    project_capabilities: [
+      { ...capability, capability_key: 'blogger' },
+      { ...capability, id: 'analytics', capability_key: 'analytics' },
+    ],
+  });
+  const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;
+  const html = render(await Page({ params: Promise.resolve({ id: projectId }) }));
+
+  assert.equal((html.match(/data-capability-validation=/g) ?? []).length, 2);
+  assert.equal((html.match(/data-capability-validation="invalid"/g) ?? []).length, 2);
+});
+
 test('unknown project detail returns a non-revealing 404', async () => {
   const load = setup();
   const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;

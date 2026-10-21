@@ -9,7 +9,7 @@ import { ProjectFavoriteForm } from '@/components/admin/project-favorite-form'
 import { ProjectToolGrid, projectWorkspaceLabels } from '@/components/admin/project-tool-grid'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
-import { getAdminProject, isAdminProjectFavorite } from '@/lib/data/projects'
+import { getAdminProject, getCapabilityActivationIssue, isAdminProjectFavorite } from '@/lib/data/projects'
 import { getLocale } from '@/lib/locale'
 import { projectTranslations } from '@/lib/i18n'
 import type { Json } from '@/lib/supabase/types'
@@ -27,6 +27,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const detail = await getAdminProject(id, locale)
   if (!detail) notFound()
   const { project, clients, client, audit, preview, warnings } = detail
+  const validationIssues = Object.fromEntries(project.capabilities.map(capability => [
+    capability.capability_key,
+    getCapabilityActivationIssue(project, capability),
+  ]))
   const isFavorite = await isAdminProjectFavorite(identity.userId, project.id)
   return <AdminShell title={project.name} description={project.domain} currentPath="/paneladmin/proyectos" userEmail={identity.email} locale={locale}>
     <div className="grid gap-6">
@@ -73,7 +77,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
         <summary className="cursor-pointer text-xl font-bold">{copy.edit}</summary>
         <div className="mt-6 grid gap-6">
           <ProjectForm key={project.updated_at} project={project} locale={locale} />
-          <ProjectCapabilitiesForm key={project.capabilities.map(capability => capability.updated_at).join()} project={project} capabilities={project.capabilities} locale={locale} />
+          <ProjectCapabilitiesForm key={project.capabilities.map(capability => capability.updated_at).join()} project={project} capabilities={project.capabilities} validationIssues={validationIssues} locale={locale} />
         </div>
       </details>
 

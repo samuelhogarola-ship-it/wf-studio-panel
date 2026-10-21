@@ -9,6 +9,10 @@ function setup(seed, extra, failures) {
 }
 const writes = db => db.calls.filter(call => call.operation !== 'select');
 const capabilityForm = values => form({ project_id: projectId, capability_key: 'blogger', state: 'active', launch_url: 'https://example.com/admin/', provisioning_confirmed: 'true', ...values });
+const configuredBlogger = {
+  '@/lib/sites/registry.mjs': { getSiteByKey: () => ({ key: 'example', domain: 'example.com', blogger: { enabled: true, runtime: 'central-multisite' } }) },
+  '@/lib/blogger/editor.mjs': { getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' }) },
+};
 
 // Pause one remote UPDATE before evaluating its predicates against shared rows.
 // Both competing requests execute the real server actions on the same database.
@@ -139,7 +143,7 @@ test('Blogger activation needs an editor destination and explicit provisioning c
     assert.ok((await s.actions().upsertProjectCapabilityAction({}, capabilityForm(values))).error);
     assert.equal(writes(s.db).length, 0);
   }
-  const s = setup();
+  const s = setup({}, configuredBlogger);
   assert.ok((await s.actions().upsertProjectCapabilityAction({}, capabilityForm({ metadata: '{"secret":"ignored"}', validated_at: 'forged' }))).success);
   const saved = writes(s.db)[0].payload;
   assert.equal(saved.metadata.provisioning_confirmed, true);
@@ -159,6 +163,86 @@ test('analytics activation requires matching registry domain, website ID and con
     const s = setup({ client_projects: [{ ...project, analytics_registry_key: 'example' }] }, { '@/lib/analytics/umami-core.mjs': { ...analytics, ...overrides } });
     const result = await s.actions().upsertProjectCapabilityAction({}, capabilityForm({ capability_key: 'analytics', launch_url: '' }));
     assert.equal(Boolean(result.success), Object.keys(overrides).length === 0);
+  }
+});
+
+test('analytics activation failure is attributable and leaves every capability row untouched', async () => {
+  const secondProjectId = '77777777-7777-4777-8777-777777777777';
+  const rows = [
+    { ...capability, capability_key: 'analytics' },
+    { ...capability, id: 'blogger-target', capability_key: 'blogger' },
+    { ...capability, id: 'foreign-analytics', project_id: secondProjectId, capability_key: 'analytics' },
+  ];
+  const s = setup({ project_capabilities: rows });
+  const before = structuredClone(s.db.tables.project_capabilities);
+
+  const result = await s.actions().upsertProjectCapabilityAction({}, capabilityForm({ capability_key: 'analytics', launch_url: '' }));
+
+  assert.match(result.error, /anal[ií]tica/i);
+  assert.deepEqual(s.db.tables.project_capabilities, before);
+  assert.equal(writes(s.db).length, 0);
+});
+
+test('Blogger activation requires the exact project registry binding and a usable runtime', async () => {
+  const validSite = { key: 'example', domain: 'example.com', blogger: { enabled: true, runtime: 'central-multisite', url: 'https://admin.webfuengirola.com/paneladmin/blogger/example' } };
+  const cases = [
+    { site: null, target: null },
+    { site: { ...validSite, key: 'foreign' }, target: { kind: 'iframe', href: '/blogger/editor/index.html?siteKey=foreign' } },
+    { site: { ...validSite, domain: 'foreign.com' }, target: { kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' } },
+    { site: { ...validSite, blogger: { ...validSite.blogger, runtime: 'unknown' } }, target: null },
+  ];
+
+  for (const { site, target } of cases) {
+    const s = setup({}, {
+      '@/lib/sites/registry.mjs': {
+        getSiteByKey: key => {
+          if (!site || site.key !== key) throw new Error('unknown site');
+          return site;
+        },
+      },
+      '@/lib/blogger/editor.mjs': { getBloggerEditorTarget: () => target },
+    });
+    const before = structuredClone(s.db.tables.project_capabilities);
+
+    const result = await s.actions().upsertProjectCapabilityAction({}, capabilityForm({ launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example' }));
+
+    assert.match(result.error, /Blogger/);
+    assert.deepEqual(s.db.tables.project_capabilities, before);
+    assert.equal(writes(s.db).length, 0);
+  }
+});
+
+test('valid analytics and Blogger activation mutate only the selected project capability row', async () => {
+  const secondProjectId = '77777777-7777-4777-8777-777777777777';
+  const analytics = { getConfiguredUmamiSites: () => [{ key: 'example', domain: 'example.com', websiteId: 'website-id', source: 'personal' }], getUmamiConnections: () => ({ personal: { baseUrl: 'https://stats.example.net', password: 'server-secret' } }) };
+  const blogger = {
+    '@/lib/sites/registry.mjs': { getSiteByKey: () => ({ key: 'example', domain: 'example.com', blogger: { enabled: true, runtime: 'central-multisite' } }) },
+    '@/lib/blogger/editor.mjs': { getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' }) },
+  };
+
+  for (const capabilityKey of ['analytics', 'blogger']) {
+    const target = { ...capability, id: `target-${capabilityKey}`, capability_key: capabilityKey };
+    const rows = [
+      target,
+      { ...capability, id: 'same-project-other', capability_key: capabilityKey === 'analytics' ? 'blogger' : 'analytics', metadata: { preserve: true } },
+      { ...capability, id: 'foreign-same-key', project_id: secondProjectId, capability_key: capabilityKey, metadata: { preserve: 'foreign' } },
+    ];
+    const s = setup(
+      { client_projects: [{ ...project, analytics_registry_key: 'example' }], project_capabilities: rows },
+      { '@/lib/analytics/umami-core.mjs': analytics, ...blogger },
+    );
+    const untouchedBefore = structuredClone(rows.slice(1));
+    const result = await s.actions().upsertProjectCapabilityAction({}, capabilityForm({
+      capability_key: capabilityKey,
+      launch_url: capabilityKey === 'blogger' ? 'https://admin.webfuengirola.com/paneladmin/blogger/example' : '',
+    }));
+
+    assert.equal(result.error, undefined);
+    assert.equal(s.db.tables.project_capabilities.find(row => row.id === target.id).state, 'active');
+    assert.deepEqual(s.db.tables.project_capabilities.filter(row => row.id !== target.id), untouchedBefore);
+    assert.deepEqual(writes(s.db).map(call => [call.table, call.payload.project_id, call.payload.capability_key]), [
+      ['project_capabilities', projectId, capabilityKey],
+    ]);
   }
 });
 
@@ -264,7 +348,7 @@ test('no-op updates and database write errors do not produce success', async () 
 
 test('capability changes preserve existing display metadata and ignore arbitrary form metadata', async () => {
   for (const key of ['blogger', 'invoices']) {
-    const s = setup({ project_capabilities: [{ ...capability, capability_key: key, metadata: { display_label: 'Existing label' } }] });
+    const s = setup({ project_capabilities: [{ ...capability, capability_key: key, metadata: { display_label: 'Existing label' } }] }, key === 'blogger' ? configuredBlogger : {});
     assert.ok((await s.actions().upsertProjectCapabilityAction({}, capabilityForm({ capability_key: key, metadata: '{"display_label":"forged"}' }))).success);
     assert.equal(s.db.tables.project_capabilities[0].metadata.display_label, 'Existing label');
   }
