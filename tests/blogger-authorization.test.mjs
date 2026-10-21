@@ -5,7 +5,7 @@ import { loadProjectModule, database, client, project, capability } from './help
 
 const siteKey = 'samuelcoachdealeman'
 const identity = { userId: 'client-user', email: client.email, role: 'client' }
-const site = { root: '/tmp/site', site: { key: siteKey, blogger: { enabled: true } } }
+const site = { root: '/tmp/site', site: { key: siteKey, domain: project.domain, blogger: { enabled: true } } }
 
 function authorize(seed, currentIdentity = identity) {
   const db = database(seed)
@@ -40,6 +40,26 @@ test('stale legacy Blogger membership cannot grant access without an assigned pr
   await assert.rejects(() => authorize({ ...activeSeed, client_projects: [], blogger_site_memberships: [{ user_id: identity.userId, site_key: siteKey }] }), error => error?.status === 403)
 })
 
-test('administrators retain Blogger access without a client assignment', async () => {
-  assert.equal((await authorize({}, { ...identity, role: 'admin' })).site.key, siteKey)
+test('Blogger authorization binds the requested registry site to the exact project domain', async () => {
+  await assert.rejects(
+    () => authorize({
+      ...activeSeed,
+      client_projects: [{ ...project, slug: siteKey, domain: 'another-site.example' }],
+    }),
+    error => error?.status === 403,
+  )
+})
+
+test('administrators retain Blogger access without a client assignment but still require the exact active capability', async () => {
+  const admin = { ...identity, role: 'admin' }
+  const unassignedProject = { ...project, slug: siteKey, client_id: null }
+
+  assert.equal((await authorize({
+    client_projects: [unassignedProject],
+    project_capabilities: [{ ...capability, state: 'active' }],
+  }, admin)).site.key, siteKey)
+  await assert.rejects(
+    () => authorize({ client_projects: [unassignedProject], project_capabilities: [] }, admin),
+    error => error?.status === 403,
+  )
 })
