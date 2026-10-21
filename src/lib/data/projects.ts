@@ -56,8 +56,10 @@ export function getCapabilityConfigurationIssue(project: Project, capability: Pi
   return null
 }
 
-export function getCapabilityActivationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'validated_at'>): ProjectWarning | null {
-  if (capability.capability_key === 'blogger' && !hasProjectBlogger(project)) return 'blogger'
+export function getCapabilityActivationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'metadata' | 'validated_at'>): ProjectWarning | null {
+  const metadata = capability.metadata
+  const provisioningConfirmed = metadata && typeof metadata === 'object' && !Array.isArray(metadata) && metadata.provisioning_confirmed === true
+  if (capability.capability_key === 'blogger' && (!hasProjectBlogger(project) || !provisioningConfirmed)) return 'blogger'
   return getCapabilityConfigurationIssue(project, capability)
 }
 

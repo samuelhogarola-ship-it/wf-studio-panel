@@ -5,8 +5,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { loadProjectModule, database, boundary, project, capability, client, projectId } from './helpers/project-harness.mjs';
 
 const render = element => renderToStaticMarkup(element);
-function setup(seed = {}) {
-  const b = boundary(database(seed));
+function setup(seed = {}, extra = {}) {
+  const b = boundary(database(seed), extra);
   return relative => loadProjectModule(relative, b.mocks);
 }
 
@@ -21,6 +21,17 @@ const configuredAnalytics = {
     getUmamiConnections: () => ({
       personal: { baseUrl: 'https://stats.example.test', password: 'runtime-secret' },
     }),
+  },
+};
+
+const configuredBlogger = {
+  '@/lib/locale': { getLocale: async () => 'en' },
+  '@/lib/sites/registry.mjs': {
+    getSites: () => [{ key: 'example', name: 'Example', domain: 'example.com' }],
+    getSiteByKey: () => ({ key: 'example', name: 'Example', domain: 'example.com', blogger: { enabled: true, runtime: 'central-multisite' } }),
+  },
+  '@/lib/blogger/editor.mjs': {
+    getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' }),
   },
 };
 
@@ -265,18 +276,36 @@ test('capability controls show their own configuration validation result', () =>
   assert.match(analytics, /Configuration ready/);
 });
 
-test('project detail supplies server-derived validation to every capability control', async () => {
-  const load = setup({
-    project_capabilities: [
-      { ...capability, capability_key: 'blogger' },
-      { ...capability, id: 'analytics', capability_key: 'analytics' },
-    ],
-  });
+test('project detail supplies default-row validation to all seven controls when capability rows are absent', async () => {
+  const load = setup({ project_capabilities: [] });
   const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;
   const html = render(await Page({ params: Promise.resolve({ id: projectId }) }));
+  const blogger = html.slice(html.indexOf('data-capability="blogger"'), html.indexOf('data-capability="analytics"'));
+  const analytics = html.slice(html.indexOf('data-capability="analytics"'));
 
-  assert.equal((html.match(/data-capability-validation=/g) ?? []).length, 2);
+  assert.equal((html.match(/data-capability-validation=/g) ?? []).length, 7);
   assert.equal((html.match(/data-capability-validation="invalid"/g) ?? []).length, 2);
+  assert.match(blogger, /data-capability-validation="invalid"/);
+  assert.match(analytics, /data-capability-validation="invalid"/);
+});
+
+test('project detail does not show Blogger ready when saved provisioning confirmation is absent', async () => {
+  const load = setup({
+    project_capabilities: [{
+      ...capability,
+      state: 'active',
+      launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+      validated_at: project.created_at,
+      metadata: {},
+    }],
+  }, configuredBlogger);
+  const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;
+  const html = render(await Page({ params: Promise.resolve({ id: projectId }) }));
+  const blogger = html.slice(html.indexOf('data-capability="blogger"'), html.indexOf('data-capability="analytics"'));
+
+  assert.match(blogger, /data-capability-validation="invalid"/);
+  assert.match(blogger, /Blogger: missing destination, validation or provisioning confirmation/);
+  assert.doesNotMatch(blogger, /Configuration ready/);
 });
 
 test('unknown project detail returns a non-revealing 404', async () => {

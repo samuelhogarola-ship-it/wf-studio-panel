@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { validateProjectDestination } from '@/lib/projects/model.mjs'
-import { getCapabilityConfigurationIssue, hasProjectAnalytics, hasProjectBlogger } from '@/lib/data/projects'
+import { getCapabilityActivationIssue, getCapabilityConfigurationIssue, hasProjectAnalytics } from '@/lib/data/projects'
 import type { Project, ProjectClient } from '@/lib/data/projects'
 import type { TablesUpdate } from '@/lib/supabase/types'
 
@@ -131,8 +131,7 @@ export async function upsertProjectCapabilityAction(_previous: ProjectFormState,
   if (payload.state === 'active' && payload.capability_key === 'analytics' && !hasProjectAnalytics(project)) {
     return failure('No se puede activar Analítica: revisa la clave del registro, el dominio, el website ID y la conexión Umami.')
   }
-  if (payload.state === 'active' && payload.capability_key === 'blogger' &&
-    (!provisioningConfirmed || !hasProjectBlogger(project) || getCapabilityConfigurationIssue(project, payload))) {
+  if (payload.state === 'active' && payload.capability_key === 'blogger' && getCapabilityActivationIssue(project, payload)) {
     return failure('No se puede activar Blogger: revisa el proyecto registrado, el runtime, el destino y la confirmación del aprovisionamiento.')
   }
   if (payload.state === 'active' && getCapabilityConfigurationIssue(project, payload)) {

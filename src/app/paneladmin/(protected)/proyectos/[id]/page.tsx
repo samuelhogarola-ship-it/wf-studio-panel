@@ -9,7 +9,7 @@ import { ProjectFavoriteForm } from '@/components/admin/project-favorite-form'
 import { ProjectToolGrid, projectWorkspaceLabels } from '@/components/admin/project-tool-grid'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
-import { getAdminProject, getCapabilityActivationIssue, isAdminProjectFavorite } from '@/lib/data/projects'
+import { capabilityKeys, getAdminProject, getCapabilityActivationIssue, isAdminProjectFavorite } from '@/lib/data/projects'
 import { getLocale } from '@/lib/locale'
 import { projectTranslations } from '@/lib/i18n'
 import type { Json } from '@/lib/supabase/types'
@@ -27,10 +27,12 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const detail = await getAdminProject(id, locale)
   if (!detail) notFound()
   const { project, clients, client, audit, preview, warnings } = detail
-  const validationIssues = Object.fromEntries(project.capabilities.map(capability => [
-    capability.capability_key,
-    getCapabilityActivationIssue(project, capability),
-  ]))
+  const validationIssues = Object.fromEntries(capabilityKeys.map(capabilityKey => {
+    const capability = project.capabilities.find(item => item.capability_key === capabilityKey) ?? {
+      capability_key: capabilityKey, launch_url: null, metadata: {}, validated_at: null,
+    }
+    return [capabilityKey, getCapabilityActivationIssue(project, capability)]
+  }))
   const isFavorite = await isAdminProjectFavorite(identity.userId, project.id)
   return <AdminShell title={project.name} description={project.domain} currentPath="/paneladmin/proyectos" userEmail={identity.email} locale={locale}>
     <div className="grid gap-6">
