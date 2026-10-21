@@ -115,9 +115,17 @@ test('analytics tool links to the exact project route only when active and corre
   const availableHtml = render(React.createElement(ConfiguredGrid, {
     project: { ...analyticsProject, capabilities: [{ ...analyticsCapability, state: 'available' }] },
   }));
+  const archivedHtml = render(React.createElement(ConfiguredGrid, {
+    project: { ...analyticsProject, status: 'archived', capabilities: [{ ...analyticsCapability, state: 'active' }] },
+  }));
+  const archivedAnalyticsStart = archivedHtml.lastIndexOf('<article', archivedHtml.indexOf('data-project-tool="analytics"'));
+  const archivedAnalyticsCard = archivedHtml.slice(archivedAnalyticsStart, archivedHtml.indexOf('</article>', archivedAnalyticsStart));
 
   assert.match(activeHtml, new RegExp(`data-project-tool="analytics"[\\s\\S]*href="/paneladmin/proyectos/${projectId}/estadisticas"`));
   assert.doesNotMatch(availableHtml, /href="[^"]*\/estadisticas"/);
+  assert.match(archivedAnalyticsCard, /data-tool-state="unavailable"/);
+  assert.match(archivedAnalyticsCard, /<button[^>]*disabled/);
+  assert.doesNotMatch(archivedAnalyticsCard, /href="[^"]*\/estadisticas"/);
 
   const misconfiguredBoundary = boundary(database(), {
     '@/lib/analytics/umami-core.mjs': {

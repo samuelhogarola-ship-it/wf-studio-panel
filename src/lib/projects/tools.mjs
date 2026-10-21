@@ -56,9 +56,11 @@ function resolveTool(definition, project, viewer, configurationIssues) {
   }
 
   const capability = (project.capabilities ?? []).find(item => item.capability_key === definition.capability);
-  const capabilityState = ['active', 'available', 'unavailable'].includes(capability?.state)
-    ? capability.state
-    : 'unavailable';
+  const capabilityState = definition.id === 'analytics' && viewer === 'admin' && project.status !== 'active'
+    ? 'unavailable'
+    : ['active', 'available', 'unavailable'].includes(capability?.state)
+      ? capability.state
+      : 'unavailable';
   let warning = configurationIssues[definition.capability];
   if (definition.id === 'blogger' && capabilityState === 'active' &&
       (!capability.validated_at || !validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug))) {
