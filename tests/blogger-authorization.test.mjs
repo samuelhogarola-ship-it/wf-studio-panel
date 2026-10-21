@@ -63,3 +63,21 @@ test('administrators retain Blogger access without a client assignment but still
     error => error?.status === 403,
   )
 })
+
+test('Blogger authorization never trusts a caller-supplied identity over the authenticated session', async () => {
+  const db = database({
+    client_projects: [{ ...project, slug: siteKey, client_id: null }],
+    project_capabilities: [{ ...capability, state: 'active' }],
+  })
+  const module = loadProjectModule('src/lib/blogger/authorize.ts', {
+    '@/lib/auth': { getOptionalIdentity: async () => null },
+    '@/lib/blogger/sites.mjs': { getBloggerSite: () => site },
+    '@/lib/supabase/admin': { getSupabaseAdminClient: () => db },
+  })
+
+  await assert.rejects(
+    () => module.authorizeBloggerSite(siteKey, { ...identity, role: 'admin' }),
+    error => error?.status === 401,
+  )
+  assert.deepEqual(db.calls, [])
+})

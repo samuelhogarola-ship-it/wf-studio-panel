@@ -2,20 +2,14 @@ import { getOptionalIdentity } from '@/lib/auth'
 import { getBloggerSite } from '@/lib/blogger/sites.mjs'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 
-type BloggerIdentity = {
-  userId: string
-  email: string
-  role: string
-}
-
 const canonicalDomain = (domain: string) => domain.toLowerCase().replace(/^www\./, '')
 
 function denied() {
   return Object.assign(new Error('No tienes acceso a este Blogger.'), { status: 403 })
 }
 
-export async function authorizeBloggerSite(siteKey: string, knownIdentity?: BloggerIdentity | null) {
-  const identity = knownIdentity === undefined ? await getOptionalIdentity() : knownIdentity
+export async function authorizeBloggerSite(siteKey: string) {
+  const identity = await getOptionalIdentity()
   if (!identity) throw Object.assign(new Error('Inicia sesión para usar Blogger.'), { status: 401 })
   const site = getBloggerSite(siteKey)
   if (!['client', 'admin'].includes(identity.role)) throw denied()

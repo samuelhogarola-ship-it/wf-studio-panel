@@ -18,7 +18,7 @@ export default async function DirectBloggerPage({ params }: { params: Promise<{ 
 
   let authorization
   try {
-    authorization = await authorizeBloggerSite(siteKey, identity)
+    authorization = await authorizeBloggerSite(siteKey)
   } catch {
     notFound()
   }
