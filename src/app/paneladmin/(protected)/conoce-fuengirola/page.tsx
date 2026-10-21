@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 
 import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
-import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { AuthorizedAdminAnalyticsPanel } from '@/components/admin/authorized-admin-analytics-panel'
 import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { AdminShell } from '@/components/layout/app-shell'
 import { requireAdmin } from '@/lib/auth'
@@ -29,7 +29,7 @@ export default async function Page() {
       <Suspense fallback={<AnalyticsSkeleton />}>
         <PanelAnalyticsSection panelKey="conoce" />
       </Suspense>
-      <AdvancedProjectAnalyticsPanel projectKey="conocef" projectLabel="Conoce Fuengirola" domain="conocefuengirola.com" />
+      <AuthorizedAdminAnalyticsPanel registryKey="conocef" projectLabel="Conoce Fuengirola" domain="conocefuengirola.com" />
     </AdminShell>
   )
 }

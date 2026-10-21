@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 
 import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
-import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { AuthorizedAdminAnalyticsPanel } from '@/components/admin/authorized-admin-analytics-panel'
 import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { updateTodoPlasticoCompanyAction, updateTodoPlasticoListingAction } from '@/lib/actions/todoplastico'
 import { requireAdmin } from '@/lib/auth'
@@ -75,7 +75,7 @@ export default async function TodoPlasticoPage({ searchParams }: { searchParams:
       <Suspense fallback={<AnalyticsSkeleton />}>
         <PanelAnalyticsSection panelKey="todoplastico" />
       </Suspense>
-      <AdvancedProjectAnalyticsPanel projectKey="agama" projectLabel="TodoPlástico" domain="todo-plastico.com" />
+      <AuthorizedAdminAnalyticsPanel registryKey="todoplastico" projectLabel="TodoPlástico" domain="todo-plastico.com" />
 
       {error ? (
         <Card className="border-amber-200 bg-amber-50 p-5">

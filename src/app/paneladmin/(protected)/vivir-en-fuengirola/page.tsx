@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 
 import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
-import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { AuthorizedAdminAnalyticsPanel } from '@/components/admin/authorized-admin-analytics-panel'
 import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { AdminShell } from '@/components/layout/app-shell'
 import { requireAdmin } from '@/lib/auth'
@@ -30,7 +30,7 @@ export default async function Page() {
       <Suspense fallback={<AnalyticsSkeleton />}>
         <PanelAnalyticsSection panelKey="vivir" />
       </Suspense>
-      <AdvancedProjectAnalyticsPanel projectKey="vivirenfuengirola" projectLabel="Vivir en Fuengirola" domain="vivirenfuengirola.com" />
+      <AuthorizedAdminAnalyticsPanel registryKey="vivirenfuengirola" projectLabel="Vivir en Fuengirola" domain="vivirenfuengirola.com" />
     </AdminShell>
   )
 }

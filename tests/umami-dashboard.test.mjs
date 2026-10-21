@@ -308,11 +308,17 @@ test('analytics project registry covers every WF Panel project and explains miss
   assert.equal(configured.websiteId, 'super-id')
   assert.equal(configured.websiteIdEnv, 'UMAMI_WEBSITE_ID_SUPERENTRENADOR')
 
-  const missing = getAnalyticsProject('agama', {})
-  assert.equal(missing.websiteId, undefined)
-  assert.equal(missing.websiteIdEnv, 'UMAMI_WEBSITE_ID_TODOPLASTICO')
-  assert.equal(missing.label, 'TodoPlástico')
-  assert.equal(missing.domain, 'todo-plastico.com')
+  const agama = getAnalyticsProject('agama', {})
+  assert.equal(agama.websiteId, undefined)
+  assert.equal(agama.websiteIdEnv, 'UMAMI_WEBSITE_ID_AGAMA')
+  assert.equal(agama.label, 'aGama')
+  assert.equal(agama.domain, 'agama.com.mx')
+
+  const todoPlastico = getAnalyticsProject('todoplastico', {})
+  assert.equal(todoPlastico.websiteId, undefined)
+  assert.equal(todoPlastico.websiteIdEnv, 'UMAMI_WEBSITE_ID_TODOPLASTICO')
+  assert.equal(todoPlastico.label, 'TodoPlástico')
+  assert.equal(todoPlastico.domain, 'todo-plastico.com')
 })
 
 test('dashboard resolves website id and returns all supported Umami dimensions', async () => {
@@ -402,7 +408,7 @@ test('dashboard keeps working when optional metrics are unsupported', async () =
   }
 
   const dashboard = await fetchUmamiDashboard({
-    projectKey: 'agama',
+    projectKey: 'todoplastico',
     period: '12m',
     env: {
       UMAMI_AGAMA_URL: 'https://agama-analytics.example.com',
@@ -475,7 +481,7 @@ test('event summary falls back to the v2 event metric without counting pageviews
   }
 
   const dashboard = await fetchUmamiDashboard({
-    projectKey: 'agama',
+    projectKey: 'todoplastico',
     period: 'live',
     summaryOnly: true,
     env: {

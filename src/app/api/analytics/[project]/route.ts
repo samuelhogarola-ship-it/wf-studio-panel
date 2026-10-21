@@ -34,7 +34,10 @@ export async function GET(
       : await resolveClientAnalyticsTarget(project)
 
     const dashboard = await fetchUmamiDashboard({ projectKey: target.registryKey, period, summaryOnly })
-    return NextResponse.json(identity.role === 'client' ? toClientAnalyticsPayload(dashboard) : dashboard, {
+    const payload = identity.role === 'client' || dashboard.status === 'ok'
+      ? toClientAnalyticsPayload(dashboard)
+      : dashboard
+    return NextResponse.json(payload, {
       headers: { 'Cache-Control': 'private, no-store, max-age=0' },
     })
   } catch (error) {

@@ -3,6 +3,7 @@ import 'server-only'
 import {
   getAccessibleClientProject,
   getAdminProject,
+  getAdminProjects,
   hasProjectAnalytics,
   type ProjectWithCapabilities,
 } from '@/lib/data/projects'
@@ -42,6 +43,13 @@ function resolveTarget(project: ProjectWithCapabilities | null, identifier: stri
 export async function resolveAdminAnalyticsTarget(projectId: string): Promise<AnalyticsTarget> {
   const detail = await getAdminProject(projectId)
   return resolveTarget(detail?.project ?? null, projectId)
+}
+
+/** Server-rendered legacy panels may resolve their fixed canonical registry key to a database ID. */
+export async function resolveAdminAnalyticsTargetForRegistryKey(registryKey: string): Promise<AnalyticsTarget> {
+  const { projects } = await getAdminProjects()
+  const matches = projects.filter(project => project.analytics_registry_key === registryKey)
+  return resolveTarget(matches.length === 1 ? matches[0] : null, registryKey)
 }
 
 export async function resolveClientAnalyticsTarget(projectSlug: string): Promise<AnalyticsTarget> {

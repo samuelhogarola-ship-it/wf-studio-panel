@@ -2,7 +2,7 @@ import Image from 'next/image'
 import { Suspense } from 'react'
 
 import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
-import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { AuthorizedAdminAnalyticsPanel } from '@/components/admin/authorized-admin-analytics-panel'
 import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
@@ -63,7 +63,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ q
       <Suspense fallback={<AnalyticsSkeleton />}>
         <PanelAnalyticsSection panelKey="superentrenador" />
       </Suspense>
-      <AdvancedProjectAnalyticsPanel projectKey="superentrenador" projectLabel="Superentrenador" domain="superentrenador.com" />
+      <AuthorizedAdminAnalyticsPanel registryKey="superentrenador" projectLabel="Superentrenador" domain="superentrenador.com" />
 
       <form className="mb-6">
         <input

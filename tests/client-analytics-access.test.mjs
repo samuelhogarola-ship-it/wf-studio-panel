@@ -171,6 +171,35 @@ test('administrator analytics requests resolve the exact project registry key', 
   assert.deepEqual(s.analyticsCalls.map(call => call.projectKey), ['webfuengirola'])
 })
 
+test('administrator browser requests cannot use a registry key as a project id', async () => {
+  const s = setup({ role: 'admin' })
+  const { response, payload } = await s.request('webfuengirola')
+
+  assert.equal(response.status, 404)
+  assert.deepEqual(payload, {
+    status: 'error',
+    message: 'Proyecto de estadísticas desconocido: webfuengirola',
+  })
+  assert.deepEqual(s.analyticsCalls, [])
+})
+
+test('administrator successful analytics responses omit operational configuration fields', async () => {
+  const s = setup({ role: 'admin' })
+  const { response, payload } = await s.request(configuredProject.id)
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(payload, {
+    status: 'ok',
+    range: analyticsResult().range,
+    generatedAt: '2026-10-17T12:00:00.000Z',
+    activeVisitors: 1,
+    summary: {},
+    series: { pageviews: [], visitors: [] },
+    metrics: {},
+  })
+  assert.doesNotMatch(JSON.stringify(payload), /webfuengirola|private-website-id|UMAMI_|server-secret/i)
+})
+
 test('administrator requests reject unknown project ids before analytics access', async () => {
   const s = setup({ role: 'admin', useRealDashboard: true })
   const missingProjectId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'

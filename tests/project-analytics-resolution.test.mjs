@@ -33,11 +33,13 @@ const configuredSite = {
 function setup({
   projectRow = configuredProject,
   capabilityRow = activeAnalytics,
+  projectRows,
+  capabilityRows,
   sites = [configuredSite],
 } = {}) {
   const db = database({
-    client_projects: [projectRow],
-    project_capabilities: [capabilityRow],
+    client_projects: projectRows ?? [projectRow],
+    project_capabilities: capabilityRows ?? [capabilityRow],
   })
   const accessEvents = []
   const analytics = loadProjectModule(resolverPath, {
@@ -63,6 +65,7 @@ function setup({
       getConfiguredUmamiSites: () => sites,
       getUmamiConnections: () => ({
         personal: { baseUrl: 'https://stats.example.test', password: 'runtime-secret' },
+        agama: { baseUrl: 'https://agama-stats.example.test', password: 'runtime-secret' },
       }),
     },
   })
@@ -128,4 +131,43 @@ test('client cannot resolve another client project by guessing its slug', async 
   const s = setup({ projectRow: { ...configuredProject, client_id: otherClientId } })
 
   await assert.rejects(() => s.analytics.resolveClientAnalyticsTarget('my-site'), unavailable)
+})
+
+test('all existing administrator panels resolve canonical registry keys to project ids', async () => {
+  const callers = [
+    { id: '00000001-1111-4111-8111-111111111111', key: 'webfuengirola', domain: 'webfuengirola.com' },
+    { id: '00000002-1111-4111-8111-111111111111', key: 'vivirenfuengirola', domain: 'vivirenfuengirola.com' },
+    { id: '00000003-1111-4111-8111-111111111111', key: 'conocef', domain: 'conocefuengirola.com' },
+    { id: '00000004-1111-4111-8111-111111111111', key: 'samuelcoachdealeman', domain: 'samuelcoachdealeman.com' },
+    { id: '00000005-1111-4111-8111-111111111111', key: 'vokabellab', domain: 'vokabellab.com' },
+    { id: '00000006-1111-4111-8111-111111111111', key: 'superentrenador', domain: 'superentrenador.com' },
+    { id: '00000007-1111-4111-8111-111111111111', key: 'todoplastico', domain: 'todo-plastico.com', source: 'agama' },
+  ]
+  const projectRows = callers.map(({ id, key, domain }) => ({
+    ...configuredProject,
+    id,
+    slug: key,
+    domain,
+    analytics_registry_key: key,
+  }))
+  const capabilityRows = callers.map(({ id }, index) => ({
+    ...activeAnalytics,
+    id: `analytics-${index + 1}`,
+    project_id: id,
+  }))
+  const sites = callers.map(({ key, domain, source = 'personal' }) => ({
+    key,
+    domain,
+    source,
+    websiteId: `${key}-runtime-id`,
+  }))
+  const s = setup({ projectRows, capabilityRows, sites })
+
+  for (const { id, key } of callers) {
+    assert.deepEqual(await s.analytics.resolveAdminAnalyticsTargetForRegistryKey(key), {
+      projectId: id,
+      projectSlug: key,
+      registryKey: key,
+    })
+  }
 })

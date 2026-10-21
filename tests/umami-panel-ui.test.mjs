@@ -138,15 +138,15 @@ test("shared analytics UI is accessible and keeps credentials server-only", asyn
   assert.doesNotMatch(clientSource, /PASSWORD|USERNAME|getUmamiConnections/);
 });
 
-test("all seven operational panels render their matching analytics section", async () => {
+test("all seven operational panels resolve canonical projects before rendering advanced analytics", async () => {
   const routes = [
     ["dashboard/page.tsx", "wf-studio", "webfuengirola"],
     ["vivir-en-fuengirola/page.tsx", "vivir", "vivirenfuengirola"],
     ["conoce-fuengirola/page.tsx", "conoce", "conocef"],
     ["samuel-coach/page.tsx", "samuel-coach", "samuelcoachdealeman"],
-    ["vokabel-world/page.tsx", "vokabel-world", "vokabelworld"],
+    ["vokabel-world/page.tsx", "vokabel-world", "vokabellab"],
     ["superentrenador/pt/page.tsx", "superentrenador", "superentrenador"],
-    ["todoplastico/page.tsx", "todoplastico", "agama"],
+    ["todoplastico/page.tsx", "todoplastico", "todoplastico"],
   ];
 
   for (const [route, panelKey, advancedProjectKey] of routes) {
@@ -157,8 +157,8 @@ test("all seven operational panels render their matching analytics section", asy
     assert.match(source, /PanelAnalyticsSection/, route);
     assert.match(source, new RegExp(`panelKey=["']${panelKey}["']`), route);
     assert.match(source, /Suspense/, route);
-    assert.match(source, /AdvancedProjectAnalyticsPanel/, route);
-    assert.match(source, new RegExp(`projectKey=["']${advancedProjectKey}["']`), route);
+    assert.match(source, /AuthorizedAdminAnalyticsPanel/, route);
+    assert.match(source, new RegExp(`registryKey=["']${advancedProjectKey}["']`), route);
   }
 });
 

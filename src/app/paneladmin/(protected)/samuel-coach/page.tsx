@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Suspense } from 'react'
 
 import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
-import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { AuthorizedAdminAnalyticsPanel } from '@/components/admin/authorized-admin-analytics-panel'
 import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
@@ -53,7 +53,7 @@ export default async function SamuelCoachAdminPage() {
       <Suspense fallback={<AnalyticsSkeleton />}>
         <PanelAnalyticsSection panelKey="samuel-coach" />
       </Suspense>
-      <AdvancedProjectAnalyticsPanel projectKey="samuelcoachdealeman" projectLabel="Samuel Coach de Alemán" domain="samuelcoachdealeman.com" />
+      <AuthorizedAdminAnalyticsPanel registryKey="samuelcoachdealeman" projectLabel="Samuel Coach de Alemán" domain="samuelcoachdealeman.com" />
 
       <section className="mb-8 grid gap-4">
         <a
