@@ -1,4 +1,6 @@
 const DEFAULT_ALLOWED_PREFIXES = ["/cliente", "/paneladmin"];
+const CLIENT_DESTINATION_FALLBACK = "/cliente/dashboard";
+const BLOGGER_SITE_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export function sanitizeInternalRedirect(next, options = {}) {
   const fallback = options.fallback ?? "/cliente/dashboard";
@@ -28,6 +30,40 @@ export function sanitizeInternalRedirect(next, options = {}) {
     return path;
   } catch {
     return fallback;
+  }
+}
+
+export function sanitizeClientDestination(value) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\")
+  ) {
+    return CLIENT_DESTINATION_FALLBACK;
+  }
+
+  try {
+    const url = new URL(value, "https://wf.local");
+
+    if (url.origin !== "https://wf.local" || url.pathname.includes("%")) {
+      return CLIENT_DESTINATION_FALLBACK;
+    }
+
+    const isClientPortal =
+      url.pathname === "/cliente" || url.pathname.startsWith("/cliente/");
+    const directBloggerMatch = url.pathname.match(/^\/acceso\/blogger\/([^/]+)$/);
+    const isDirectBlogger =
+      directBloggerMatch !== null && BLOGGER_SITE_SEGMENT.test(directBloggerMatch[1]);
+
+    if (!isClientPortal && !isDirectBlogger) {
+      return CLIENT_DESTINATION_FALLBACK;
+    }
+
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return CLIENT_DESTINATION_FALLBACK;
   }
 }
 

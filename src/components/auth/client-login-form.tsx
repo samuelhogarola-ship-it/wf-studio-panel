@@ -10,7 +10,7 @@ import { FormMessage } from '@/components/ui/form-message'
 
 const initialState: AuthFormState = {}
 
-export function ClientLoginForm({ locale }: { locale: Locale }) {
+export function ClientLoginForm({ locale, destination }: { locale: Locale; destination: string }) {
   const [tab, setTab] = useState<'magic' | 'password'>('magic')
   const [magicState, magicAction, magicPending] = useActionState(clientMagicLinkAction, initialState)
   const [passState, passAction, passPending] = useActionState(clientPasswordLoginAction, initialState)
@@ -59,6 +59,7 @@ export function ClientLoginForm({ locale }: { locale: Locale }) {
       {tab === 'magic' && (
         <form action={magicAction} className="grid gap-4" role="tabpanel" id="client-login-panel-magic" aria-labelledby="client-login-tab-magic">
           <input type="hidden" name="origin" defaultValue="" ref={(el) => { if (el) el.value = window.location.origin }} />
+          <input type="hidden" name="destination" value={destination} />
           <div className="grid gap-1.5">
             <label htmlFor="magic-email" className="text-sm text-white/80">
               {t(locale, 'clientLoginForm.magicEmail')}
@@ -84,6 +85,7 @@ export function ClientLoginForm({ locale }: { locale: Locale }) {
 
       {tab === 'password' && (
         <form action={passAction} className="grid gap-4" role="tabpanel" id="client-login-panel-password" aria-labelledby="client-login-tab-password">
+          <input type="hidden" name="destination" value={destination} />
           <div className="grid gap-1.5">
             <label htmlFor="pass-email" className="text-sm text-white/80">
               {t(locale, 'clientLoginForm.passEmail')}

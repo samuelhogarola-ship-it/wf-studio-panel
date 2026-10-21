@@ -9,6 +9,8 @@ declare module '@/lib/security/redirects.mjs' {
     },
   ): string
 
+  export function sanitizeClientDestination(value: unknown): string
+
   export function buildCanonicalAppUrl(appUrl: string, path?: string): URL
 
   export function resolveRequestOrigin(input: {
