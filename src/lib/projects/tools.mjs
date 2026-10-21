@@ -1,5 +1,8 @@
 import { validateBloggerProjectDestination, validateProjectDestination } from './model.mjs';
 
+const STUDIO_ORIGIN = 'https://admin.webfuengirola.com';
+const SITE_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 const definitions = Object.freeze([
   { id: 'website', label: 'Sitio web', audience: 'both' },
   { id: 'blogger', label: 'Blogger', audience: 'both', capability: 'blogger' },
@@ -27,6 +30,27 @@ function internalHref(id, project, viewer) {
   if (id === 'reports') return viewer === 'admin' ? '/paneladmin/informes' : '/cliente/informes';
   if (id === 'bonuses') return viewer === 'admin' ? '/paneladmin/bonos' : '/cliente/bonos';
   return null;
+}
+
+export function generatePublicBloggerEntry(siteKey) {
+  if (typeof siteKey !== 'string' || !SITE_KEY_PATTERN.test(siteKey)) {
+    throw new TypeError('Invalid Blogger site key');
+  }
+  const path = '/admin/blogger/';
+  const target = `${STUDIO_ORIGIN}/acceso/blogger/${siteKey}`;
+  const html = `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="refresh" content="0;url=${target}">
+    <title>Abriendo Blogger</title>
+  </head>
+  <body>
+    <p><a href="${target}" rel="noreferrer">Abrir Blogger</a></p>
+  </body>
+</html>`;
+  return Object.freeze({ path, target, html });
 }
 
 function resolveTool(definition, project, viewer, configurationIssues) {

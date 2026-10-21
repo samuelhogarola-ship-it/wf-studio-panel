@@ -7,6 +7,7 @@ import test from 'node:test';
 import { buildHookRequest, executeBuildHook } from '../src/lib/blogger/build-hook.mjs';
 import { canAccessBloggerSite } from '../src/lib/blogger/access.mjs';
 import { resolvePublicPostBase } from '../src/lib/blogger/sites.mjs';
+import * as projectTools from '../src/lib/projects/tools.mjs';
 import {
   deletePostImage,
   listPostImages,
@@ -18,6 +19,28 @@ import {
   savePostImage,
   validateExistingImageName,
 } from '../src/lib/blogger/content-store.mjs';
+
+test('generated public Blogger entry redirects only to the site-specific direct route', () => {
+  assert.equal(typeof projectTools.generatePublicBloggerEntry, 'function');
+
+  const entry = projectTools.generatePublicBloggerEntry('future-site');
+  const expected = 'https://admin.webfuengirola.com/acceso/blogger/future-site';
+
+  assert.equal(entry.target, expected);
+  assert.match(entry.html, new RegExp(`<meta[^>]+url=${expected}`));
+  assert.match(entry.html, new RegExp(`href="${expected}"`));
+  assert.doesNotMatch(entry.html, /\/cliente\/(?:dashboard|proyectos)(?:\/|["'?#<])/);
+});
+
+test('public Blogger entry generation rejects malformed site keys before rendering HTML', () => {
+  for (const siteKey of ['', 'Future-Site', '../admin', 'site/key', 'site?<script>']) {
+    assert.throws(
+      () => projectTools.generatePublicBloggerEntry(siteKey),
+      /site key/i,
+      siteKey,
+    );
+  }
+});
 
 test('existing image validation preserves the stored filename', () => {
   assert.equal(validateExistingImageName('Foto-Legacy.JPG'), 'Foto-Legacy.JPG');

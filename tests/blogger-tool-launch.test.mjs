@@ -10,6 +10,7 @@ import {
   loadProjectModule,
   project,
 } from './helpers/project-harness.mjs'
+import * as projectTools from '../src/lib/projects/tools.mjs'
 
 const migrationUrl = new URL(
   '../supabase/migrations/202610170004_tool_launch_tickets.sql',
@@ -19,6 +20,38 @@ const launchRoutePath = 'src/app/api/tools/blogger/[siteKey]/launch/route.ts'
 const exchangeRoutePath = 'src/app/api/tool-launch/exchange/route.ts'
 const protocol = 'wf-blogger-handoff/v1'
 const now = Date.parse('2026-10-17T12:00:00.000Z')
+
+test('generated website Blogger entries target the exact direct Studio route', () => {
+  assert.equal(typeof projectTools.generatePublicBloggerEntry, 'function')
+
+  const entry = projectTools.generatePublicBloggerEntry('first-site')
+
+  assert.equal(entry.path, '/admin/blogger/')
+  assert.equal(entry.target, 'https://admin.webfuengirola.com/acceso/blogger/first-site')
+  assert.doesNotMatch(entry.target, /\/cliente\/(?:dashboard|proyectos)(?:\/|$)/)
+})
+
+test('public Blogger entry generation does not replace administrator or client in-panel routes', () => {
+  const input = {
+    ...project,
+    slug: 'first-site',
+    status: 'active',
+    client_access_enabled: true,
+    capabilities: [{
+      ...capability,
+      capability_key: 'blogger',
+      state: 'active',
+      launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/first-site',
+      validated_at: project.created_at,
+    }],
+  }
+
+  const admin = projectTools.buildProjectTools({ project: input, viewer: 'admin' })
+  const clientTools = projectTools.buildProjectTools({ project: input, viewer: 'client' })
+
+  assert.equal(admin.find(tool => tool.id === 'blogger')?.href, '/paneladmin/blogger/first-site')
+  assert.equal(clientTools.find(tool => tool.id === 'blogger')?.href, '/cliente/proyectos/first-site/blogger')
+})
 
 const configuredSite = {
   schemaVersion: 1,
