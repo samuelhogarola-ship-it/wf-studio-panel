@@ -45,21 +45,22 @@ export function hasProjectBlogger(project: Project): boolean {
   }
 }
 
-export function getCapabilityConfigurationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'validated_at'>): ProjectWarning | null {
+export function getCapabilityConfigurationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'metadata' | 'validated_at'>): ProjectWarning | null {
   if (capability.launch_url && !(capability.capability_key === 'blogger'
     ? validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)
     : validateProjectDestination(capability.launch_url, project.domain, true))) return 'destination'
   if (capability.capability_key === 'hosting' && project.hosting_management_url &&
     !validateProjectDestination(project.hosting_management_url, project.domain, true)) return 'destination'
-  if (capability.capability_key === 'blogger' && (!capability.launch_url || !capability.validated_at)) return 'blogger'
+  if (capability.capability_key === 'blogger') {
+    const metadata = capability.metadata
+    const provisioningConfirmed = metadata && typeof metadata === 'object' && !Array.isArray(metadata) && metadata.provisioning_confirmed === true
+    if (!capability.launch_url || !capability.validated_at || !provisioningConfirmed || !hasProjectBlogger(project)) return 'blogger'
+  }
   if (capability.capability_key === 'analytics' && !hasProjectAnalytics(project)) return 'analytics'
   return null
 }
 
 export function getCapabilityActivationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'metadata' | 'validated_at'>): ProjectWarning | null {
-  const metadata = capability.metadata
-  const provisioningConfirmed = metadata && typeof metadata === 'object' && !Array.isArray(metadata) && metadata.provisioning_confirmed === true
-  if (capability.capability_key === 'blogger' && (!hasProjectBlogger(project) || !provisioningConfirmed)) return 'blogger'
   return getCapabilityConfigurationIssue(project, capability)
 }
 

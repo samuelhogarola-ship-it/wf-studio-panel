@@ -54,7 +54,7 @@ test('password login redirects to the sanitized client destination', async () =>
       password: 'secret-password',
       destination: '/acceso/blogger/sportmassagefuengirola',
     })),
-    { message: 'redirect:/acceso/blogger/sportmassagefuengirola' },
+    { message: 'redirect:https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola' },
   );
   assert.deepEqual(passwordCalls, [{ email: client.email, password: 'secret-password' }]);
 });
@@ -68,7 +68,7 @@ test('password login falls back to the dashboard for an administrator destinatio
       password: 'secret-password',
       destination: '/paneladmin/inicio',
     })),
-    { message: 'redirect:/cliente/dashboard' },
+    { message: 'redirect:https://portal.webfuengirola.com/cliente/dashboard' },
   );
 });
 
@@ -91,6 +91,21 @@ test('magic-link login carries the sanitized destination through the callback', 
   }]);
 });
 
+test('magic-link login ignores a caller-controlled callback origin', async () => {
+  const { actions, magicCalls } = loadAuthActions();
+
+  await actions.clientMagicLinkAction({}, form({
+    email: client.email,
+    origin: 'https://evil.example',
+    destination: '/acceso/blogger/sportmassagefuengirola',
+  }));
+
+  assert.equal(
+    magicCalls[0].options.emailRedirectTo,
+    'https://portal.webfuengirola.com/auth/callback?next=%2Facceso%2Fblogger%2Fsportmassagefuengirola',
+  );
+});
+
 test('magic-link callback opens the direct Blogger destination end to end', async () => {
   const { actions, magicCalls } = loadAuthActions();
   await actions.clientMagicLinkAction({}, form({
@@ -106,7 +121,7 @@ test('magic-link callback opens the direct Blogger destination end to end', asyn
 
   assert.equal(
     response.headers.get('location'),
-    'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
+    'https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
   );
   assert.deepEqual(exchangedCodes, ['valid-code']);
 });
@@ -145,6 +160,43 @@ test('administrator callback retains its panel destination', async () => {
   );
 });
 
+test('administrator-host callback accepts a safe direct Blogger client destination', async () => {
+  const { route } = loadAuthCallback();
+  const callbackUrl = new URL('https://admin.webfuengirola.com/auth/callback');
+  callbackUrl.searchParams.set('next', '/acceso/blogger/sportmassagefuengirola');
+
+  const response = await route.GET(new Request(callbackUrl, {
+    headers: { host: 'admin.webfuengirola.com' },
+  }));
+
+  assert.equal(
+    response.headers.get('location'),
+    'https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
+  );
+});
+
+test('failed portal magic-link callback preserves the error on the exact Blogger return target', async () => {
+  const route = loadProjectModule('src/app/auth/callback/route.ts', {
+    '@/lib/supabase/server': {
+      createSupabaseRouteClient: () => ({
+        auth: { async exchangeCodeForSession() { throw new Error('expired code'); } },
+      }),
+    },
+  });
+  const callbackUrl = new URL('https://portal.webfuengirola.com/auth/callback');
+  callbackUrl.searchParams.set('code', 'expired-code');
+  callbackUrl.searchParams.set('next', '/acceso/blogger/sportmassagefuengirola');
+
+  const response = await route.GET(new Request(callbackUrl, {
+    headers: { host: 'portal.webfuengirola.com' },
+  }));
+
+  assert.equal(
+    response.headers.get('location'),
+    'https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola?error=callback_exchange_failed',
+  );
+});
+
 test('magic-link login replaces an external destination with the dashboard', async () => {
   const { actions, magicCalls } = loadAuthActions();
 
@@ -160,7 +212,7 @@ test('magic-link login replaces an external destination with the dashboard', asy
 });
 
 for (const [requested, expected] of [
-  ['/acceso/blogger/sportmassagefuengirola', '/acceso/blogger/sportmassagefuengirola'],
+  ['/acceso/blogger/sportmassagefuengirola', 'https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola'],
   ['/paneladmin/inicio', '/cliente/dashboard'],
 ]) {
   test(`authenticated client entry honors the safe destination for ${requested}`, async () => {

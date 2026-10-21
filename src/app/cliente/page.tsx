@@ -7,7 +7,7 @@ import { getOptionalIdentity } from '@/lib/auth'
 import { getClientPortalContext } from '@/lib/data/projects'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
-import { sanitizeClientDestination } from '@/lib/security/redirects.mjs'
+import { buildCanonicalClientDestinationUrl, isDirectBloggerDestination, sanitizeClientDestination } from '@/lib/security/redirects.mjs'
 
 type ClientLoginPageProps = {
   searchParams?: Promise<{
@@ -41,7 +41,9 @@ export default async function ClientLoginPage({ searchParams }: ClientLoginPageP
   }
 
   if (identity?.role === 'client') {
-    if (params?.redirectedFrom !== undefined) redirect(destination)
+    if (params?.redirectedFrom !== undefined) redirect(isDirectBloggerDestination(destination)
+      ? buildCanonicalClientDestinationUrl(destination).toString()
+      : destination)
     const context = await getClientPortalContext()
     if (context.mode === 'legacy') redirect('/cliente/dashboard')
     redirect(context.projects.length === 1

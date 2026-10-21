@@ -1,6 +1,8 @@
 const DEFAULT_ALLOWED_PREFIXES = ["/cliente", "/paneladmin"];
 const CLIENT_DESTINATION_FALLBACK = "/cliente/dashboard";
 const BLOGGER_SITE_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const ADMIN_ORIGIN = "https://admin.webfuengirola.com";
+const PORTAL_ORIGIN = "https://portal.webfuengirola.com";
 
 export function sanitizeInternalRedirect(next, options = {}) {
   const fallback = options.fallback ?? "/cliente/dashboard";
@@ -65,6 +67,33 @@ export function sanitizeClientDestination(value) {
   } catch {
     return CLIENT_DESTINATION_FALLBACK;
   }
+}
+
+export function isDirectBloggerDestination(value) {
+  const destination = sanitizeClientDestination(value);
+  return destination === value && destination.startsWith("/acceso/blogger/");
+}
+
+export function buildCanonicalClientDestinationUrl(value) {
+  const destination = sanitizeClientDestination(value);
+  const origin = isDirectBloggerDestination(destination) ? ADMIN_ORIGIN : PORTAL_ORIGIN;
+  return new URL(destination, origin);
+}
+
+export function buildCanonicalClientLoginUrl(value, error) {
+  const destination = sanitizeClientDestination(value);
+  const loginUrl = new URL("/cliente", PORTAL_ORIGIN);
+  loginUrl.searchParams.set("redirectedFrom", destination);
+  if (error === "callback_exchange_failed") {
+    loginUrl.searchParams.set("error", error);
+  }
+  return loginUrl;
+}
+
+export function buildCanonicalClientCallbackUrl(value) {
+  const callbackUrl = new URL("/auth/callback", PORTAL_ORIGIN);
+  callbackUrl.searchParams.set("next", sanitizeClientDestination(value));
+  return callbackUrl;
 }
 
 export function buildCanonicalAppUrl(appUrl, path = "/") {

@@ -150,6 +150,21 @@ test('invalid Blogger configuration is disabled for administrators and omitted f
   assert.equal(buildProjectTools({ project: input, viewer: 'client' }).some(tool => tool.id === 'blogger'), false);
 });
 
+test('archived projects never expose an active Blogger tool to administrators', () => {
+  const input = project({
+    status: 'archived',
+    capabilities: [capability('blogger', 'active', {
+      launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/first-site',
+      validated_at: '2026-10-20T10:00:00Z',
+      metadata: { provisioning_confirmed: true },
+    })],
+  });
+
+  const tool = byId(buildProjectTools({ project: input, viewer: 'admin' })).blogger;
+
+  assert.deepEqual({ state: tool.state, href: tool.href }, { state: 'unavailable', href: null });
+});
+
 test('rejects unknown viewers instead of defaulting to administrator visibility', () => {
   assert.throws(() => buildProjectTools({ project: project(), viewer: 'owner' }), /viewer/i);
 });

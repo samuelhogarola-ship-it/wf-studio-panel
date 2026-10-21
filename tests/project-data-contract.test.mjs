@@ -84,7 +84,16 @@ test('favorites preserve administrator position while resolving only current non
 });
 
 test('client repository uses session identity and denies guessed, archived, hidden and foreign projects', async () => {
-  const s = setup({ client_projects: [project, { ...project, id: 'foreign', slug: 'foreign', client_id: otherClientId }, { ...project, id: 'hidden', slug: 'hidden', client_access_enabled: false }, { ...project, id: 'archived', slug: 'archived', status: 'archived' }], project_capabilities: [{ ...capability, state: 'active', launch_url: 'https://example.com/admin/', validated_at: project.created_at }] });
+  const s = setup({
+    client_projects: [project, { ...project, id: 'foreign', slug: 'foreign', client_id: otherClientId }, { ...project, id: 'hidden', slug: 'hidden', client_access_enabled: false }, { ...project, id: 'archived', slug: 'archived', status: 'archived' }],
+    project_capabilities: [{
+      ...capability,
+      state: 'active',
+      launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+      metadata: { provisioning_confirmed: true },
+      validated_at: project.created_at,
+    }],
+  }, configuredBlogger);
   assert.deepEqual((await s.data().getClientPortalContext()).projects.map(p => p.slug), ['example']);
   assert.equal((await s.data().getAccessibleClientProject('example')).id, projectId);
   for (const slug of ['foreign', 'hidden', 'archived', 'unknown']) assert.equal(await s.data().getAccessibleClientProject(slug), null);
@@ -100,6 +109,75 @@ test('client capability resolution fails closed for inactive or invalid Blogger 
     assert.equal(await s.data().getActiveClientCapability('example', 'blogger'), null);
     assert.equal(await s.data().clientHasActiveCapability('blogger'), false);
   }
+});
+
+test('client Blogger reads revalidate runtime, editor, domain and provisioning confirmation', async () => {
+  const activeBlogger = {
+    ...capability,
+    state: 'active',
+    launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+    validated_at: project.created_at,
+    metadata: { provisioning_confirmed: true },
+  };
+  const validSite = { key: 'example', domain: 'example.com', blogger: { enabled: true, runtime: 'central-multisite' } };
+  const cases = [
+    {
+      label: 'disabled runtime',
+      capability: activeBlogger,
+      site: { ...validSite, blogger: { ...validSite.blogger, enabled: false } },
+      editor: { kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' },
+    },
+    {
+      label: 'missing editor',
+      capability: activeBlogger,
+      site: validSite,
+      editor: null,
+    },
+    {
+      label: 'foreign domain',
+      capability: activeBlogger,
+      site: { ...validSite, domain: 'foreign.example.com' },
+      editor: { kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' },
+    },
+    {
+      label: 'missing provisioning confirmation',
+      capability: { ...activeBlogger, metadata: {} },
+      site: validSite,
+      editor: { kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' },
+    },
+  ];
+
+  for (const entry of cases) {
+    const s = setup(
+      { project_capabilities: [entry.capability] },
+      {
+        '@/lib/sites/registry.mjs': { getSiteByKey: () => entry.site },
+        '@/lib/blogger/editor.mjs': { getBloggerEditorTarget: () => entry.editor },
+      },
+    );
+    assert.equal(await s.data().getActiveClientCapability('example', 'blogger'), null, entry.label);
+    assert.equal(await s.data().clientHasActiveCapability('blogger'), false, entry.label);
+  }
+});
+
+test('administrator Blogger warnings revalidate stale runtime and provisioning', () => {
+  const activeBlogger = {
+    ...capability,
+    state: 'active',
+    launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+    validated_at: project.created_at,
+    metadata: {},
+  };
+  const s = setup(
+    { project_capabilities: [activeBlogger] },
+    {
+      '@/lib/sites/registry.mjs': { getSiteByKey: () => ({ key: 'example', domain: 'example.com', blogger: { enabled: true, runtime: 'central-multisite' } }) },
+      '@/lib/blogger/editor.mjs': { getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' }) },
+    },
+  );
+
+  const data = s.data();
+  assert.ok(data.getProjectWarnings({ ...project, capabilities: [activeBlogger] }).includes('blogger'));
 });
 
 test('all exported mutations authorize before opening a database or validating input', async () => {

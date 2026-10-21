@@ -56,7 +56,7 @@ function resolveTool(definition, project, viewer, configurationIssues) {
   }
 
   const capability = (project.capabilities ?? []).find(item => item.capability_key === definition.capability);
-  const capabilityState = definition.id === 'analytics' && viewer === 'admin' && project.status !== 'active'
+  const capabilityState = ['blogger', 'analytics'].includes(definition.id) && viewer === 'admin' && project.status !== 'active'
     ? 'unavailable'
     : ['active', 'available', 'unavailable'].includes(capability?.state)
       ? capability.state

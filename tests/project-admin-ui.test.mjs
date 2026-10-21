@@ -24,8 +24,7 @@ const configuredAnalytics = {
   },
 };
 
-const configuredBlogger = {
-  '@/lib/locale': { getLocale: async () => 'en' },
+const configuredBloggerRuntime = {
   '@/lib/sites/registry.mjs': {
     getSites: () => [{ key: 'example', name: 'Example', domain: 'example.com' }],
     getSiteByKey: () => ({ key: 'example', name: 'Example', domain: 'example.com', blogger: { enabled: true, runtime: 'central-multisite' } }),
@@ -33,6 +32,10 @@ const configuredBlogger = {
   '@/lib/blogger/editor.mjs': {
     getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' }),
   },
+};
+const configuredBlogger = {
+  ...configuredBloggerRuntime,
+  '@/lib/locale': { getLocale: async () => 'en' },
 };
 
 test('inventory renders database projects, search/filter controls and manual registration', async () => {
@@ -64,10 +67,19 @@ test('inventory turns arbitrary database projects into capability-driven launch 
         ...capability,
         state: 'active',
         launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/north-star-bakery',
+        metadata: { provisioning_confirmed: true },
         validated_at: project.created_at,
       },
       { ...capability, id: 'domains', capability_key: 'domains', state: 'available' },
     ],
+  }, {
+    '@/lib/sites/registry.mjs': {
+      getSites: () => [{ key: 'north-star-bakery', name: 'North Star Bakery', domain: 'northstar.example' }],
+      getSiteByKey: () => ({ key: 'north-star-bakery', name: 'North Star Bakery', domain: 'northstar.example', blogger: { enabled: true, runtime: 'central-multisite' } }),
+    },
+    '@/lib/blogger/editor.mjs': {
+      getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=north-star-bakery' }),
+    },
   });
   const Page = load('src/app/paneladmin/(protected)/proyectos/page.tsx').default;
 
@@ -82,7 +94,7 @@ test('inventory turns arbitrary database projects into capability-driven launch 
 });
 
 test('project tool grid labels every state and disables incomplete tools', () => {
-  const load = setup();
+  const load = setup({}, configuredBloggerRuntime);
   const { ProjectToolGrid } = load('src/components/admin/project-tool-grid.tsx');
   const workspaceProject = {
     ...project,
@@ -91,6 +103,7 @@ test('project tool grid labels every state and disables incomplete tools', () =>
         ...capability,
         state: 'active',
         launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+        metadata: { provisioning_confirmed: true },
         validated_at: project.created_at,
       },
       { ...capability, id: 'domains', capability_key: 'domains', state: 'available' },
@@ -197,9 +210,10 @@ test('detail prioritizes identity and operational work before access, warnings, 
       ...capability,
       state: 'active',
       launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+      metadata: { provisioning_confirmed: true },
       validated_at: project.created_at,
     }],
-  });
+  }, configuredBloggerRuntime);
   const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;
 
   const html = render(await Page({ params: Promise.resolve({ id: projectId }) }));
@@ -328,11 +342,13 @@ test('administrator home renders favorite projects as validated launcher cards a
         ...capability,
         state: 'active',
         launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+        metadata: { provisioning_confirmed: true },
         validated_at: '2026-10-20T10:00:00Z',
       },
       { ...capability, id: 'analytics', capability_key: 'analytics', state: 'available' },
     ],
   }, {
+    ...configuredBloggerRuntime,
     react: { ...React, useActionState: () => [{}, () => {}, false] },
   });
   const Page = load('src/app/paneladmin/(protected)/inicio/page.tsx').default;

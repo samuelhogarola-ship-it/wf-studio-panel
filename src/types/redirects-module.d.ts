@@ -10,6 +10,10 @@ declare module '@/lib/security/redirects.mjs' {
   ): string
 
   export function sanitizeClientDestination(value: unknown): string
+  export function isDirectBloggerDestination(value: unknown): boolean
+  export function buildCanonicalClientDestinationUrl(value: unknown): URL
+  export function buildCanonicalClientLoginUrl(value: unknown, error?: unknown): URL
+  export function buildCanonicalClientCallbackUrl(value: unknown): URL
 
   export function buildCanonicalAppUrl(appUrl: string, path?: string): URL
 
