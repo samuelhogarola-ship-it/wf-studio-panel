@@ -10,6 +10,20 @@ function setup(seed = {}) {
   return relative => loadProjectModule(relative, b.mocks);
 }
 
+const configuredAnalytics = {
+  '@/lib/analytics/umami-core.mjs': {
+    getConfiguredUmamiSites: () => [{
+      key: 'example',
+      domain: 'example.com',
+      websiteId: 'example-runtime-id',
+      source: 'personal',
+    }],
+    getUmamiConnections: () => ({
+      personal: { baseUrl: 'https://stats.example.test', password: 'runtime-secret' },
+    }),
+  },
+};
+
 test('inventory renders database projects, search/filter controls and manual registration', async () => {
   const load = setup();
   const Page = load('src/app/paneladmin/(protected)/proyectos/page.tsx').default;
@@ -86,6 +100,39 @@ test('project tool grid labels every state and disables incomplete tools', () =>
     const toolCard = html.slice(start, html.indexOf('</article>', start));
     assert.match(toolCard, /<button[^>]*disabled/);
   }
+});
+
+test('analytics tool links to the exact project route only when active and correctly configured', () => {
+  const configuredBoundary = boundary(database(), configuredAnalytics);
+  const configuredLoad = relative => loadProjectModule(relative, configuredBoundary.mocks);
+  const { ProjectToolGrid: ConfiguredGrid } = configuredLoad('src/components/admin/project-tool-grid.tsx');
+  const analyticsCapability = { ...capability, id: 'analytics', capability_key: 'analytics' };
+  const analyticsProject = { ...project, analytics_registry_key: 'example' };
+
+  const activeHtml = render(React.createElement(ConfiguredGrid, {
+    project: { ...analyticsProject, capabilities: [{ ...analyticsCapability, state: 'active' }] },
+  }));
+  const availableHtml = render(React.createElement(ConfiguredGrid, {
+    project: { ...analyticsProject, capabilities: [{ ...analyticsCapability, state: 'available' }] },
+  }));
+
+  assert.match(activeHtml, new RegExp(`data-project-tool="analytics"[\\s\\S]*href="/paneladmin/proyectos/${projectId}/estadisticas"`));
+  assert.doesNotMatch(availableHtml, /href="[^"]*\/estadisticas"/);
+
+  const misconfiguredBoundary = boundary(database(), {
+    '@/lib/analytics/umami-core.mjs': {
+      getConfiguredUmamiSites: () => [],
+      getUmamiConnections: () => ({}),
+    },
+  });
+  const misconfiguredLoad = relative => loadProjectModule(relative, misconfiguredBoundary.mocks);
+  const { ProjectToolGrid: MisconfiguredGrid } = misconfiguredLoad('src/components/admin/project-tool-grid.tsx');
+  const misconfiguredHtml = render(React.createElement(MisconfiguredGrid, {
+    project: { ...analyticsProject, capabilities: [{ ...analyticsCapability, state: 'active' }] },
+  }));
+
+  assert.match(misconfiguredHtml, /data-project-tool="analytics"[^>]*data-tool-state="misconfigured"/);
+  assert.doesNotMatch(misconfiguredHtml, /href="[^"]*\/estadisticas"/);
 });
 
 test('active domains and hosting render disabled actions instead of dead workspace fragments', () => {
