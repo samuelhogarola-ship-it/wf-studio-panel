@@ -15,10 +15,4 @@ declare module '@/lib/projects/tools.mjs' {
     viewer: 'admin' | 'client'
     configurationIssues?: Readonly<Record<string, string>>
   }): readonly ProjectTool[]
-
-  export function generatePublicBloggerEntry(siteKey: string): Readonly<{
-    path: '/admin/blogger/'
-    target: string
-    html: string
-  }>
 }

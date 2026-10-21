@@ -21,16 +21,6 @@ const exchangeRoutePath = 'src/app/api/tool-launch/exchange/route.ts'
 const protocol = 'wf-blogger-handoff/v1'
 const now = Date.parse('2026-10-17T12:00:00.000Z')
 
-test('generated website Blogger entries target the exact direct Studio route', () => {
-  assert.equal(typeof projectTools.generatePublicBloggerEntry, 'function')
-
-  const entry = projectTools.generatePublicBloggerEntry('first-site')
-
-  assert.equal(entry.path, '/admin/blogger/')
-  assert.equal(entry.target, 'https://admin.webfuengirola.com/acceso/blogger/first-site')
-  assert.doesNotMatch(entry.target, /\/cliente\/(?:dashboard|proyectos)(?:\/|$)/)
-})
-
 test('public Blogger entry generation does not replace administrator or client in-panel routes', () => {
   const input = {
     ...project,
