@@ -1,7 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { createSupabaseRouteClient } from '@/lib/supabase/server'
-import { resolveRequestOrigin, sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
+import {
+  resolveRequestOrigin,
+  sanitizeClientDestination,
+  sanitizeInternalRedirect,
+} from '@/lib/security/redirects.mjs'
 
 function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
   return resolveRequestOrigin({
@@ -17,9 +21,11 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? ''
   const isAdminHost = host.startsWith('admin.')
-  const next = sanitizeInternalRedirect(requestUrl.searchParams.get('next'), {
-    fallback: isAdminHost ? '/paneladmin/inicio' : '/cliente/dashboard',
-  })
+  const next = isAdminHost
+    ? sanitizeInternalRedirect(requestUrl.searchParams.get('next'), {
+        fallback: '/paneladmin/inicio',
+      })
+    : sanitizeClientDestination(requestUrl.searchParams.get('next'))
   const appUrl = getAppBaseUrl(request, requestUrl)
   const successUrl = new URL(next, appUrl)
   const successResponse = NextResponse.redirect(successUrl)

@@ -29,6 +29,22 @@ function loadAuthActions() {
   return { actions, magicCalls, passwordCalls };
 }
 
+function loadAuthCallback() {
+  const exchangedCodes = [];
+  const route = loadProjectModule('src/app/auth/callback/route.ts', {
+    '@/lib/supabase/server': {
+      createSupabaseRouteClient: () => ({
+        auth: {
+          async exchangeCodeForSession(code) {
+            exchangedCodes.push(code);
+          },
+        },
+      }),
+    },
+  });
+  return { exchangedCodes, route };
+}
+
 test('password login redirects to the sanitized client destination', async () => {
   const { actions, passwordCalls } = loadAuthActions();
 
@@ -73,6 +89,60 @@ test('magic-link login carries the sanitized destination through the callback', 
       emailRedirectTo: 'https://portal.webfuengirola.com/auth/callback?next=%2Facceso%2Fblogger%2Fsportmassagefuengirola',
     },
   }]);
+});
+
+test('magic-link callback opens the direct Blogger destination end to end', async () => {
+  const { actions, magicCalls } = loadAuthActions();
+  await actions.clientMagicLinkAction({}, form({
+    email: client.email,
+    origin: 'https://portal.webfuengirola.com',
+    destination: '/acceso/blogger/sportmassagefuengirola',
+  }));
+  const callbackUrl = new URL(magicCalls[0].options.emailRedirectTo);
+  callbackUrl.searchParams.set('code', 'valid-code');
+  const { exchangedCodes, route } = loadAuthCallback();
+
+  const response = await route.GET(new Request(callbackUrl));
+
+  assert.equal(
+    response.headers.get('location'),
+    'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
+  );
+  assert.deepEqual(exchangedCodes, ['valid-code']);
+});
+
+test('client callback rejects external, encoded and administrator destinations', async () => {
+  const { route } = loadAuthCallback();
+
+  for (const destination of [
+    'https://evil.example/phish',
+    '/cliente/%2e%2e/paneladmin/inicio',
+    '/paneladmin/inicio',
+  ]) {
+    const callbackUrl = new URL('https://portal.webfuengirola.com/auth/callback');
+    callbackUrl.searchParams.set('next', destination);
+    const response = await route.GET(new Request(callbackUrl));
+    assert.equal(
+      response.headers.get('location'),
+      'https://portal.webfuengirola.com/cliente/dashboard',
+      destination,
+    );
+  }
+});
+
+test('administrator callback retains its panel destination', async () => {
+  const { route } = loadAuthCallback();
+  const callbackUrl = new URL('https://admin.webfuengirola.com/auth/callback');
+  callbackUrl.searchParams.set('next', '/paneladmin/proyectos?tab=blogger');
+
+  const response = await route.GET(new Request(callbackUrl, {
+    headers: { host: 'admin.webfuengirola.com' },
+  }));
+
+  assert.equal(
+    response.headers.get('location'),
+    'https://admin.webfuengirola.com/paneladmin/proyectos?tab=blogger',
+  );
 });
 
 test('magic-link login replaces an external destination with the dashboard', async () => {
