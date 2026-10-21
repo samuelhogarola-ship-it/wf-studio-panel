@@ -82,7 +82,8 @@ export function buildCanonicalClientDestinationUrl(value) {
 
 export function buildCanonicalClientLoginUrl(value, error) {
   const destination = sanitizeClientDestination(value);
-  const loginUrl = new URL("/cliente", PORTAL_ORIGIN);
+  const origin = isDirectBloggerDestination(destination) ? ADMIN_ORIGIN : PORTAL_ORIGIN;
+  const loginUrl = new URL("/cliente", origin);
   loginUrl.searchParams.set("redirectedFrom", destination);
   if (error === "callback_exchange_failed") {
     loginUrl.searchParams.set("error", error);
@@ -91,8 +92,10 @@ export function buildCanonicalClientLoginUrl(value, error) {
 }
 
 export function buildCanonicalClientCallbackUrl(value) {
-  const callbackUrl = new URL("/auth/callback", PORTAL_ORIGIN);
-  callbackUrl.searchParams.set("next", sanitizeClientDestination(value));
+  const destination = sanitizeClientDestination(value);
+  const origin = isDirectBloggerDestination(destination) ? ADMIN_ORIGIN : PORTAL_ORIGIN;
+  const callbackUrl = new URL("/auth/callback", origin);
+  callbackUrl.searchParams.set("next", destination);
   return callbackUrl;
 }
 

@@ -33,10 +33,11 @@ function loadAuthCallback() {
   const exchangedCodes = [];
   const route = loadProjectModule('src/app/auth/callback/route.ts', {
     '@/lib/supabase/server': {
-      createSupabaseRouteClient: () => ({
+      createSupabaseRouteClient: (_request, response) => ({
         auth: {
           async exchangeCodeForSession(code) {
             exchangedCodes.push(code);
+            response.cookies.set('sb-host-only', 'session-token', { httpOnly: true, path: '/' });
           },
         },
       }),
@@ -86,7 +87,7 @@ test('magic-link login carries the sanitized destination through the callback', 
   assert.deepEqual(magicCalls, [{
     email: client.email,
     options: {
-      emailRedirectTo: 'https://portal.webfuengirola.com/auth/callback?next=%2Facceso%2Fblogger%2Fsportmassagefuengirola',
+      emailRedirectTo: 'https://admin.webfuengirola.com/auth/callback?next=%2Facceso%2Fblogger%2Fsportmassagefuengirola',
     },
   }]);
 });
@@ -102,7 +103,7 @@ test('magic-link login ignores a caller-controlled callback origin', async () =>
 
   assert.equal(
     magicCalls[0].options.emailRedirectTo,
-    'https://portal.webfuengirola.com/auth/callback?next=%2Facceso%2Fblogger%2Fsportmassagefuengirola',
+    'https://admin.webfuengirola.com/auth/callback?next=%2Facceso%2Fblogger%2Fsportmassagefuengirola',
   );
 });
 
@@ -124,6 +125,8 @@ test('magic-link callback opens the direct Blogger destination end to end', asyn
     'https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
   );
   assert.deepEqual(exchangedCodes, ['valid-code']);
+  assert.match(response.headers.get('set-cookie') ?? '', /sb-host-only=session-token/);
+  assert.doesNotMatch(response.headers.get('set-cookie') ?? '', /domain=/i);
 });
 
 test('client callback rejects external, encoded and administrator destinations', async () => {
@@ -175,7 +178,7 @@ test('administrator-host callback accepts a safe direct Blogger client destinati
   );
 });
 
-test('failed portal magic-link callback preserves the error on the exact Blogger return target', async () => {
+test('failed admin-host magic-link callback preserves the error on the exact Blogger return target', async () => {
   const route = loadProjectModule('src/app/auth/callback/route.ts', {
     '@/lib/supabase/server': {
       createSupabaseRouteClient: () => ({
@@ -183,12 +186,12 @@ test('failed portal magic-link callback preserves the error on the exact Blogger
       }),
     },
   });
-  const callbackUrl = new URL('https://portal.webfuengirola.com/auth/callback');
+  const callbackUrl = new URL('https://admin.webfuengirola.com/auth/callback');
   callbackUrl.searchParams.set('code', 'expired-code');
   callbackUrl.searchParams.set('next', '/acceso/blogger/sportmassagefuengirola');
 
   const response = await route.GET(new Request(callbackUrl, {
-    headers: { host: 'portal.webfuengirola.com' },
+    headers: { host: 'admin.webfuengirola.com' },
   }));
 
   assert.equal(
@@ -208,6 +211,19 @@ test('magic-link login replaces an external destination with the dashboard', asy
   assert.equal(
     magicCalls[0].options.emailRedirectTo,
     'https://portal.webfuengirola.com/auth/callback?next=%2Fcliente%2Fdashboard',
+  );
+});
+
+test('normal client magic-link login stays entirely on the portal host', async () => {
+  const { actions, magicCalls } = loadAuthActions();
+
+  await actions.clientMagicLinkAction({}, form({
+    email: client.email,
+    destination: '/cliente/proyectos',
+  }));
+  assert.equal(
+    magicCalls[0].options.emailRedirectTo,
+    'https://portal.webfuengirola.com/auth/callback?next=%2Fcliente%2Fproyectos',
   );
 });
 

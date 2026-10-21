@@ -69,7 +69,7 @@ export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
     let range;
     let countRequested = false;
     const query = {
-      select(_columns, options) { countRequested = options?.count === 'exact'; return query; },
+      select(columns, options) { call.columns = columns; countRequested = options?.count === 'exact'; return query; },
       eq(key, value) { call.filters.push(row => row[key] === value); return query; },
       neq(key, value) { call.filters.push(row => row[key] !== value); return query; },
       is(key, value) { call.filters.push(row => row[key] === value); return query; },

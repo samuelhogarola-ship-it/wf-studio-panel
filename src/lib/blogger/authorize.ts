@@ -1,5 +1,6 @@
 import { getOptionalIdentity } from '@/lib/auth'
 import { getBloggerSite } from '@/lib/blogger/sites.mjs'
+import { getBloggerCapabilityIssue } from '@/lib/projects/blogger-validation'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 
 const canonicalDomain = (domain: string) => domain.toLowerCase().replace(/^www\./, '')
@@ -29,9 +30,10 @@ export async function authorizeBloggerSite(siteKey: string) {
   const { data: project } = await projectQuery.maybeSingle()
   if (!project || canonicalDomain(project.domain) !== canonicalDomain(site.site.domain)) throw denied()
 
-  const { data: capability } = await db.from('project_capabilities').select('id').eq('project_id', project.id)
+  const { data: capability } = await db.from('project_capabilities')
+    .select('id, capability_key, state, launch_url, validated_at, metadata').eq('project_id', project.id)
     .eq('capability_key', 'blogger').eq('state', 'active').maybeSingle()
-  if (!capability) throw denied()
+  if (!capability || getBloggerCapabilityIssue(project, capability, site.site)) throw denied()
 
   return { identity, project, ...site }
 }

@@ -52,6 +52,9 @@ function capabilityFor(siteKey) {
     id: `capability-${siteKey}`,
     project_id: `project-${siteKey}`,
     state: 'active',
+    launch_url: sites[siteKey].blogger.url,
+    validated_at: project.created_at,
+    metadata: { provisioning_confirmed: true },
   }
 }
 
@@ -86,12 +89,12 @@ function setup({ identity = null, authorizedSites = [] } = {}) {
   return { db, Page }
 }
 
-test('direct Blogger route sends an unauthenticated request to the canonical client login host with the exact destination', async () => {
+test('direct Blogger route keeps unauthenticated login on the admin host with the exact destination', async () => {
   const { Page, db } = setup()
 
   await assert.rejects(
     () => Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }),
-    { message: 'redirect:https://portal.webfuengirola.com/cliente?redirectedFrom=%2Facceso%2Fblogger%2Fsportmassagefuengirola' },
+    { message: 'redirect:https://admin.webfuengirola.com/cliente?redirectedFrom=%2Facceso%2Fblogger%2Fsportmassagefuengirola' },
   )
   assert.deepEqual(db.calls, [])
 })
@@ -104,7 +107,7 @@ test('direct Blogger route carries a callback exchange error to the canonical cl
       params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }),
       searchParams: Promise.resolve({ error: 'callback_exchange_failed' }),
     }),
-    { message: 'redirect:https://portal.webfuengirola.com/cliente?redirectedFrom=%2Facceso%2Fblogger%2Fsportmassagefuengirola&error=callback_exchange_failed' },
+    { message: 'redirect:https://admin.webfuengirola.com/cliente?redirectedFrom=%2Facceso%2Fblogger%2Fsportmassagefuengirola&error=callback_exchange_failed' },
   )
 })
 
