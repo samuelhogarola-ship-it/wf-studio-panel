@@ -37,6 +37,11 @@ test("canonical website registry covers every current site and configures Samuel
   assert.equal(agama.blogger.contentDir, "entrada-de-blog");
   assert.equal(agama.blogger.publicPostBase, "/entrada-de-blog/");
 
+  const todoPlastico = getSiteByKey("todoplastico");
+  assert.equal(todoPlastico.domain, "todo-plastico.com");
+  assert.deepEqual(todoPlastico.blogger, { enabled: false });
+  assert.equal(getBloggerHandoff(todoPlastico), null);
+
   const sportMassage = getSiteByKey("sportmassagefuengirola");
   assert.equal(sportMassage.blogger.enabled, true);
   assert.equal(

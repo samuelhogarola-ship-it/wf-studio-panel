@@ -177,5 +177,54 @@ test("real aGama analytics and Blogger activation preserves every non-target row
   assert.equal(db.tables.project_capabilities.length, agamaCapabilities.length);
   assert.equal(db.tables.project_capabilities.find((row) => row.capability_key === "analytics").state, "active");
   assert.equal(db.tables.project_capabilities.find((row) => row.capability_key === "blogger").state, "active");
+  assert.equal(db.tables.project_capabilities.find((row) => row.capability_key === "blogger").launch_url, "https://admin.webfuengirola.com/paneladmin/blogger/agama");
+  assert.equal(db.tables.project_capabilities.find((row) => row.capability_key === "blogger").metadata.provisioning_confirmed, true);
   assert.equal(db.tables.project_capabilities.find((row) => row.capability_key === "bonuses_reports").state, "active");
+});
+
+test("TodoPlástico analytics can activate while Blogger remains available without its adapter", async () => {
+  const todoProject = {
+    ...project,
+    name: "TodoPlástico",
+    slug: "todoplastico",
+    domain: "todo-plastico.com",
+    analytics_registry_key: "todoplastico",
+  };
+  const todoCapabilities = [
+    capability("analytics", "available", {}),
+    capability("blogger", "available", {}),
+  ];
+  const db = database({
+    clients: [agamaClient],
+    client_projects: [todoProject],
+    project_capabilities: todoCapabilities,
+  });
+  const { mocks } = boundary(db, {
+    "@/lib/analytics/umami-core.mjs": {
+      getConfiguredUmamiSites: () => [{ key: "todoplastico", domain: "todo-plastico.com", source: "agama", websiteId: true }],
+      getUmamiConnections: () => ({ agama: { baseUrl: true, password: true } }),
+    },
+  });
+  const { upsertProjectCapabilityAction } = loadProjectModule("src/lib/actions/projects.ts", mocks);
+
+  const analyticsResult = await upsertProjectCapabilityAction({}, form({
+    project_id: projectId,
+    capability_key: "analytics",
+    state: "active",
+    launch_url: "",
+  }));
+  const bloggerResult = await upsertProjectCapabilityAction({}, form({
+    project_id: projectId,
+    capability_key: "blogger",
+    state: "active",
+    launch_url: "https://admin.webfuengirola.com/paneladmin/blogger/todoplastico",
+    provisioning_confirmed: "true",
+  }));
+
+  assert.equal(analyticsResult.error, undefined);
+  assert.match(bloggerResult.error, /No se puede activar Blogger/);
+  assert.equal(db.tables.project_capabilities.find((row) => row.capability_key === "analytics").state, "active");
+  assert.equal(db.tables.project_capabilities.find((row) => row.capability_key === "blogger").state, "available");
+  assert.equal(db.tables.project_capabilities.find((row) => row.capability_key === "blogger").launch_url, null);
+  assert.equal(db.tables.project_capabilities.find((row) => row.capability_key === "blogger").validated_at, null);
 });
