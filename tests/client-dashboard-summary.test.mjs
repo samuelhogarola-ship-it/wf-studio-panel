@@ -27,12 +27,22 @@ test('rotator advances after six seconds and manual controls wrap in both direct
 })
 
 test('rotator pause, reduced motion and zero or one item keep automatic state stable', () => {
-  const { createRotatorState, reduceRotatorState } = loadProjectModule(componentPath)
+  const { createRotatorState, getRotationControlState, reduceRotatorState } = loadProjectModule(componentPath)
   const reduced = createRotatorState(3, true)
   assert.equal(reduced.reducedMotion, true)
   assert.equal(reduceRotatorState(reduced, { type: 'advance', elapsedMs: 6_000, intervalMs: 6_000, itemCount: 3 }).index, 0)
+  assert.deepEqual(getRotationControlState(reduced), {
+    disabled: true,
+    label: 'Rotación desactivada por movimiento reducido',
+    text: 'Movimiento reducido',
+  })
 
   const paused = reduceRotatorState(createRotatorState(3, false), { type: 'set-manual-paused', paused: true })
+  assert.deepEqual(getRotationControlState(paused), {
+    disabled: false,
+    label: 'Reanudar rotación',
+    text: 'Reanudar',
+  })
   assert.equal(reduceRotatorState(paused, { type: 'advance', elapsedMs: 12_000, intervalMs: 6_000, itemCount: 3 }).index, 0)
   for (const itemCount of [0, 1]) {
     const state = createRotatorState(itemCount, false)

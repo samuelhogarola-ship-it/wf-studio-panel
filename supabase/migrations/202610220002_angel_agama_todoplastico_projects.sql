@@ -9,10 +9,12 @@ declare
   v_agama_ids uuid[];
   v_agama_id uuid;
   v_agama_identity_valid boolean;
+  v_agama_analytics_registry_key text;
   v_todoplastico_count integer;
   v_todoplastico_ids uuid[];
   v_todoplastico_id uuid;
   v_todoplastico_identity_valid boolean;
+  v_todoplastico_analytics_registry_key text;
   v_validated_at timestamptz := statement_timestamp();
 begin
   select count(*)::integer, array_agg(c.id)
@@ -44,6 +46,15 @@ begin
   end if;
   v_agama_id := v_agama_ids[1];
 
+  select p.analytics_registry_key
+  into v_agama_analytics_registry_key
+  from public.client_projects p
+  where p.id = v_agama_id;
+
+  if v_agama_analytics_registry_key is distinct from 'agama' then
+    raise exception 'Expected analytics registry key agama';
+  end if;
+
   select
     count(*)::integer,
     array_agg(p.id),
@@ -61,6 +72,15 @@ begin
   end if;
   v_todoplastico_id := v_todoplastico_ids[1];
 
+  select p.analytics_registry_key
+  into v_todoplastico_analytics_registry_key
+  from public.client_projects p
+  where p.id = v_todoplastico_id;
+
+  if v_todoplastico_analytics_registry_key is distinct from 'todoplastico' then
+    raise exception 'Expected analytics registry key todoplastico';
+  end if;
+
   update public.client_projects
   set client_id = v_client_id,
       status = 'active',
@@ -77,8 +97,10 @@ begin
     (v_todoplastico_id, 'analytics', 'active', null, '{}'::jsonb, v_validated_at)
   on conflict (project_id, capability_key) do update
   set state = 'active',
+      launch_url = null,
       validated_at = coalesce(public.project_capabilities.validated_at, excluded.validated_at)
   where public.project_capabilities.state is distinct from 'active'
+     or public.project_capabilities.launch_url is not null
      or public.project_capabilities.validated_at is null;
 
   insert into public.project_capabilities
@@ -119,10 +141,10 @@ begin
       launch_url = null,
       metadata = public.project_capabilities.metadata - 'provisioning_confirmed',
       validated_at = null
-  where public.project_capabilities.state is distinct from 'available'
-     or public.project_capabilities.launch_url is not null
-     or public.project_capabilities.metadata ? 'provisioning_confirmed'
-     or public.project_capabilities.validated_at is not null;
+  where not (public.project_capabilities.state = 'active'
+    and public.project_capabilities.launch_url is not null
+    and public.project_capabilities.metadata @> '{"provisioning_confirmed": true}'::jsonb
+    and public.project_capabilities.validated_at is not null);
 end;
 $$;
 

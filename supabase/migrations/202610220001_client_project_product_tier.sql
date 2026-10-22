@@ -12,7 +12,10 @@ check (product_tier is null or product_tier in ('lite', 'express', 'pro'));
 
 update public.client_projects
 set product_tier = 'pro'
-where lower(btrim(slug)) in ('agama', 'todoplastico')
+where (lower(btrim(slug)) = 'agama'
+    and lower(btrim(domain)) = 'agama.com.mx'
+  or lower(btrim(slug)) = 'todoplastico'
+    and lower(btrim(domain)) = 'todo-plastico.com')
   and product_tier is distinct from 'pro';
 
 commit;

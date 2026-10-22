@@ -183,6 +183,27 @@ test('legacy clients can open assigned projects while project tools stay capabil
   await assert.rejects(() => blogger.page('proyectos/[slug]/blogger', { params: Promise.resolve({ slug: 'example' }) }), { message: '404' });
 });
 
+test('Blogger route authorizes only through the accessible project lookup', async () => {
+  const activeBlogger = { ...capability, capability_key: 'blogger', state: 'active' };
+  const Page = loadProjectModule(`${protectedRoot}/proyectos/[slug]/blogger/page.tsx`, {
+    '@/lib/data/projects': {
+      getAccessibleClientProject: async slug => slug === project.slug
+        ? { ...project, capabilities: [activeBlogger] }
+        : null,
+      getClientPortalContext: async () => { throw new Error('duplicate portal context read'); },
+    },
+    '@/lib/sites/registry.mjs': {
+      getSiteByKey: () => ({ key: project.slug, name: project.name, domain: project.domain, blogger: { enabled: true } }),
+    },
+    '@/lib/blogger/editor.mjs': {
+      getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' }),
+    },
+  }).default;
+
+  const html = render(await Page({ params: Promise.resolve({ slug: project.slug }) }));
+  assert.match(html, /Blogger · Example/);
+});
+
 test('project routes still hide archived, client-hidden and foreign projects in either historical mode', async () => {
   for (const mode of ['legacy', 'dynamic']) {
     const s = setup({ mode, projects: [project, { ...second, slug: 'archived', status: 'archived' }, { ...second, slug: 'hidden', client_access_enabled: false }, { ...second, slug: 'foreign', client_id: otherClientId }] });

@@ -40,6 +40,17 @@ function rotationPaused(state: RotatorState) {
   return state.manualPaused || state.hoverPaused || state.focusPaused || state.reducedMotion
 }
 
+export function getRotationControlState(state: RotatorState) {
+  if (state.reducedMotion) return {
+    disabled: true,
+    label: 'Rotación desactivada por movimiento reducido',
+    text: 'Movimiento reducido',
+  }
+  return state.manualPaused
+    ? { disabled: false, label: 'Reanudar rotación', text: 'Reanudar' }
+    : { disabled: false, label: 'Pausar rotación', text: 'Pausar' }
+}
+
 export function reduceRotatorState(state: RotatorState, action: RotatorAction): RotatorState {
   if (action.type === 'set-manual-paused') return { ...state, manualPaused: action.paused, elapsedMs: 0 }
   if (action.type === 'set-hover-paused') return { ...state, hoverPaused: action.paused }
@@ -88,6 +99,7 @@ export function RotatingAnalyticsSummary({
     (itemCount) => createRotatorState(itemCount, false),
   )
   const paused = rotationPaused(state)
+  const rotationControl = getRotationControlState(state)
 
   useEffect(() => {
     dispatch({ type: 'sync-items', itemCount: metrics.length })
@@ -145,7 +157,7 @@ export function RotatingAnalyticsSummary({
       </div>
       <div className="mt-4 flex items-center gap-2">
         <button type="button" aria-label="Métrica anterior" onClick={() => dispatch({ type: 'previous', itemCount: metrics.length })} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">←</button>
-        <button type="button" aria-label={state.manualPaused ? 'Reanudar rotación' : 'Pausar rotación'} onClick={() => dispatch({ type: 'set-manual-paused', paused: !state.manualPaused })} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">{state.manualPaused ? 'Reanudar' : 'Pausar'}</button>
+        <button type="button" aria-label={rotationControl.label} disabled={rotationControl.disabled} onClick={() => dispatch({ type: 'set-manual-paused', paused: !state.manualPaused })} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">{rotationControl.text}</button>
         <button type="button" aria-label="Métrica siguiente" onClick={() => dispatch({ type: 'next', itemCount: metrics.length })} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">→</button>
         <Link href={`/cliente/proyectos/${encodeURIComponent(metric.projectSlug)}/estadisticas`} className="ml-auto text-xs font-semibold text-brand hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Ver detalle →</Link>
       </div>

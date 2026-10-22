@@ -150,7 +150,7 @@ test('product tier migration adds a nullable constrained field and idempotently 
   assert.match(source, /alter table public\.client_projects\s+add column if not exists product_tier text;/i)
   assert.doesNotMatch(source, /product_tier text not null/i)
   assert.match(source, /constraint client_projects_product_tier_check\s+check \(product_tier is null or product_tier in \('lite', 'express', 'pro'\)\)/i)
-  assert.match(source, /update public\.client_projects\s+set product_tier = 'pro'\s+where lower\(btrim\(slug\)\) in \('agama', 'todoplastico'\)\s+and product_tier is distinct from 'pro';/i)
+  assert.match(source, /update public\.client_projects\s+set product_tier = 'pro'\s+where \(lower\(btrim\(slug\)\) = 'agama'\s+and lower\(btrim\(domain\)\) = 'agama\.com\.mx'\s+or lower\(btrim\(slug\)\) = 'todoplastico'\s+and lower\(btrim\(domain\)\) = 'todo-plastico\.com'\)\s+and product_tier is distinct from 'pro';/i)
 })
 
 test('Supabase project types expose the exact nullable product tier union', async () => {
@@ -200,6 +200,24 @@ test('Ángel assignment activates only intended analytics and validated aGama Bl
   assert.match(source, /metadata = public\.project_capabilities\.metadata \|\| excluded\.metadata/i)
 })
 
+test('Ángel assignment rejects unexpected analytics registry keys before activating normalized analytics rows', async () => {
+  const source = await readFile(angelAssignmentMigrationUrl, 'utf8')
+  const analyticsInsert = source.indexOf('insert into public.project_capabilities')
+
+  for (const [variable, expected] of [
+    ['v_agama_analytics_registry_key', 'agama'],
+    ['v_todoplastico_analytics_registry_key', 'todoplastico'],
+  ]) {
+    const guard = source.indexOf(`if ${variable} is distinct from '${expected}' then`)
+    assert.ok(guard > 0 && guard < analyticsInsert, `${variable} must be guarded before capability writes`)
+    assert.match(source.slice(guard, analyticsInsert), /raise exception 'Expected analytics registry key [^']+';/i)
+  }
+
+  const analyticsUpsert = source.slice(analyticsInsert, source.indexOf("v_agama_id,\n    'blogger'"))
+  assert.match(analyticsUpsert, /set state = 'active',\s*launch_url = null,\s*validated_at = coalesce/i)
+  assert.match(analyticsUpsert, /or public\.project_capabilities\.launch_url is not null/i)
+})
+
 test('Ángel assignment keeps TodoPlástico Blogger dormant and preserves unrelated data on reruns', async () => {
   const source = await readFile(angelAssignmentMigrationUrl, 'utf8')
 
@@ -207,6 +225,7 @@ test('Ángel assignment keeps TodoPlástico Blogger dormant and preserves unrela
   assert.ok(todoBlogger.startsWith('-- TodoPlástico Blogger adapter handoff'))
   assert.match(todoBlogger, /v_todoplastico_id,\s*'blogger',\s*'available',\s*null,\s*'\{\}'::jsonb,\s*null/i)
   assert.match(todoBlogger, /on conflict \(project_id, capability_key\) do update\s+set state = 'available',\s*launch_url = null,\s*metadata = public\.project_capabilities\.metadata - 'provisioning_confirmed',\s*validated_at = null/i)
+  assert.match(todoBlogger, /where not \(public\.project_capabilities\.state = 'active'\s+and public\.project_capabilities\.launch_url is not null\s+and public\.project_capabilities\.metadata @> '\{"provisioning_confirmed": true\}'::jsonb\s+and public\.project_capabilities\.validated_at is not null\)/i)
   assert.match(todoBlogger, /application adapter[\s\S]*end-to-end/i)
 
   assert.doesNotMatch(source, /(?:insert into|update|delete from) public\.(?:services|packs|activities|invoices|notifications|client_resources)\b/i)

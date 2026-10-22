@@ -316,6 +316,27 @@ test('project action accepts only exact product tiers and persists an empty choi
   assert.equal(db.calls.some(call => call.table === 'client_projects' && ['insert', 'update'].includes(call.operation)), false);
 });
 
+test('project update persists product tier through the optimistic project snapshot', async () => {
+  const db = database({ client_projects: [{ ...project, product_tier: null }] });
+  const load = relative => loadProjectModule(relative, boundary(db).mocks);
+  const { upsertProjectAction } = load('src/lib/actions/projects.ts');
+
+  const result = await upsertProjectAction({}, form({
+    id: projectId,
+    slug: project.slug,
+    name: project.name,
+    domain: project.domain,
+    status: project.status,
+    product_tier: 'pro',
+  }));
+
+  assert.ok(result.success);
+  assert.equal(db.tables.client_projects[0].product_tier, 'pro');
+  const update = db.calls.find(call => call.table === 'client_projects' && call.operation === 'update');
+  assert.equal(update.payload.product_tier, 'pro');
+  assert.equal(update.filters.length, 3, 'update must match id, updated_at and the validated owner snapshot');
+});
+
 test('capability controls show their own configuration validation result', () => {
   const load = setup();
   const { ProjectCapabilitiesForm } = load('src/components/admin/project-capabilities-form.tsx');
