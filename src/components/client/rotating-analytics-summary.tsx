@@ -11,7 +11,8 @@ export type RotatorState = {
   index: number
   elapsedMs: number
   manualPaused: boolean
-  interactionPaused: boolean
+  hoverPaused: boolean
+  focusPaused: boolean
   reducedMotion: boolean
 }
 
@@ -19,7 +20,8 @@ export type RotatorAction =
   | { type: 'advance'; elapsedMs: number; intervalMs: number; itemCount: number }
   | { type: 'next' | 'previous'; itemCount: number }
   | { type: 'set-manual-paused'; paused: boolean }
-  | { type: 'set-interaction-paused'; paused: boolean }
+  | { type: 'set-hover-paused'; paused: boolean }
+  | { type: 'set-focus-paused'; paused: boolean }
   | { type: 'set-reduced-motion'; reducedMotion: boolean }
   | { type: 'sync-items'; itemCount: number }
 
@@ -28,18 +30,20 @@ export function createRotatorState(itemCount: number, reducedMotion: boolean): R
     index: 0,
     elapsedMs: 0,
     manualPaused: false,
-    interactionPaused: false,
+    hoverPaused: false,
+    focusPaused: false,
     reducedMotion,
   }
 }
 
 function rotationPaused(state: RotatorState) {
-  return state.manualPaused || state.interactionPaused || state.reducedMotion
+  return state.manualPaused || state.hoverPaused || state.focusPaused || state.reducedMotion
 }
 
 export function reduceRotatorState(state: RotatorState, action: RotatorAction): RotatorState {
   if (action.type === 'set-manual-paused') return { ...state, manualPaused: action.paused, elapsedMs: 0 }
-  if (action.type === 'set-interaction-paused') return { ...state, interactionPaused: action.paused }
+  if (action.type === 'set-hover-paused') return { ...state, hoverPaused: action.paused }
+  if (action.type === 'set-focus-paused') return { ...state, focusPaused: action.paused }
   if (action.type === 'set-reduced-motion') return { ...state, reducedMotion: action.reducedMotion, elapsedMs: 0 }
 
   if (action.type === 'sync-items') {
@@ -121,12 +125,12 @@ export function RotatingAnalyticsSummary({
     <section
       aria-labelledby="analytics-summary-heading"
       className="rounded-2xl border border-slate-200 bg-white p-5"
-      onMouseEnter={() => dispatch({ type: 'set-interaction-paused', paused: true })}
-      onMouseLeave={() => dispatch({ type: 'set-interaction-paused', paused: false })}
-      onFocusCapture={() => dispatch({ type: 'set-interaction-paused', paused: true })}
+      onMouseEnter={() => dispatch({ type: 'set-hover-paused', paused: true })}
+      onMouseLeave={() => dispatch({ type: 'set-hover-paused', paused: false })}
+      onFocusCapture={() => dispatch({ type: 'set-focus-paused', paused: true })}
       onBlurCapture={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          dispatch({ type: 'set-interaction-paused', paused: false })
+          dispatch({ type: 'set-focus-paused', paused: false })
         }
       }}
     >

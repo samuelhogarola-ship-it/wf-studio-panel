@@ -42,6 +42,30 @@ test('rotator pause, reduced motion and zero or one item keep automatic state st
   }
 })
 
+test('rotator stays paused until both hover and focus have ended', () => {
+  const { createRotatorState, reduceRotatorState } = loadProjectModule(componentPath)
+  const advance = { type: 'advance', elapsedMs: 6_000, intervalMs: 6_000, itemCount: 3 }
+  const initial = createRotatorState(3, false)
+
+  const focusedWhileHovered = reduceRotatorState(
+    reduceRotatorState(initial, { type: 'set-hover-paused', paused: true }),
+    { type: 'set-focus-paused', paused: true },
+  )
+  const pointerLeft = reduceRotatorState(focusedWhileHovered, { type: 'set-hover-paused', paused: false })
+  assert.equal(reduceRotatorState(pointerLeft, advance).index, 0)
+  assert.equal(reduceRotatorState(
+    reduceRotatorState(pointerLeft, { type: 'set-focus-paused', paused: false }),
+    advance,
+  ).index, 1)
+
+  const pointerRemains = reduceRotatorState(focusedWhileHovered, { type: 'set-focus-paused', paused: false })
+  assert.equal(reduceRotatorState(pointerRemains, advance).index, 0)
+  assert.equal(reduceRotatorState(
+    reduceRotatorState(pointerRemains, { type: 'set-hover-paused', paused: false }),
+    advance,
+  ).index, 1)
+})
+
 test('analytics summary renders one public metric with accessible controls and an authorized route', () => {
   const { RotatingAnalyticsSummary } = loadProjectModule(componentPath)
   const html = renderToStaticMarkup(React.createElement(RotatingAnalyticsSummary, {
@@ -98,4 +122,39 @@ test('shared dashboard keeps existing content and separates notifications, messa
     const call = db.calls.find(entry => entry.table === table)
     assert.ok(call, `${table} must be queried`)
   }
+})
+
+test('dashboard reports the exact unread total beyond its five-message preview', async () => {
+  const messages = Array.from({ length: 7 }, (_, index) => ({
+    id: `message-${index}`,
+    client_id: clientId,
+    subject: `Mensaje ${index}`,
+    body: `Contenido ${index}`,
+    direction: 'inbound',
+    type: 'message',
+    read_at: null,
+    reply_to_id: null,
+    created_at: `2026-10-${String(10 + index).padStart(2, '0')}T11:00:00Z`,
+  }))
+  const db = database({
+    packs: [], pack_summary: [], activities: [], invoices: [], pending_items: [],
+    notifications: [], messages, client_resources: [],
+  })
+  const Page = loadProjectModule(dashboardPath, {
+    '@/lib/data/projects': {
+      getClientPortalContext: async () => ({
+        userId: 'session-client', email: client.email, role: 'client', client,
+        mode: 'legacy', projects: [], navigation: [],
+      }),
+      getCapabilityConfigurationIssue: () => null,
+    },
+    '@/lib/supabase/server': { createSupabaseServerClient: async () => db },
+  }).default
+
+  const html = renderToStaticMarkup(await Page())
+
+  assert.match(html, /7 sin leer/)
+  const messageCalls = db.calls.filter((call) => call.table === 'messages')
+  assert.equal(messageCalls.length, 2)
+  assert.ok(messageCalls.some((call) => call.columns === 'id'))
 })

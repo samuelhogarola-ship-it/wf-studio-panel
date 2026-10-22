@@ -64,6 +64,7 @@ export const getClientDashboardData = cache(async (clientId: string) => {
     { data: notifications },
     { data: pendingItems },
     { data: messages },
+    { count: unreadMessageCount },
     { data: reports },
   ] = await Promise.all([
     supabase
@@ -110,6 +111,13 @@ export const getClientDashboardData = cache(async (clientId: string) => {
       .order('created_at', { ascending: false })
       .limit(5),
     supabase
+      .from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', clientId)
+      .eq('direction', 'inbound')
+      .eq('type', 'message')
+      .is('read_at', null),
+    supabase
       .from('client_resources')
       .select('id, title, report_path, created_at')
       .eq('client_id', clientId)
@@ -128,6 +136,7 @@ export const getClientDashboardData = cache(async (clientId: string) => {
     notifications: notifications ?? [],
     pendingItems: pendingItems ?? [],
     messages: messages ?? [],
+    unreadMessageCount: unreadMessageCount ?? 0,
     reports: reports ?? [],
   }
 })

@@ -71,7 +71,7 @@ export default async function ClientDashboardPage() {
           ) : (
             <>
               <p className="mt-4 text-sm font-semibold text-foreground">{data.messages[0].subject}</p>
-              <p className="mt-1 text-xs text-slate-500">{data.messages.filter((message) => !message.read_at).length} sin leer</p>
+              <p className="mt-1 text-xs text-slate-500">{data.unreadMessageCount} sin leer</p>
             </>
           )}
           <Link href="/cliente/mensajeria" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">Ver mensajes →</Link>
