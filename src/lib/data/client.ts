@@ -63,6 +63,8 @@ export const getClientDashboardData = cache(async (clientId: string) => {
     { data: activities },
     { data: notifications },
     { data: pendingItems },
+    { data: messages },
+    { data: reports },
   ] = await Promise.all([
     supabase
       .from('packs')
@@ -99,6 +101,21 @@ export const getClientDashboardData = cache(async (clientId: string) => {
       .eq('client_id', clientId)
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true }),
+    supabase
+      .from('messages')
+      .select('id, subject, direction, type, read_at, created_at')
+      .eq('client_id', clientId)
+      .eq('direction', 'inbound')
+      .eq('type', 'message')
+      .order('created_at', { ascending: false })
+      .limit(5),
+    supabase
+      .from('client_resources')
+      .select('id, title, report_path, created_at')
+      .eq('client_id', clientId)
+      .eq('kind', 'report')
+      .order('created_at', { ascending: false })
+      .limit(3),
   ])
 
   const summaryMap = new Map((packSummaries ?? []).map((s) => [s.pack_id, s]))
@@ -110,6 +127,8 @@ export const getClientDashboardData = cache(async (clientId: string) => {
     activities: activities ?? [],
     notifications: notifications ?? [],
     pendingItems: pendingItems ?? [],
+    messages: messages ?? [],
+    reports: reports ?? [],
   }
 })
 
