@@ -60,7 +60,7 @@ Every deployed Blogger or Blogger 2.0 instance supports two complementary authen
 - The editor is available from the website's own address, normally `https://example.com/admin/blogger`.
 - The client signs in with a website-specific email and password.
 - These credentials belong to that editor instance and are independent from WF Studio credentials.
-- The website provides its own forgot-password/reset flow.
+- The direct credential can be rotated independently by the website owner or administrator; forgetting it never blocks the portal recovery entry.
 - WF Studio never stores, displays, synchronizes or attempts to reuse the direct password.
 
 ### WF Studio and client-portal access
@@ -70,7 +70,7 @@ Every deployed Blogger or Blogger 2.0 instance supports two complementary authen
 - WF Studio issues a short-lived, single-use, audience-bound launch ticket only after checking the exact user, project, domain and active Blogger capability.
 - The website exchanges that ticket server-to-server and creates its own local editor session.
 - This path does not require the user to enter or remember the direct website password.
-- It therefore acts as a safe recovery entry: after entering through the client portal, the user can continue editing and can start the website's local password-reset flow if desired. It never reveals or recovers the previous password.
+- It therefore acts as a safe recovery entry: after entering through the client portal, the user can continue editing even when the direct password is forgotten. It never reveals or recovers the previous password.
 
 The two sessions remain independent. Signing out of the direct editor does not sign the user out of WF Studio, and signing out of WF Studio does not invalidate a separately authenticated direct-editor session.
 
@@ -218,7 +218,7 @@ WF Studio already contains the secure handoff protocol, single-use launch ticket
 Sport Massage is the first end-to-end acceptance site. Completion requires:
 
 - direct login at its own `/admin/blogger` with independent credentials;
-- local forgot-password/reset behavior;
+- a documented, administrator-controlled direct-password rotation procedure;
 - administrator launch from WF Studio;
 - client launch from the WF client portal without entering the direct password;
 - exchange of a single-use ticket into a Sport Massage-local session;
@@ -350,5 +350,5 @@ The browser never selects arbitrary schemas, repositories, paths, tables or adap
 - An administrator can manage every enabled project; a client can manage only assigned active projects.
 - The same editor is reachable through the client panel and authorized direct access.
 - Direct access uses a separate website credential, while WF Studio/client-panel access uses a one-time handoff and requires no direct password.
-- Forgetting the direct password never blocks an authorized client from entering through the client portal and initiating local recovery.
+- Forgetting the direct password never blocks an authorized client from entering through the client portal; the old direct password remains unrecoverable and can only be replaced.
 - No deployment or capability activation occurs as part of merging the editor foundation.
