@@ -10,6 +10,21 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
 
   export type MetricRow = { x: string | null; y: number }
   export type TimeSeriesRow = { x: string; y: number }
+  export type SessionRow = {
+    country: string | null
+    region: string | null
+    city: string | null
+    device: string | null
+    browser: string | null
+    operatingSystem: string | null
+    screen: string | null
+    language: string | null
+    views: number
+    visits: number
+    firstAt: string | null
+    lastAt: string | null
+    durationSeconds: number
+  }
 
   export type AnalyticsDashboard = {
     status: 'ok'
@@ -33,6 +48,8 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
     summary: Record<string, MetricValue>
     series: { pageviews: TimeSeriesRow[]; visitors: TimeSeriesRow[] }
     metrics: Record<string, MetricRow[]>
+    sessions: SessionRow[]
+    sessionsAvailable: boolean
   }
 
   export type AnalyticsConfigurationError = {
@@ -55,6 +72,8 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
     abort(): void
   }
   export function normalizePeriod(period?: string): AnalyticsPeriod
+  export function normalizeSessionRows(response: unknown): SessionRow[]
+  export function mergeSummaryRefresh<T extends { status: string }>(current: T | null, refresh: T): T
   export function toClientAnalyticsPayload(
     dashboard: AnalyticsDashboard | AnalyticsConfigurationError,
   ): ClientAnalyticsDashboard | ClientAnalyticsConfigurationError

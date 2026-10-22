@@ -28,6 +28,45 @@ export function createRequestCoordinator() {
   }
 }
 
+export function normalizeSessionRows(response) {
+  const rows = Array.isArray(response?.data) ? response.data : []
+  return rows.map((row) => {
+    const firstAt = typeof row?.firstAt === 'string' ? row.firstAt : null
+    const lastAt = typeof row?.lastAt === 'string' ? row.lastAt : null
+    const firstTime = firstAt ? Date.parse(firstAt) : Number.NaN
+    const lastTime = lastAt ? Date.parse(lastAt) : Number.NaN
+    const durationSeconds = Number.isFinite(firstTime) && Number.isFinite(lastTime)
+      ? Math.max(0, Math.round((lastTime - firstTime) / 1000))
+      : 0
+
+    return {
+      country: typeof row?.country === 'string' ? row.country : null,
+      region: typeof row?.region === 'string' ? row.region : null,
+      city: typeof row?.city === 'string' ? row.city : null,
+      device: typeof row?.device === 'string' ? row.device : null,
+      browser: typeof row?.browser === 'string' ? row.browser : null,
+      operatingSystem: typeof row?.os === 'string' ? row.os : null,
+      screen: typeof row?.screen === 'string' ? row.screen : null,
+      language: typeof row?.language === 'string' ? row.language : null,
+      views: Number.isFinite(Number(row?.views)) ? Number(row.views) : 0,
+      visits: Number.isFinite(Number(row?.visits)) ? Number(row.visits) : 0,
+      firstAt,
+      lastAt,
+      durationSeconds,
+    }
+  })
+}
+
+export function mergeSummaryRefresh(current, refresh) {
+  if (current?.status !== 'ok' || refresh?.status !== 'ok') return refresh
+  return {
+    ...refresh,
+    metrics: current.metrics,
+    sessions: current.sessions,
+    sessionsAvailable: current.sessionsAvailable,
+  }
+}
+
 export const ANALYTICS_PROJECTS = getLegacyAnalyticsProjects()
 const CANONICAL_ANALYTICS_PROJECTS = getSites().map(site => ({
   key: site.key,
@@ -412,10 +451,21 @@ export async function fetchUmamiDashboard({
         })
         return result
       })
+  const sessionsPromise = summaryOnly
+    ? Promise.resolve({ rows: [], available: false })
+    : requestJson(apiUrl(baseUrl, `/api/websites/${websiteId}/sessions`, {
+        ...baseParams,
+        page: 1,
+        pageSize: 20,
+        orderBy: 'lastAt',
+      }), { token, fetchImpl, timeoutMs })
+      .then((response) => ({ rows: normalizeSessionRows(response), available: true }))
+      .catch(() => ({ rows: [], available: false }))
 
-  const [[activeResult, statsResult, pageviewsResult, eventsResult], metrics] = await Promise.all([
+  const [[activeResult, statsResult, pageviewsResult, eventsResult], metrics, sessions] = await Promise.all([
     corePromise,
     metricsPromise,
+    sessionsPromise,
   ])
 
   if (statsResult.status === 'rejected') throw statsResult.reason
@@ -457,5 +507,7 @@ export async function fetchUmamiDashboard({
       visitors: Array.isArray(pageviewsResult.value?.sessions) ? pageviewsResult.value.sessions : [],
     },
     metrics,
+    sessions: sessions.rows,
+    sessionsAvailable: sessions.available,
   }
 }
