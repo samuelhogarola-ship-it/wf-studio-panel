@@ -13,14 +13,17 @@ Clients, collaborators and administrators must be able to create and maintain co
 
 ## Success criteria
 
-1. Blogger continues to work for existing Samuel Coach, Sport Massage and other configured sites without changing existing URLs or published content.
-2. Blogger 2.0 can declare multiple content types and destinations per website without requiring a new editor implementation.
-3. The editor supports visual rich text, inline images, preview, SEO, categories, tags, structured sections, FAQs, sources and project-specific relationships.
-4. Existing Vivir and Conoce guides and news can be listed and edited through the common editor after their adapters are enabled.
-5. TodoPlástico can expose Articles, Guides and Tips through the same editor while preserving its public rendering and `mkt_articles` storage contract.
-6. Draft, preview, publish, archive/delete and public-link behavior is explicit and tested for every adapter.
-7. Authorization remains project-bound and site-bound; no client can discover or mutate another project's content.
-8. Every enabled website supports two independent entry paths: its own direct Blogger credentials and a secure launch from WF Studio or the WF client portal.
+1. Sport Massage is delivered first as the reference product: its own `/admin/blogger` serves the local editor, accepts the dedicated `sportsmassage` username and an operator-supplied password hash, and no longer redirects ordinary direct access to WF Studio.
+2. Sport Massage can remember an explicitly requested direct-login session for 30 days without storing the password, survives service restarts, and invalidates that session on logout.
+3. The Sport Massage editor is usable at a 360 px mobile viewport: no horizontal clipping, touch targets are at least 44 px, the visual editor uses a mobile-safe font size, and copy, paste, edit, save and publish remain available.
+4. Blogger continues to work for existing Samuel Coach and other configured sites without changing existing URLs or published content.
+5. Blogger 2.0 can declare multiple content types and destinations per website without requiring a new editor implementation.
+6. The editor supports visual rich text, inline images, preview, SEO, categories, tags, structured sections, FAQs, sources and project-specific relationships.
+7. Existing Vivir and Conoce guides and news can be listed and edited through the common editor after their adapters are enabled.
+8. TodoPlástico can expose Articles, Guides and Tips through the same editor while preserving its public rendering and `mkt_articles` storage contract.
+9. Draft, preview, publish, archive/delete and public-link behavior is explicit and tested for every adapter.
+10. Authorization remains project-bound and site-bound; no client can discover or mutate another project's content.
+11. Every enabled website supports two independent entry paths: its own direct Blogger credentials and a secure launch from WF Studio or the WF client portal.
 
 ## Non-goals
 
@@ -58,10 +61,11 @@ Every deployed Blogger or Blogger 2.0 instance supports two complementary authen
 ### Direct website access
 
 - The editor is available from the website's own address, normally `https://example.com/admin/blogger`.
-- The client signs in with a website-specific email and password.
+- The client signs in with a website-specific username or email and password.
 - These credentials belong to that editor instance and are independent from WF Studio credentials.
 - The direct credential can be rotated independently by the website owner or administrator; forgetting it never blocks the portal recovery entry.
 - WF Studio never stores, displays, synchronizes or attempts to reuse the direct password.
+- Editors may offer `Recordarme en este dispositivo`. When enabled, only a revocable server-side session and secure HttpOnly cookie persist; the website never stores the plaintext password in JavaScript storage.
 
 ### WF Studio and client-portal access
 
@@ -213,11 +217,18 @@ New websites select an existing adapter family and provide a profile. They do no
 
 ### Sport Massage Fuengirola access baseline
 
-WF Studio already contains the secure handoff protocol, single-use launch tickets and a Sport Massage direct URL declaration. However, the current canonical Sport Massage registry entry does not declare the complete external handoff contract (`launchUrl`, `healthUrl`, adapter capabilities and exchange secret), so the dual-entry model is only partially present and must not be treated as fully provisioned.
+The Sport Massage repository already contains a complete local editor, direct username/password authentication, secure cookies, the Studio ticket exchange, image handling and static publishing. The current release generator nevertheless overwrites `/admin/blogger/` with a redirect to Studio, so those existing assets are not the product users receive. WF Studio also lacks the complete external handoff contract (`launchUrl`, `healthUrl`, adapter capabilities and exchange secret). The work is therefore an activation and hardening of the existing editor, not a rewrite.
+
+Sport Massage is a release gate for the rest of the rollout. No Blogger 2.0 adapter rollout is considered started until this product passes its direct-login, remembered-session and mobile acceptance checks.
 
 Sport Massage is the first end-to-end acceptance site. Completion requires:
 
 - direct login at its own `/admin/blogger` with independent credentials;
+- username configured as `sportsmassage` and the user-supplied password stored only as a strong environment hash;
+- an explicit, default-enabled `Recordarme en este dispositivo` option that creates a persistent 30-day server-side session without persisting the plaintext password;
+- remembered sessions that survive a service restart, are pruned after expiry and are deleted immediately on logout;
+- browser password-manager support through correct autocomplete fields, without custom plaintext credential storage;
+- mobile acceptance at 360 px for login, post selection, copy/paste editing, image insertion, draft saving and publishing;
 - a documented, administrator-controlled direct-password rotation procedure;
 - administrator launch from WF Studio;
 - client launch from the WF client portal without entering the direct password;

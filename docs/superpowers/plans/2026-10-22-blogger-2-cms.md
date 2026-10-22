@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Turn the existing WF Studio Blogger into a profile-driven CMS that supports multiple page types per website and two independent access paths, then connect Sport Massage, Vivir en Fuengirola, Conoce Fuengirola and TodoPlástico without changing their public URLs.
+**Goal:** Ship Sport Massage first as a complete independent Blogger product with remembered secure login and mobile editing, then turn the existing WF Studio Blogger into a profile-driven CMS and connect Vivir en Fuengirola, Conoce Fuengirola and TodoPlástico without changing their public URLs.
 
 **Architecture:** WF Studio owns the normalized content contract, profile validation, administrator/client authorization and central editor. Existing Blogger storage is wrapped by an adapter, while external websites expose the same server-to-server content contract through project-specific adapters. Hosted editors retain direct site credentials and accept Studio's existing one-time launch tickets as a separate recovery entry.
 
@@ -22,6 +22,7 @@
 - Activate capabilities only after direct login, portal launch, health, draft, preview and publish checks pass.
 - Every repository uses its own dedicated `codex/` branch, commits and Pull Request; never mix repositories or modify dirty primary checkouts.
 - Use test-driven development: every behavior change starts with a focused failing test, then minimal implementation, then the full repository suite.
+- Treat Task 0 as a release gate. Do not begin the shared Blogger 2.0 foundation or other site adapters until Sport Massage passes its repository tests and mobile acceptance flow.
 
 ## Review Focus
 
@@ -29,7 +30,89 @@
 - Existing simple Blogger posts containing legacy optional metadata round-trip without field loss; Task 2 pins this.
 - An authorized user cannot select a different adapter, schema, site, project or type by changing API parameters; Task 3 pins this.
 - Structured content with malformed URLs, unsafe HTML, repeated IDs or unsupported modules is rejected without losing the editor draft; Tasks 1 and 4 pin this.
-- Direct credentials, handoff secrets and remote adapter errors never appear in browser configuration, logs or client-visible failures; Tasks 3, 5, 6, 7 and 8 pin this.
+- Direct credentials, handoff secrets and remote adapter errors never appear in browser configuration, logs or client-visible failures; Tasks 0, 3, 6, 7 and 8 pin this.
+
+---
+
+### Task 0: Ship the independent Sport Massage editor first
+
+**Repositories:** `sportmassage` and `wf-studio-panel` in separate worktrees and commits.
+
+**Sport Massage files:**
+- Modify: `scripts/generate-site-release.mjs`
+- Modify: `deploy/public-manifest.json`
+- Modify: `deploy/nginx-blogger.conf.example`
+- Modify: `docs/blogger-deployment.md`
+- Modify: `admin/blogger/index.html`
+- Modify: `admin/blogger/blogger-auth.js`
+- Modify: `admin/blogger/styles.css`
+- Modify: `scripts/blogger-launch-session.mjs`
+- Modify: `scripts/post-manager-server.mjs`
+- Modify: `tests/review-round-1-build.test.mjs`
+- Modify: `tests/post-manager-server.test.mjs`
+- Modify: `tests/blogger-browser-auth.test.mjs`
+- Modify: `tests/final-review-security.test.mjs`
+- Modify: `tests/site-integration.test.mjs`
+
+**WF Studio files:**
+- Modify: `src/config/sites.json`
+- Modify: `.env.example`
+- Modify: `tests/site-registry.test.mjs`
+- Modify: `tests/blogger-tool-launch.test.mjs`
+
+**Interfaces:**
+- Produces direct Sport entry at `https://sportmassagefuengirola.com/admin/blogger/` instead of a Studio redirect.
+- Uses direct username `sportsmassage`; the operator-supplied password is converted to `BLOGGER_DIRECT_PASSWORD_HASH` and never written to source, documentation, logs or test fixtures.
+- Extends `POST /admin/blogger/login` with boolean `remember`; unchecked sessions remain short-lived, while checked sessions use a 30-day cookie and persistent server-side record in the ignored `.blogger-state` directory.
+- Preserves `HttpOnly`, `Secure`, `SameSite=Strict`, exact-origin mutation checks, rate limits, session rotation and immediate logout revocation.
+- Preserves browser password-manager support with `autocomplete="username"` and `autocomplete="current-password"`; no JavaScript, localStorage or source file stores credentials.
+- Consumes existing `wf-blogger-handoff/v1` and `POST /api/tool-launch/exchange` for password-independent Studio/client-portal entry.
+
+- [ ] **Step 1: Create isolated branches from current remote main in both repositories**
+
+  Preserve both primary checkouts. Use `samuelhogarola-ship-it/sportmassage` as Sport Massage source of truth and the separate `wf-studio-panel` repository for Studio changes.
+
+- [ ] **Step 2: Write the failing Sport release and remembered-session tests**
+
+  Replace the generated-release redirect assertion with an allowlisted local-editor assertion. Add tests for `remember: true`, a 30-day cookie, restart persistence, expired-record pruning, session rotation, logout deletion, state-file mode and absence of passwords/tokens from audit and errors. Keep the existing short-session behavior for `remember: false`.
+
+- [ ] **Step 3: Write the failing mobile/editor assertions**
+
+  Require a default-enabled `Recordarme en este dispositivo` control, correct autocomplete attributes, 44 px touch targets, 16 px editable/input text, mobile-sticky save/publish controls, wrapping or horizontal scrolling toolbars, no page-level horizontal overflow and an explicit paste path that preserves safe common formatting while rejecting scripts and event attributes.
+
+- [ ] **Step 4: Run the focused tests and confirm the intended failures**
+
+  Run: `node --test tests/review-round-1-build.test.mjs tests/post-manager-server.test.mjs tests/blogger-browser-auth.test.mjs tests/site-integration.test.mjs tests/final-review-security.test.mjs`
+
+  Expected: FAIL on the current redirect, in-memory-only 24-hour session limit and missing mobile/remember behavior.
+
+- [ ] **Step 5: Serve the existing editor and implement persistent remembered sessions**
+
+  Copy only allowlisted `admin/blogger` assets into immutable releases and keep API routes proxied to the local service. Store only random session identifiers plus metadata in an atomically written, permission-restricted `.blogger-state/sessions.json`; sign tokens, cap records, prune expiry and delete on logout. Never persist the password or its plaintext equivalent.
+
+- [ ] **Step 6: Make the editor comfortable on mobile**
+
+  Keep the proven WYSIWYG/image flow. Add the remember control, responsive post/editor navigation, touch-safe controls, non-clipping toolbars, mobile-sticky primary actions and safe paste normalization. Verify copy, paste, select, edit, save draft, upload/insert image and publish at 360 x 800 and 390 x 844.
+
+- [ ] **Step 7: Complete the Sport handoff registry in WF Studio**
+
+  Add Sport's exact HTTPS `launchUrl`, `healthUrl`, adapter capabilities and environment secret name. Assert no secret value enters `sites.json`, `.env.example`, browser serialization or logs. Keep capability activation tied to successful production health.
+
+- [ ] **Step 8: Verify both repositories and perform the product acceptance flow**
+
+  Sport: `npm test && npm run check && npm run build:site`.
+
+  WF Studio: `node --test tests/site-registry.test.mjs tests/blogger-tool-launch.test.mjs && npm test`.
+
+  Browser acceptance: direct login with the configured username and operator-provided password; create/edit a draft on mobile width; paste formatted text; publish; open the public URL; restart the service and confirm the remembered session remains; logout and confirm it is revoked; enter again from WF Studio without the direct password.
+
+- [ ] **Step 9: Commit and open separate Pull Requests**
+
+  Sport: `git commit -m "feat: ship independent Sport Blogger editor"`.
+
+  WF Studio: `git commit -m "feat: complete Sport Blogger handoff"`.
+
+  Stop and present the Sport product for acceptance before Task 1.
 
 ---
 
@@ -242,7 +325,11 @@
   git commit -m "feat: add Blogger 2.0 editor mode"
   ```
 
-### Task 5: Restore Sport Massage as the dual-access reference implementation
+### Task 5: Retired — superseded by the Task 0 Sport Massage release gate
+
+This task is intentionally retained as a traceability marker. All Sport Massage scope, tests, deployment requirements and acceptance checks now live in Task 0 and must not be implemented a second time.
+
+<!--
 
 **Repositories:** `sportmassage` and `wf-studio-panel` in separate worktrees and commits.
 
@@ -305,6 +392,8 @@
   Sport: `git commit -m "feat: restore dual-access Blogger editor"`.
 
   WF Studio: `git commit -m "feat: complete Sport Blogger handoff"`.
+
+-->
 
 ### Task 6: Vivir en Fuengirola Guide and News adapter
 
