@@ -58,7 +58,7 @@ export function form(values) {
 }
 
 export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
-  const tables = structuredClone({ clients: [client], client_projects: [project], project_capabilities: [capability], project_capability_audit: [], ...seed });
+  const tables = structuredClone({ admin_project_favorites: [], clients: [client], client_projects: [project], project_capabilities: [capability], project_capability_audit: [], ...seed });
   const calls = [];
   return { tables, calls, from(table) {
     const call = { table, operation: 'select', filters: [], payload: null };
@@ -69,7 +69,7 @@ export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
     let range;
     let countRequested = false;
     const query = {
-      select(_columns, options) { countRequested = options?.count === 'exact'; return query; },
+      select(columns, options) { call.columns = columns; countRequested = options?.count === 'exact'; return query; },
       eq(key, value) { call.filters.push(row => row[key] === value); return query; },
       neq(key, value) { call.filters.push(row => row[key] !== value); return query; },
       is(key, value) { call.filters.push(row => row[key] === value); return query; },
@@ -83,6 +83,7 @@ export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
       insert(payload) { call.operation = 'insert'; call.payload = payload; return query; },
       update(payload) { call.operation = 'update'; call.payload = payload; return query; },
       upsert(payload, options) { call.operation = 'upsert'; call.payload = payload; call.conflict = options?.onConflict; return query; },
+      delete() { call.operation = 'delete'; return query; },
       async then(resolve, reject) {
         try {
           await beforeExecute?.(call);
@@ -93,6 +94,9 @@ export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
             // Mirrors the project's existing BEFORE UPDATE timestamp trigger.
             if (table === 'client_projects') row.updated_at = new Date(Date.parse(row.updated_at ?? project.updated_at) + 1).toISOString();
           });
+          if (call.operation === 'delete') {
+            tables[table] = (tables[table] ?? []).filter(row => !call.filters.every(filter => filter(row)));
+          }
           if (['insert', 'upsert'].includes(call.operation)) {
             rows = (Array.isArray(call.payload) ? call.payload : [call.payload]).map(payload => {
               const existing = call.operation === 'upsert' && (tables[table] ?? []).find(row => (call.conflict ?? 'id').split(',').every(key => row[key] === payload[key]));

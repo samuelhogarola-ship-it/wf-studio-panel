@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 
 import { AnalyticsSkeleton } from '@/components/admin/analytics-skeleton'
-import { AdvancedProjectAnalyticsPanel } from '@/components/admin/advanced-project-analytics-panel'
+import { AuthorizedAdminAnalyticsPanel } from '@/components/admin/authorized-admin-analytics-panel'
 import { PanelAnalyticsSection } from '@/components/admin/panel-analytics-section'
 import { AdminShell } from '@/components/layout/app-shell'
 import { requireAdmin } from '@/lib/auth'
@@ -21,7 +21,7 @@ export default async function Page() {
       <Suspense fallback={<AnalyticsSkeleton />}>
         <PanelAnalyticsSection panelKey="vokabel-world" />
       </Suspense>
-      <AdvancedProjectAnalyticsPanel projectKey="vokabelworld" projectLabel="Vokabel-World" domain="vokabellab.com" />
+      <AuthorizedAdminAnalyticsPanel registryKey="vokabellab" projectLabel="Vokabel-World" domain="vokabellab.com" />
     </AdminShell>
   )
 }

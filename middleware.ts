@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 import { updateSession } from '@/lib/supabase/middleware'
+import { isDirectBloggerDestination, sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
 
 const ADMIN_HOST = 'admin.webfuengirola.com'
 const PORTAL_HOST = 'portal.webfuengirola.com'
@@ -14,9 +15,23 @@ export async function middleware(request: NextRequest) {
   const isKnownHost = host === ADMIN_HOST || host === PORTAL_HOST
 
   if (isKnownHost) {
-    // admin.webfuengirola.com: /cliente/* does not exist here
+    // admin.webfuengirola.com: only the direct Blogger login may use /cliente.
     if (host === ADMIN_HOST && pathname.startsWith('/cliente')) {
-      return new NextResponse(null, { status: 404 })
+      const destination = request.nextUrl.searchParams.get('redirectedFrom')
+      if (pathname !== '/cliente' || !isDirectBloggerDestination(destination)) {
+        return new NextResponse(null, { status: 404 })
+      }
+    }
+
+    if (host === ADMIN_HOST && pathname === '/auth/callback') {
+      const destination = request.nextUrl.searchParams.get('next')
+      const adminDestination = sanitizeInternalRedirect(destination, {
+        fallback: '',
+        allowedPrefixes: ['/paneladmin'],
+      })
+      if (destination !== null && !isDirectBloggerDestination(destination) && adminDestination !== destination) {
+        return new NextResponse(null, { status: 404 })
+      }
     }
 
     // portal.webfuengirola.com: /paneladmin/* does not exist here

@@ -1,4 +1,8 @@
 const DEFAULT_ALLOWED_PREFIXES = ["/cliente", "/paneladmin"];
+const CLIENT_DESTINATION_FALLBACK = "/cliente/dashboard";
+const BLOGGER_SITE_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const ADMIN_ORIGIN = "https://admin.webfuengirola.com";
+const PORTAL_ORIGIN = "https://portal.webfuengirola.com";
 
 export function sanitizeInternalRedirect(next, options = {}) {
   const fallback = options.fallback ?? "/cliente/dashboard";
@@ -29,6 +33,70 @@ export function sanitizeInternalRedirect(next, options = {}) {
   } catch {
     return fallback;
   }
+}
+
+export function sanitizeClientDestination(value) {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("\\")
+  ) {
+    return CLIENT_DESTINATION_FALLBACK;
+  }
+
+  try {
+    const url = new URL(value, "https://wf.local");
+
+    if (url.origin !== "https://wf.local" || url.pathname.includes("%")) {
+      return CLIENT_DESTINATION_FALLBACK;
+    }
+
+    const isClientPortal =
+      url.pathname === "/cliente" || url.pathname.startsWith("/cliente/");
+    const directBloggerMatch = url.pathname.match(/^\/acceso\/blogger\/([^/]+)$/);
+    const isDirectBlogger =
+      directBloggerMatch !== null && BLOGGER_SITE_SEGMENT.test(directBloggerMatch[1]);
+
+    if (!isClientPortal && !isDirectBlogger) {
+      return CLIENT_DESTINATION_FALLBACK;
+    }
+
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return CLIENT_DESTINATION_FALLBACK;
+  }
+}
+
+export function isDirectBloggerDestination(value) {
+  const destination = sanitizeClientDestination(value);
+  return destination === value && destination.startsWith("/acceso/blogger/");
+}
+
+export function buildCanonicalClientDestinationUrl(value) {
+  const destination = sanitizeClientDestination(value);
+  const origin = isDirectBloggerDestination(destination) ? ADMIN_ORIGIN : PORTAL_ORIGIN;
+  return new URL(destination, origin);
+}
+
+export function buildCanonicalClientLoginUrl(value, error) {
+  const destination = sanitizeClientDestination(value);
+  const origin = isDirectBloggerDestination(destination) ? ADMIN_ORIGIN : PORTAL_ORIGIN;
+  const loginUrl = new URL("/cliente", origin);
+  loginUrl.searchParams.set("redirectedFrom", destination);
+  if (error === "callback_exchange_failed") {
+    loginUrl.searchParams.set("error", error);
+  }
+  return loginUrl;
+}
+
+export function buildCanonicalClientCallbackUrl(value) {
+  const destination = sanitizeClientDestination(value);
+  const origin = isDirectBloggerDestination(destination) ? ADMIN_ORIGIN : PORTAL_ORIGIN;
+  const callbackUrl = new URL("/auth/callback", origin);
+  callbackUrl.searchParams.set("next", destination);
+  return callbackUrl;
 }
 
 export function buildCanonicalAppUrl(appUrl, path = "/") {

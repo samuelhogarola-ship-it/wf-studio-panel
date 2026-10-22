@@ -5,8 +5,11 @@ import { cache } from 'react'
 import { requireAdmin, requireClientAccess } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import type { CapabilityKey, Tables } from '@/lib/supabase/types'
-import { validateBloggerProjectDestination, validateProjectDestination } from '@/lib/projects/model.mjs'
+import { validateProjectDestination } from '@/lib/projects/model.mjs'
 import { buildPortalNavigation } from '@/lib/projects/portal-navigation.mjs'
+import { reconcileProjectsWithRegistry } from '@/lib/projects/reconciliation.mjs'
+import { getBloggerCapabilityIssue, hasProjectBloggerRuntime } from '@/lib/projects/blogger-validation'
+import { getSiteByKey, getSites } from '@/lib/sites/registry.mjs'
 import { getConfiguredUmamiSites, getUmamiConnections } from '@/lib/analytics/umami-core.mjs'
 import type { Locale } from '@/lib/i18n'
 
@@ -15,6 +18,7 @@ export type Project = Tables<'client_projects'>
 export type ProjectCapability = Tables<'project_capabilities'>
 export type ProjectClient = Pick<Tables<'clients'>, 'id' | 'name' | 'email' | 'status' | 'project' | 'portal_mode'>
 export type ProjectWithCapabilities = Project & { capabilities: ProjectCapability[] }
+export type FavoriteProject = ProjectWithCapabilities & { client: ProjectClient | null }
 export type ProjectWarning = 'destination' | 'blogger' | 'analytics' | 'assignment'
 type SessionDatabase = Awaited<ReturnType<typeof createSupabaseServerClient>>
 
@@ -28,15 +32,33 @@ export function hasProjectAnalytics(project: Project): boolean {
   return Boolean(connection?.baseUrl && connection?.password)
 }
 
-export function getCapabilityConfigurationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'validated_at'>): ProjectWarning | null {
-  if (capability.launch_url && !(capability.capability_key === 'blogger'
-    ? validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)
-    : validateProjectDestination(capability.launch_url, project.domain, true))) return 'destination'
+/** Requires the project's stable slug and domain to resolve to an enabled editor runtime. */
+export function hasProjectBlogger(project: Project): boolean {
+  try {
+    const site = getSiteByKey(project.slug)
+    return hasProjectBloggerRuntime(project, site)
+  } catch {
+    return false
+  }
+}
+
+export function getCapabilityConfigurationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'metadata' | 'validated_at'>): ProjectWarning | null {
+  if (capability.capability_key === 'blogger') {
+    try {
+      return getBloggerCapabilityIssue(project, capability, getSiteByKey(project.slug))
+    } catch {
+      return getBloggerCapabilityIssue(project, capability, null)
+    }
+  }
+  if (capability.launch_url && !validateProjectDestination(capability.launch_url, project.domain, true)) return 'destination'
   if (capability.capability_key === 'hosting' && project.hosting_management_url &&
     !validateProjectDestination(project.hosting_management_url, project.domain, true)) return 'destination'
-  if (capability.capability_key === 'blogger' && (!capability.launch_url || !capability.validated_at)) return 'blogger'
   if (capability.capability_key === 'analytics' && !hasProjectAnalytics(project)) return 'analytics'
   return null
+}
+
+export function getCapabilityActivationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'metadata' | 'validated_at'>): ProjectWarning | null {
+  return getCapabilityConfigurationIssue(project, capability)
 }
 
 export function getProjectWarnings(project: ProjectWithCapabilities): ProjectWarning[] {
@@ -73,14 +95,61 @@ async function loadClients(db: SessionDatabase): Promise<ProjectClient[]> {
   return data ?? []
 }
 
+export async function getAdminFavoriteProjects(adminUserId: string): Promise<FavoriteProject[]> {
+  const db = await createSupabaseServerClient()
+  const { data: favoriteRows, error: favoritesError } = await db.from('admin_project_favorites')
+    .select('project_id, position, created_at').eq('admin_user_id', adminUserId)
+  if (favoritesError) throw new Error('No se pudieron cargar los proyectos favoritos.')
+  if (!favoriteRows?.length) return []
+
+  const favorites = [...favoriteRows].sort((left, right) => {
+    if (left.position === null && right.position !== null) return 1
+    if (left.position !== null && right.position === null) return -1
+    return (left.position ?? 0) - (right.position ?? 0) || left.created_at.localeCompare(right.created_at)
+  })
+  const { data: projects, error: projectsError } = await db.from('client_projects').select('*')
+    .in('id', favorites.map(favorite => favorite.project_id)).neq('status', 'archived')
+  if (projectsError) throw new Error('No se pudieron cargar los proyectos favoritos.')
+  if (!projects?.length) return []
+
+  const { data: capabilities, error: capabilitiesError } = await db.from('project_capabilities').select('*')
+    .in('project_id', projects.map(project => project.id))
+  if (capabilitiesError) throw new Error('No se pudieron cargar las capacidades.')
+  const clientIds = [...new Set(projects.flatMap(project => project.client_id ? [project.client_id] : []))]
+  const clientsResult = clientIds.length
+    ? await db.from('clients').select('id, name, email, status, project, portal_mode').in('id', clientIds)
+    : { data: [], error: null }
+  if (clientsResult.error) throw new Error('No se pudieron cargar los clientes asignados.')
+  const clientsById = new Map((clientsResult.data ?? []).map(client => [client.id, client]))
+  const projectsById = new Map(projects.map(project => [project.id, {
+    ...project,
+    client: project.client_id ? clientsById.get(project.client_id) ?? null : null,
+    capabilities: (capabilities ?? []).filter(capability => capability.project_id === project.id),
+  }]))
+  return favorites.flatMap(favorite => {
+    const project = projectsById.get(favorite.project_id)
+    return project ? [project] : []
+  })
+}
+
+export async function isAdminProjectFavorite(adminUserId: string, projectId: string): Promise<boolean> {
+  const db = await createSupabaseServerClient()
+  const { data, error } = await db.from('admin_project_favorites').select('project_id')
+    .eq('admin_user_id', adminUserId).eq('project_id', projectId).maybeSingle()
+  if (error) throw new Error('No se pudo comprobar el proyecto favorito.')
+  return Boolean(data)
+}
+
 export async function getAdminProjects(filters: { query?: string; clientId?: string; status?: string; capability?: string } = {}) {
   await requireAdmin()
   const db = await createSupabaseServerClient()
   const [projects, clients] = await Promise.all([loadProjects(db), loadClients(db)])
   const query = filters.query?.trim().toLowerCase()
+  const catalogProjects = projects.map(project => ({ ...project, client: clients.find(client => client.id === project.client_id) ?? null, warnings: getProjectWarnings(project) }))
   return {
     clients,
-    projects: projects.map(project => ({ ...project, client: clients.find(client => client.id === project.client_id) ?? null, warnings: getProjectWarnings(project) }))
+    registryIssues: reconcileProjectsWithRegistry(projects, getSites()),
+    projects: catalogProjects
       .filter(project => (!query || [project.name, project.domain, project.slug, project.client?.name, project.client?.email].some(value => value?.toLowerCase().includes(query))) &&
         (!filters.clientId || (filters.clientId === 'unassigned' ? !project.client_id : project.client_id === filters.clientId)) &&
         (!filters.status || project.status === filters.status) &&

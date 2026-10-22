@@ -1,7 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server'
 
 import { createSupabaseRouteClient } from '@/lib/supabase/server'
-import { resolveRequestOrigin, sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
+import {
+  buildCanonicalClientDestinationUrl,
+  isDirectBloggerDestination,
+  resolveRequestOrigin,
+  sanitizeClientDestination,
+  sanitizeInternalRedirect,
+} from '@/lib/security/redirects.mjs'
 
 function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
   return resolveRequestOrigin({
@@ -17,11 +23,19 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? ''
   const isAdminHost = host.startsWith('admin.')
-  const next = sanitizeInternalRedirect(requestUrl.searchParams.get('next'), {
-    fallback: isAdminHost ? '/paneladmin/inicio' : '/cliente/dashboard',
-  })
+  const requestedNext = requestUrl.searchParams.get('next')
+  const directBloggerDestination = isDirectBloggerDestination(requestedNext)
+  const next = directBloggerDestination
+    ? sanitizeClientDestination(requestedNext)
+    : isAdminHost
+    ? sanitizeInternalRedirect(requestUrl.searchParams.get('next'), {
+        fallback: '/paneladmin/inicio',
+      })
+    : sanitizeClientDestination(requestUrl.searchParams.get('next'))
   const appUrl = getAppBaseUrl(request, requestUrl)
-  const successUrl = new URL(next, appUrl)
+  const successUrl = directBloggerDestination
+    ? buildCanonicalClientDestinationUrl(next)
+    : new URL(next, appUrl)
   const successResponse = NextResponse.redirect(successUrl)
 
   try {
@@ -36,7 +50,7 @@ export async function GET(request: NextRequest) {
       hasCode: Boolean(code),
       message: error instanceof Error ? error.message : 'unknown_error',
     })
-    const errorUrl = new URL(next, appUrl)
+    const errorUrl = new URL(successUrl)
     errorUrl.searchParams.set('error', 'callback_exchange_failed')
     return NextResponse.redirect(errorUrl)
   }

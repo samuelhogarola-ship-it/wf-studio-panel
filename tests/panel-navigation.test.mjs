@@ -36,6 +36,20 @@ test("launcher names TodoPlástico explicitly and keeps its marketplace links ou
   assert.doesNotMatch(superentrenadorSection, /Admin marketplace|Mi panel de entrenador|Mis anuncios|Coach Studio/);
 });
 
+test("Samuel Coach launcher keeps every academy action and adds its direct Blogger shortcut", async () => {
+  const source = await readSource("src/app/paneladmin/(protected)/inicio/page.tsx");
+  const samuelSection = source.slice(
+    source.indexOf("title: 'Samuel Coach de Alemán'"),
+    source.indexOf("title: 'Vokabel-World'"),
+  );
+
+  assert.match(samuelSection, /label: 'Alumnos'.*href: '\/paneladmin\/samuel-coach\/alumnos'/);
+  assert.match(samuelSection, /label: 'Ejercicios'.*href: '\/paneladmin\/samuel-coach\/ejercicios'/);
+  assert.match(samuelSection, /label: 'Progreso'.*href: '\/paneladmin\/samuel-coach\/progreso'/);
+  assert.match(samuelSection, /label: 'Estadísticas'.*href: '\/paneladmin\/samuel-coach#estadisticas'/);
+  assert.match(samuelSection, /label: 'Blogger'.*href: '\/paneladmin\/blogger\/samuelcoachdealeman'/);
+});
+
 test("admin shell allows page content and navigation to scroll", async () => {
   const source = await readSource("src/components/layout/app-shell.tsx");
 

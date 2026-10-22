@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react'
 import { upsertProjectCapabilityAction, type ProjectFormState } from '@/lib/actions/projects'
-import type { Project, ProjectCapability } from '@/lib/data/projects'
+import type { Project, ProjectCapability, ProjectWarning } from '@/lib/data/projects'
 import type { CapabilityKey } from '@/lib/supabase/types'
 import { validateBloggerProjectDestination, validateProjectDestination } from '@/lib/projects/model.mjs'
 import { projectTranslations, type Locale } from '@/lib/i18n'
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { FormMessage } from '@/components/ui/form-message'
 
-function CapabilityCard({ project, capabilityKey, capability, locale }: { project: Project; capabilityKey: CapabilityKey; capability?: ProjectCapability; locale: Locale }) {
+function CapabilityCard({ project, capabilityKey, capability, validationIssue, showValidation, locale }: { project: Project; capabilityKey: CapabilityKey; capability?: ProjectCapability; validationIssue?: ProjectWarning | null; showValidation: boolean; locale: Locale }) {
   const [state, action, pending] = useActionState(upsertProjectCapabilityAction, {} as ProjectFormState)
   const copy = projectTranslations[locale]
   const prefix = `capability-${capabilityKey}`
@@ -28,6 +28,10 @@ function CapabilityCard({ project, capabilityKey, capability, locale }: { projec
         {(['unavailable', 'available', 'active'] as const).map(value => <option key={value} value={value}>{copy.states[value]}</option>)}
       </Select></div>
       <div><Label htmlFor={`${prefix}-url`}>{copy.destination}</Label><Input id={`${prefix}-url`} name="launch_url" defaultValue={capability?.launch_url ?? ''} /></div>
+      {showValidation ? <p
+        className={validationIssue ? 'text-xs text-amber-800' : 'text-xs text-emerald-700'}
+        data-capability-validation={validationIssue ? 'invalid' : 'valid'}
+      >{validationIssue ? copy.warnings[validationIssue] : copy.validationReady}</p> : null}
       {capabilityKey === 'blogger' ? <>
         <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="provisioning_confirmed" value="true" defaultChecked={Boolean(confirmed)} />{copy.provisioning}</label>
         <p className="text-xs text-muted">{copy.bloggerNote}</p>
@@ -40,7 +44,7 @@ function CapabilityCard({ project, capabilityKey, capability, locale }: { projec
   </Card>
 }
 
-export function ProjectCapabilitiesForm({ project, capabilities = [], locale }: { project: Project; capabilities?: ProjectCapability[]; locale: Locale }) {
+export function ProjectCapabilitiesForm({ project, capabilities = [], validationIssues = {}, locale }: { project: Project; capabilities?: ProjectCapability[]; validationIssues?: Partial<Record<CapabilityKey, ProjectWarning | null>>; locale: Locale }) {
   return <div className="grid gap-4 md:grid-cols-2">{(Object.keys(projectTranslations[locale].capabilities) as CapabilityKey[]).map(key =>
-    <CapabilityCard key={key} project={project} capabilityKey={key} capability={capabilities.find(capability => capability.capability_key === key)} locale={locale} />)}</div>
+    <CapabilityCard key={key} project={project} capabilityKey={key} capability={capabilities.find(capability => capability.capability_key === key)} validationIssue={validationIssues[key]} showValidation={Object.hasOwn(validationIssues, key)} locale={locale} />)}</div>
 }

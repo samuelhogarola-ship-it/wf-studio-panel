@@ -46,6 +46,18 @@ test("canonical website registry covers every current site and configures Samuel
   assert.equal(sportMassage.blogger.publicPostBase, "/blog/");
 });
 
+test("aGama analytics exposes only its canonical runtime lookup schema", () => {
+  const agama = getSiteByKey("agama");
+
+  assert.equal(agama.key, "agama");
+  assert.equal(agama.domain, "agama.com.mx");
+  assert.deepEqual(agama.analytics, {
+    source: "agama",
+    envSuffix: "AGAMA",
+    legacyDashboard: false,
+  });
+});
+
 test("Blogger handoff registry accepts only complete same-site HTTPS destinations", () => {
   const base = structuredClone(getSiteByKey("samuelcoachdealeman"));
   const configured = {

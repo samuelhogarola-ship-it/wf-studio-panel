@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { requireAdmin } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { validateProjectDestination } from '@/lib/projects/model.mjs'
-import { getCapabilityConfigurationIssue } from '@/lib/data/projects'
+import { getCapabilityActivationIssue, getCapabilityConfigurationIssue, hasProjectAnalytics } from '@/lib/data/projects'
 import type { Project, ProjectClient } from '@/lib/data/projects'
 import type { TablesUpdate } from '@/lib/supabase/types'
 
@@ -128,8 +128,15 @@ export async function upsertProjectCapabilityAction(_previous: ProjectFormState,
     metadata: parsed.data.capability_key === 'blogger' ? { ...metadata, provisioning_confirmed: provisioningConfirmed } : metadata,
     validated_at: parsed.data.state === 'active' ? new Date().toISOString() : null,
   }
-  if (payload.state === 'active' && (getCapabilityConfigurationIssue(project, payload) ||
-    (payload.capability_key === 'blogger' && !provisioningConfirmed))) return failure('La activación requiere un destino válido y la configuración completa de Blogger o analítica.')
+  if (payload.state === 'active' && payload.capability_key === 'analytics' && !hasProjectAnalytics(project)) {
+    return failure('No se puede activar Analítica: revisa la clave del registro, el dominio, el website ID y la conexión Umami.')
+  }
+  if (payload.state === 'active' && payload.capability_key === 'blogger' && getCapabilityActivationIssue(project, payload)) {
+    return failure('No se puede activar Blogger: revisa el proyecto registrado, el runtime, el destino y la confirmación del aprovisionamiento.')
+  }
+  if (payload.state === 'active' && getCapabilityConfigurationIssue(project, payload)) {
+    return failure('La activación requiere un destino válido y la configuración completa de la herramienta.')
+  }
   // The database trigger records old/new values and auth.uid() from this session.
   const { error } = await db.from('project_capabilities').upsert(payload, { onConflict: 'project_id,capability_key' })
   return error ? failure() : saved(project.id)

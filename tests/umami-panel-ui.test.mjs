@@ -1,6 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { renderToStaticMarkup } from "react-dom/server";
+
+import {
+  boundary,
+  capability,
+  database,
+  loadProjectModule,
+  project,
+  projectId,
+} from "./helpers/project-harness.mjs";
 
 import {
   buildUmamiAnalyticsView,
@@ -17,6 +27,67 @@ function site(key, label = key) {
     websiteId: `${key}-id`,
   };
 }
+
+const activeAnalytics = {
+  ...capability,
+  id: "analytics",
+  capability_key: "analytics",
+  state: "active",
+};
+
+function adminStatisticsSetup({ configured = true, requireAdmin } = {}) {
+  const db = database({
+    client_projects: [{ ...project, analytics_registry_key: "example" }],
+    project_capabilities: [activeAnalytics],
+  });
+  const b = boundary(db, {
+    ...(requireAdmin ? { "@/lib/auth": { requireAdmin } } : {}),
+    "@/lib/analytics/umami-core.mjs": {
+      getConfiguredUmamiSites: () => configured ? [{
+        key: "example",
+        domain: "example.com",
+        websiteId: "example-runtime-id",
+        source: "personal",
+      }] : [],
+      getUmamiConnections: () => configured ? {
+        personal: { baseUrl: "https://stats.example.test", password: "runtime-secret" },
+      } : {},
+    },
+  });
+  const Page = loadProjectModule(
+    "src/app/paneladmin/(protected)/proyectos/[id]/estadisticas/page.tsx",
+    b.mocks,
+  ).default;
+  return { Page, db, events: b.events };
+}
+
+test("administrator project statistics authenticates before resolving and renders the exact project analytics panel", async () => {
+  const denied = adminStatisticsSetup({
+    requireAdmin: async () => { throw new Error("redirect:/login"); },
+  });
+  await assert.rejects(
+    () => denied.Page({ params: Promise.resolve({ id: projectId }) }),
+    /redirect:\/login/,
+  );
+  assert.deepEqual(denied.db.calls, []);
+
+  const allowed = adminStatisticsSetup();
+  const html = renderToStaticMarkup(await allowed.Page({ params: Promise.resolve({ id: projectId }) }));
+
+  assert.equal(allowed.events[0], "admin");
+  assert.match(html, new RegExp(`href="/paneladmin/proyectos/${projectId}"`));
+  assert.match(html, new RegExp(`id="${projectId}-analytics-title"`));
+  assert.match(html, /Estadísticas de Example/);
+});
+
+test("administrator project statistics warns without mounting analytics when configuration is invalid", async () => {
+  const s = adminStatisticsSetup({ configured: false });
+
+  const html = renderToStaticMarkup(await s.Page({ params: Promise.resolve({ id: projectId }) }));
+
+  assert.match(html, /configuraci[oó]n/i);
+  assert.doesNotMatch(html, /Estadísticas de Example|Modo de estadísticas/);
+});
 
 test("metric values normalize Umami numbers and value objects", () => {
   assert.equal(metricValue(14), 14);
@@ -138,15 +209,15 @@ test("shared analytics UI is accessible and keeps credentials server-only", asyn
   assert.doesNotMatch(clientSource, /PASSWORD|USERNAME|getUmamiConnections/);
 });
 
-test("all seven operational panels render their matching analytics section", async () => {
+test("all seven operational panels resolve canonical projects before rendering advanced analytics", async () => {
   const routes = [
     ["dashboard/page.tsx", "wf-studio", "webfuengirola"],
     ["vivir-en-fuengirola/page.tsx", "vivir", "vivirenfuengirola"],
     ["conoce-fuengirola/page.tsx", "conoce", "conocef"],
     ["samuel-coach/page.tsx", "samuel-coach", "samuelcoachdealeman"],
-    ["vokabel-world/page.tsx", "vokabel-world", "vokabelworld"],
+    ["vokabel-world/page.tsx", "vokabel-world", "vokabellab"],
     ["superentrenador/pt/page.tsx", "superentrenador", "superentrenador"],
-    ["todoplastico/page.tsx", "todoplastico", "agama"],
+    ["todoplastico/page.tsx", "todoplastico", "todoplastico"],
   ];
 
   for (const [route, panelKey, advancedProjectKey] of routes) {
@@ -157,8 +228,8 @@ test("all seven operational panels render their matching analytics section", asy
     assert.match(source, /PanelAnalyticsSection/, route);
     assert.match(source, new RegExp(`panelKey=["']${panelKey}["']`), route);
     assert.match(source, /Suspense/, route);
-    assert.match(source, /AdvancedProjectAnalyticsPanel/, route);
-    assert.match(source, new RegExp(`projectKey=["']${advancedProjectKey}["']`), route);
+    assert.match(source, /AuthorizedAdminAnalyticsPanel/, route);
+    assert.match(source, new RegExp(`registryKey=["']${advancedProjectKey}["']`), route);
   }
 });
 

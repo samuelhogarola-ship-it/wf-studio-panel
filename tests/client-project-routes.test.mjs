@@ -15,7 +15,7 @@ const render = element => renderToStaticMarkup(element);
 
 // Exercise real routes, repositories, navigation and components. Only the session,
 // remote database and Next request/navigation boundaries are replaced.
-function setup({ mode = 'dynamic', projects = [project], capabilities = [], locale = 'es', seed = {}, denied = false, pathname = '/cliente/dashboard', identityRole = 'client', configuredAnalytics = false, localeRead } = {}) {
+function setup({ mode = 'dynamic', projects = [project], capabilities = [], locale = 'es', seed = {}, denied = false, pathname = '/cliente/dashboard', identityRole = 'client', configuredAnalytics = false, configuredBlogger = false, localeRead } = {}) {
   const db = database({ client_projects: projects, project_capabilities: capabilities, ...seed });
   const identity = { userId: 'session-client', email: client.email, role: identityRole, client: { ...client, portal_mode: mode } };
   const mocks = {
@@ -31,6 +31,14 @@ function setup({ mode = 'dynamic', projects = [project], capabilities = [], loca
       getConfiguredUmamiSites: () => [{ key: 'example', domain: 'example.com', websiteId: 'website-id', source: 'personal' }],
       getUmamiConnections: () => ({ personal: { baseUrl: 'https://stats.example.net', password: 'server-secret' } }),
     } } : {}),
+    ...(configuredBlogger ? {
+      '@/lib/sites/registry.mjs': {
+        getSiteByKey: () => ({ key: 'example', name: 'Example', domain: 'example.com', blogger: { enabled: true, runtime: 'central-multisite' } }),
+      },
+      '@/lib/blogger/editor.mjs': {
+        getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' }),
+      },
+    } : {}),
     'next/navigation': {
       redirect(url) { throw new Error(`redirect:${url}`); },
       notFound() { throw new Error('404'); },
@@ -106,7 +114,7 @@ test('legacy dashboard retains account summary and legacy service links', async 
 });
 
 test('server layout provides identical desktop/mobile actions, labels and accessible current state', async () => {
-  const s = setup({ capabilities: [cap('invoices'), cap('blogger', { launch_url: 'https://example.com/admin/blogger/', validated_at: project.created_at, metadata: { secret: 'never-serialize' } })] });
+  const s = setup({ configuredBlogger: true, capabilities: [cap('invoices'), cap('blogger', { launch_url: 'https://example.com/admin/blogger/', validated_at: project.created_at, metadata: { provisioning_confirmed: true, secret: 'never-serialize' } })] });
   const Layout = s.load(`${protectedRoot}/layout.tsx`).default;
   const element = await Layout({ children: React.createElement('p', null, 'Page content') });
   assert.ok(Array.isArray(element.props.navigation), 'layout must pass precomputed navigation');
@@ -191,7 +199,7 @@ test('services show only categories enabled anywhere on accessible client projec
 });
 
 test('project overview identifies its website and opens Blogger inside the authorized portal', async () => {
-  const s = setup({ capabilities: [cap('blogger', { launch_url: 'https://example.com/admin/blogger/', validated_at: project.created_at })], locale: 'en' });
+  const s = setup({ configuredBlogger: true, capabilities: [cap('blogger', { launch_url: 'https://example.com/admin/blogger/', validated_at: project.created_at, metadata: { provisioning_confirmed: true } })], locale: 'en' });
   const html = render(await s.page('proyectos/[slug]', { params: Promise.resolve({ slug: 'example' }) }));
   assert.match(html, /Example/);
   assert.match(html, /example\.com/);

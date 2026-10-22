@@ -1,4 +1,4 @@
-import { getLegacyAnalyticsProjects } from '../sites/registry.mjs'
+import { getLegacyAnalyticsProjects, getSites } from '../sites/registry.mjs'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const PERIODS = new Set(['live', '7d', '30d', '90d', '6m', '12m'])
@@ -29,6 +29,14 @@ export function createRequestCoordinator() {
 }
 
 export const ANALYTICS_PROJECTS = getLegacyAnalyticsProjects()
+const CANONICAL_ANALYTICS_PROJECTS = getSites().map(site => ({
+  key: site.key,
+  label: site.name,
+  domain: site.domain,
+  source: site.analytics.source,
+  envSuffix: site.analytics.envSuffix,
+  legacyKey: site.analytics.legacyKey,
+}))
 
 const METRIC_TYPES = {
   entries: ['entry'],
@@ -122,10 +130,10 @@ export function getAnalyticsRange(period, now = new Date()) {
 }
 
 export function getAnalyticsProject(projectKey, env = process.env) {
-  const project = ANALYTICS_PROJECTS.find(({ key }) => key === projectKey)
+  const project = CANONICAL_ANALYTICS_PROJECTS.find(({ key }) => key === projectKey)
   if (!project) throw new Error(`Proyecto de estadísticas desconocido: ${projectKey}`)
 
-  const legacySuffix = project.key.toUpperCase()
+  const legacySuffix = (project.legacyKey || project.key).toUpperCase()
   const suffix = project.envSuffix || legacySuffix
   const websiteIdEnv = `UMAMI_WEBSITE_ID_${suffix}`
   const legacyWebsiteIdEnv = `STAT_REPORT_UMAMI_WEBSITE_ID_${legacySuffix}`

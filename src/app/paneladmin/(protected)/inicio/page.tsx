@@ -1,7 +1,9 @@
 import Link from 'next/link'
 
+import { FavoriteProjectCard } from '@/components/admin/favorite-project-card'
 import { AdminShell } from '@/components/layout/app-shell'
 import { requireAdmin } from '@/lib/auth'
+import { getAdminFavoriteProjects } from '@/lib/data/projects'
 import { getLocale } from '@/lib/locale'
 
 export const dynamic = 'force-dynamic'
@@ -88,6 +90,7 @@ const PANELS: Panel[] = [
       { label: 'Ejercicios', href: '/paneladmin/samuel-coach/ejercicios' },
       { label: 'Progreso', href: '/paneladmin/samuel-coach/progreso' },
       { label: 'Estadísticas', href: '/paneladmin/samuel-coach#estadisticas' },
+      { label: 'Blogger', href: '/paneladmin/blogger/samuelcoachdealeman' },
     ],
   },
   {
@@ -143,7 +146,10 @@ const PANELS: Panel[] = [
 
 export default async function LauncherPage() {
   const identity = await requireAdmin()
-  const locale = await getLocale()
+  const [locale, favoriteProjects] = await Promise.all([
+    getLocale(),
+    getAdminFavoriteProjects(identity.userId),
+  ])
 
   return (
     <AdminShell
@@ -153,6 +159,29 @@ export default async function LauncherPage() {
       userEmail={identity.email}
       locale={locale}
     >
+      <section aria-labelledby="favorite-projects-title" className="mb-8">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">Accesos personales</p>
+            <h2 id="favorite-projects-title" className="mt-1 text-2xl font-bold text-foreground">Favoritos</h2>
+          </div>
+          <Link href="/paneladmin/proyectos" className="text-sm font-semibold text-brand hover:underline">
+            Ver todos los proyectos
+          </Link>
+        </div>
+
+        {favoriteProjects.length ? (
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {favoriteProjects.map(project => <FavoriteProjectCard key={project.id} project={project} />)}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-line bg-white px-6 py-8 text-center">
+            <h3 className="font-semibold text-foreground">Todavía no tienes proyectos favoritos</h3>
+            <p className="mt-2 text-sm text-muted">Añade proyectos desde el catálogo para tener sus herramientas a mano.</p>
+          </div>
+        )}
+      </section>
+
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {PANELS.map((panel) => (
           <article

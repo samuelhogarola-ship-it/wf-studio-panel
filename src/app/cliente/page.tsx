@@ -7,6 +7,7 @@ import { getOptionalIdentity } from '@/lib/auth'
 import { getClientPortalContext } from '@/lib/data/projects'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
+import { buildCanonicalClientDestinationUrl, isDirectBloggerDestination, sanitizeClientDestination } from '@/lib/security/redirects.mjs'
 
 type ClientLoginPageProps = {
   searchParams?: Promise<{
@@ -32,13 +33,17 @@ function getLoginErrorMessage(error?: string, redirectedFrom?: string) {
 }
 
 export default async function ClientLoginPage({ searchParams }: ClientLoginPageProps) {
-  const identity = await getOptionalIdentity()
+  const [identity, params] = await Promise.all([getOptionalIdentity(), searchParams])
+  const destination = sanitizeClientDestination(params?.redirectedFrom)
 
   if (identity?.role === 'admin') {
     redirect('/paneladmin/inicio')
   }
 
   if (identity?.role === 'client') {
+    if (params?.redirectedFrom !== undefined) redirect(isDirectBloggerDestination(destination)
+      ? buildCanonicalClientDestinationUrl(destination).toString()
+      : destination)
     const context = await getClientPortalContext()
     if (context.mode === 'legacy') redirect('/cliente/dashboard')
     redirect(context.projects.length === 1
@@ -46,7 +51,7 @@ export default async function ClientLoginPage({ searchParams }: ClientLoginPageP
       : '/cliente/proyectos')
   }
 
-  const [locale, params] = await Promise.all([getLocale(), searchParams])
+  const locale = await getLocale()
   const loginError = getLoginErrorMessage(params?.error, params?.redirectedFrom)
 
   return (
@@ -82,7 +87,7 @@ export default async function ClientLoginPage({ searchParams }: ClientLoginPageP
           </p>
         </div>
 
-        <ClientLoginForm locale={locale} />
+        <ClientLoginForm locale={locale} destination={destination} />
 
         {loginError ? (
           <div className="mt-4 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4">

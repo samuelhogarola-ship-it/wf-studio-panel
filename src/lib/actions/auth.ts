@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 
 import { registerPendingClient } from '@/lib/auth/register.mjs'
+import { buildCanonicalClientCallbackUrl, buildCanonicalClientDestinationUrl, sanitizeClientDestination } from '@/lib/security/redirects.mjs'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -40,6 +41,7 @@ export async function adminLoginAction(_prevState: AuthFormState, formData: Form
 export async function clientPasswordLoginAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
+  const destination = sanitizeClientDestination(formData.get('destination'))
   const supabase = await createSupabaseServerClient()
   const adminClient = getSupabaseAdminClient()
 
@@ -69,11 +71,12 @@ export async function clientPasswordLoginAction(_prevState: AuthFormState, formD
     return { error: 'Email o contraseña incorrectos.' }
   }
 
-  redirect('/cliente/dashboard')
+  redirect(buildCanonicalClientDestinationUrl(destination).toString())
 }
 
 export async function clientMagicLinkAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
+  const destination = sanitizeClientDestination(formData.get('destination'))
   const supabase = await createSupabaseServerClient()
   const adminClient = getSupabaseAdminClient()
 
@@ -92,12 +95,7 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
     return { error: 'Tu cuenta no está activa. Contacta con el estudio.' }
   }
 
-  const origin = String(formData.get('origin') ?? '').trim()
-  if (!origin) {
-    return { error: 'No se pudo determinar la URL de la app.' }
-  }
-
-  const emailRedirectTo = new URL('/auth/callback', origin).toString()
+  const emailRedirectTo = buildCanonicalClientCallbackUrl(destination).toString()
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -110,7 +108,6 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
     console.warn('[auth/client/magic-link] signInWithOtp failed', {
       email,
       project: CLIENT_PROJECT,
-      origin,
       message: error.message,
     })
     return { error: 'No se pudo enviar el magic link. Comprueba el email e inténtalo de nuevo.' }

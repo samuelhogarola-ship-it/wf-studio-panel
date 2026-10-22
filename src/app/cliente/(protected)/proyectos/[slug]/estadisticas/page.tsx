@@ -2,6 +2,10 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
+import {
+  AnalyticsTargetUnavailableError,
+  resolveClientAnalyticsTarget,
+} from '@/lib/analytics/project-access'
 import { getAccessibleClientProject } from '@/lib/data/projects'
 import { clientPortalTranslations, projectTranslations } from '@/lib/i18n'
 import { getLocale } from '@/lib/locale'
@@ -14,10 +18,15 @@ export default async function ClientProjectStatisticsPage({
   params: Promise<{ slug: string }>
 }) {
   const [locale, { slug }] = await Promise.all([getLocale(), params])
-  const project = await getAccessibleClientProject(slug)
-  const activeAnalytics = project?.capabilities.some(capability =>
-    capability.capability_key === 'analytics' && capability.state === 'active')
-  if (!project || !activeAnalytics) notFound()
+  let target
+  try {
+    target = await resolveClientAnalyticsTarget(slug)
+  } catch (error) {
+    if (error instanceof AnalyticsTargetUnavailableError) notFound()
+    throw error
+  }
+  const project = await getAccessibleClientProject(target.projectSlug)
+  if (!project) notFound()
 
   const clientText = clientPortalTranslations[locale]
   const analyticsLabel = projectTranslations[locale].capabilities.analytics
@@ -34,7 +43,7 @@ export default async function ClientProjectStatisticsPage({
       </header>
 
       <ProjectAnalyticsPanel
-        projectKey={project.slug}
+        projectKey={target.projectSlug}
         projectLabel={project.name}
         domain={project.domain}
       />
