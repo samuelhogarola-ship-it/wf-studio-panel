@@ -56,8 +56,33 @@ Ejecutar en el repo de Superentrenador, no en WF Studio:
 - Confirmar empresas `active|blocked` y anuncios `pending_review|published|rejected`.
 - No exponer la service key al navegador.
 
+## Despliegue del portal cliente unificado
+
+No aplicar estas migraciones hasta que el Pull Request haya sido aprobado y el despliegue esté coordinado. En producción, respetar el orden completo de versiones y, para este cambio, aplicar específicamente:
+
+1. `202610220001_client_project_product_tier.sql`: añade y clasifica `client_projects.product_tier`.
+2. `202610220002_angel_agama_todoplastico_projects.sql`: asigna a Ángel los proyectos aGama y TodoPlástico y activa solo las capacidades validadas.
+
+Puertas de activación:
+
+- Las rutas universales de cuenta quedan disponibles para todo cliente activo; sus datos continúan limitados por sesión y RLS.
+- Las herramientas de proyecto requieren proyecto asignado, visible y activo, más una capacidad `active` con configuración válida.
+- aGama puede activar Estadísticas y Blogger porque su adaptador está validado.
+- TodoPlástico puede activar Estadísticas, pero Blogger debe permanecer inactivo hasta que su adaptador separado supere E2E.
+- `Novedades` resume notificaciones. `Actualizaciones` y `Mensajes` siguen siendo secciones independientes.
+
+Comprobaciones posteriores al despliegue, sin efectuar mutaciones adicionales:
+
+- Administrador: abrir el catálogo y ambos proyectos de Ángel; confirmar las dos páginas de Estadísticas y que TodoPlástico no ofrece Blogger.
+- Ángel: confirmar Inicio, Webs, rutas universales de cuenta, aislamiento entre aGama/TodoPlástico, Estadísticas en ambas webs y Blogger solo en aGama.
+- Sofía: confirmar que su acceso y Blogger siguen vinculados únicamente a su proyecto autorizado.
+- Cliente activo sin proyectos: confirmar Inicio, Webs vacío controlado y rutas universales de cuenta sin herramientas de proyecto.
+- Forzar un fallo de lectura de una fuente de analítica en un entorno seguro y confirmar que Inicio conserva los demás resúmenes sin filtrar detalles internos.
+- Revisar navegación de escritorio y móvil, preservación de rutas directas y pausa por movimiento reducido.
+
 ## Checklist
 
 - Aplicar las migraciones `202608190001_client_auth_identity.sql`, `202608230001_client_summary_active_packs.sql` y `202608230002_pending_reminder_claims.sql`.
+- Para el portal cliente unificado, aplicar después `202610220001_client_project_product_tier.sql` y `202610220002_angel_agama_todoplastico_projects.sql`, en ese orden y solo tras aprobación.
 - Ejecutar `npm run lint`, `npm run typecheck`, `npm test` y `npm run build`.
 - Confirmar que `Proyectos` sigue sin cambios funcionales.
