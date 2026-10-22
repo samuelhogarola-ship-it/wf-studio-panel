@@ -49,6 +49,29 @@ test("canonical website registry covers every current site and configures Samuel
     "https://sportmassagefuengirola.com/admin/blogger/",
   );
   assert.equal(sportMassage.blogger.publicPostBase, "/blog/");
+  assert.deepEqual(getBloggerHandoff(sportMassage), {
+    enabled: true,
+    runtime: "central-legacy",
+    url: "https://sportmassagefuengirola.com/admin/blogger/",
+    apiBase: "/api/posts",
+    buildEndpoint: "/api/build",
+    publicPostBase: "/blog/",
+    launchUrl: "https://sportmassagefuengirola.com/admin/blogger/launch",
+    healthUrl: "https://sportmassagefuengirola.com/api/blogger/health",
+    adapter: "snapshot-build",
+    capabilities: ["posts", "media", "publish", "unpublish"],
+  });
+});
+
+test("Sport handoff documents an empty server-only exchange secret without public credentials", async () => {
+  const [environmentExample, registrySource] = await Promise.all([
+    readFile(new URL("../.env.example", import.meta.url), "utf8"),
+    readFile(new URL("../src/config/sites.json", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(environmentExample, /^WF_BLOGGER_HANDOFF_SECRET_SPORTMASSAGEFUENGIROLA=$/m);
+  assert.doesNotMatch(environmentExample, /^WF_BLOGGER_HANDOFF_SECRET_SPORTMASSAGEFUENGIROLA=.+$/m);
+  assert.doesNotMatch(registrySource, /WF_BLOGGER_HANDOFF_SECRET|password|passwordHash|filesystemRoot/i);
 });
 
 test("aGama analytics exposes only its canonical runtime lookup schema", () => {

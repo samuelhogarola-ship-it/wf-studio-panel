@@ -11,6 +11,11 @@ import {
   project,
 } from './helpers/project-harness.mjs'
 import * as projectTools from '../src/lib/projects/tools.mjs'
+import { getBloggerHandoff, getSiteByKey } from '../src/lib/sites/registry.mjs'
+import {
+  getBloggerExchangeSecret,
+  renderLaunchForm,
+} from '../src/lib/tools/launch-tickets.mjs'
 
 const migrationUrl = new URL(
   '../supabase/migrations/202610170004_tool_launch_tickets.sql',
@@ -41,6 +46,26 @@ test('public Blogger entry generation does not replace administrator or client i
 
   assert.equal(admin.find(tool => tool.id === 'blogger')?.href, '/paneladmin/blogger/first-site')
   assert.equal(clientTools.find(tool => tool.id === 'blogger')?.href, '/cliente/proyectos/first-site/blogger')
+})
+
+test('Sport launch keeps the exchange secret server-side and serializes only the bounded handoff form', () => {
+  const site = getSiteByKey('sportmassagefuengirola')
+  const handoff = getBloggerHandoff(site)
+  assert.ok(handoff)
+
+  const secretName = 'WF_BLOGGER_HANDOFF_SECRET_SPORTMASSAGEFUENGIROLA'
+  const secretValue = 'sport-handoff-test-secret'
+  assert.equal(getBloggerExchangeSecret(site.key, { [secretName]: secretValue }), secretValue)
+
+  const html = renderLaunchForm({
+    action: handoff.launchUrl,
+    code: 'S'.repeat(43),
+    siteKey: site.key,
+  })
+  assert.match(html, /action="https:\/\/sportmassagefuengirola\.com\/admin\/blogger\/launch"/)
+  assert.match(html, /name="protocol" value="wf-blogger-handoff\/v1"/)
+  assert.match(html, /name="siteKey" value="sportmassagefuengirola"/)
+  assert.doesNotMatch(html, new RegExp(`${secretName}|${secretValue}|password|hash|filesystem|api\\/posts|api\\/build`, 'i'))
 })
 
 const configuredSite = {
@@ -361,6 +386,65 @@ test('exchange POST authenticates the target server and returns only audience-bo
   assert.doesNotMatch(JSON.stringify(payload), new RegExp(`${'A'.repeat(43)}|target-shared-secret|expiresAt|\\"code\\"|token`, 'i'))
   responseSecurity(response)
   assert.match(response.headers.get('content-security-policy') ?? '', /form-action 'none'/)
+})
+
+test('Sport exchange response and logs omit secrets and server-only runtime configuration', async t => {
+  const secretName = 'WF_BLOGGER_HANDOFF_SECRET_SPORTMASSAGEFUENGIROLA'
+  const secretValue = 'sport-route-test-secret'
+  const previousSecret = process.env[secretName]
+  process.env[secretName] = secretValue
+
+  const logs = []
+  const originalConsole = {
+    error: console.error,
+    info: console.info,
+    log: console.log,
+    warn: console.warn,
+  }
+  for (const level of Object.keys(originalConsole)) {
+    console[level] = (...args) => logs.push([level, ...args])
+  }
+  t.after(() => {
+    if (previousSecret === undefined) delete process.env[secretName]
+    else process.env[secretName] = previousSecret
+    for (const [level, method] of Object.entries(originalConsole)) console[level] = method
+  })
+
+  const ticketModule = await import('../src/lib/tools/launch-tickets.mjs')
+  const route = loadProjectModule(exchangeRoutePath, {
+    '@/lib/sites/registry.mjs': { getSiteByKey, getBloggerHandoff },
+    '@/lib/supabase/admin': { getSupabaseAdminClient: () => ({ serviceRole: true }) },
+    '@/lib/tools/launch-tickets.mjs': {
+      ...ticketModule,
+      async consumeLaunchTicket() {
+        return {
+          protocol,
+          siteKey: 'sportmassagefuengirola',
+          audience: 'https://sportmassagefuengirola.com',
+          projectId: project.id,
+          clientId: client.id,
+          userId: claims().userId,
+          actorRole: 'client',
+          expiresAt: new Date(now + 60_000).toISOString(),
+        }
+      },
+    },
+  })
+  const response = await route.POST(new Request('https://studio.example/api/tool-launch/exchange', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${secretValue}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ protocol, code: 'S'.repeat(43), siteKey: 'sportmassagefuengirola' }),
+  }))
+  const payload = await response.json()
+
+  assert.equal(response.status, 200)
+  assert.equal(payload.siteKey, 'sportmassagefuengirola')
+  const publicOutput = JSON.stringify(payload)
+  const loggedOutput = JSON.stringify(logs)
+  const forbidden = new RegExp(`${secretName}|${secretValue}|password|hash|filesystem|api\\/posts|api\\/build`, 'i')
+  assert.doesNotMatch(publicOutput, forbidden)
+  assert.doesNotMatch(loggedOutput, forbidden)
+  responseSecurity(response)
 })
 
 async function boundedExchangeSetup() {

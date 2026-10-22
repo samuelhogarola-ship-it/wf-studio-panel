@@ -233,7 +233,16 @@
       "url": "https://sportmassagefuengirola.com/admin/blogger/",
       "apiBase": "/api/posts",
       "buildEndpoint": "/api/build",
-      "publicPostBase": "/blog/"
+      "publicPostBase": "/blog/",
+      "launchUrl": "https://sportmassagefuengirola.com/admin/blogger/launch",
+      "healthUrl": "https://sportmassagefuengirola.com/api/blogger/health",
+      "adapter": "snapshot-build",
+      "capabilities": [
+        "posts",
+        "media",
+        "publish",
+        "unpublish"
+      ]
     }
   },
   {
