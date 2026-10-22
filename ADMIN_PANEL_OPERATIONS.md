@@ -73,6 +73,8 @@ Puertas de activación:
 
 Comprobaciones posteriores al despliegue, sin efectuar mutaciones adicionales:
 
+- Inicio debe resolver en `/cliente/dashboard` y nunca redirigir a un proyecto.
+- Webs debe resolver en `/cliente/proyectos`, también para un cliente con cero proyectos.
 - Administrador: abrir el catálogo y ambos proyectos de Ángel; confirmar las dos páginas de Estadísticas y que TodoPlástico no ofrece Blogger.
 - Ángel: confirmar Inicio, Webs, rutas universales de cuenta, aislamiento entre aGama/TodoPlástico, Estadísticas en ambas webs y Blogger solo en aGama.
 - Sofía: confirmar que su acceso y Blogger siguen vinculados únicamente a su proyecto autorizado.
