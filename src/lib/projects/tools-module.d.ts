@@ -1,5 +1,6 @@
 declare module '@/lib/projects/tools.mjs' {
   import type { ProjectWithCapabilities } from '@/lib/data/projects'
+  import type { ProductTier } from '@/lib/supabase/types'
 
   export type ProjectTool = Readonly<{
     id: 'website' | 'blogger' | 'analytics' | 'client' | 'domains' | 'hosting' | 'invoices' | 'reports' | 'bonuses'
@@ -15,4 +16,6 @@ declare module '@/lib/projects/tools.mjs' {
     viewer: 'admin' | 'client'
     configurationIssues?: Readonly<Record<string, string>>
   }): readonly ProjectTool[]
+
+  export function productTierLabel(tier: ProductTier | null | undefined, locale?: 'es' | 'en'): string
 }

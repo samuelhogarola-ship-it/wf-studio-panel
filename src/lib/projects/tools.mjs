@@ -12,6 +12,16 @@ const definitions = Object.freeze([
   { id: 'bonuses', label: 'Bonos', audience: 'both', capability: 'bonuses_reports' },
 ]);
 
+const productTierLabels = Object.freeze({
+  es: Object.freeze({ lite: 'Lite', express: 'Express', pro: 'Pro', fallback: 'Por confirmar' }),
+  en: Object.freeze({ lite: 'Lite', express: 'Express', pro: 'Pro', fallback: 'To confirm' }),
+});
+
+export function productTierLabel(tier, locale = 'es') {
+  const labels = locale === 'en' ? productTierLabels.en : productTierLabels.es;
+  return labels[tier] ?? labels.fallback;
+}
+
 function internalHref(id, project, viewer) {
   const projectId = encodeURIComponent(project.id);
   const slug = encodeURIComponent(project.slug);

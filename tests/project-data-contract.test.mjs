@@ -107,16 +107,21 @@ test('favorites preserve administrator position while resolving only current non
 
 test('client repository uses session identity and denies guessed, archived, hidden and foreign projects', async () => {
   const s = setup({
-    client_projects: [project, { ...project, id: 'foreign', slug: 'foreign', client_id: otherClientId }, { ...project, id: 'hidden', slug: 'hidden', client_access_enabled: false }, { ...project, id: 'archived', slug: 'archived', status: 'archived' }],
-    project_capabilities: [{
-      ...capability,
-      state: 'active',
-      launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
-      metadata: { provisioning_confirmed: true },
-      validated_at: project.created_at,
-    }],
+    client_projects: [{ ...project, product_tier: 'pro' }, { ...project, id: 'foreign', slug: 'foreign', client_id: otherClientId, product_tier: 'lite' }, { ...project, id: 'hidden', slug: 'hidden', client_access_enabled: false }, { ...project, id: 'archived', slug: 'archived', status: 'archived' }],
+    project_capabilities: [
+      {
+        ...capability,
+        state: 'active',
+        launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+        metadata: { provisioning_confirmed: true },
+        validated_at: project.created_at,
+      },
+      { ...capability, id: 'foreign-capability', project_id: 'foreign', capability_key: 'analytics', state: 'active' },
+    ],
   }, configuredBlogger);
-  assert.deepEqual((await s.data().getClientPortalContext()).projects.map(p => p.slug), ['example']);
+  const context = await s.data().getClientPortalContext();
+  assert.deepEqual(context.projects.map(p => [p.slug, p.product_tier]), [['example', 'pro']]);
+  assert.equal(context.projects[0].capabilities.some(item => item.project_id === 'foreign'), false);
   assert.equal((await s.data().getAccessibleClientProject('example')).id, projectId);
   for (const slug of ['foreign', 'hidden', 'archived', 'unknown']) assert.equal(await s.data().getAccessibleClientProject(slug), null);
   assert.equal((await s.data().getActiveClientCapability('example', 'blogger')).capability_key, 'blogger');

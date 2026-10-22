@@ -48,6 +48,14 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
   const hoursCount = packs.filter(pack => pack.pack_type === 'hours').length
   const closedCount = packs.length - hoursCount
   const numberLocale = locale === 'en' ? 'en-GB' : 'es-ES'
+  const workspaceTools = [...selectedTools.values()]
+  const toolLabel = (id: string) => {
+    if (id === 'website') return text.website
+    if (id === 'reports') return text.reports
+    if (id === 'bonuses') return text.bonuses
+    if (id === 'blogger' || id === 'analytics' || id === 'domains' || id === 'hosting' || id === 'invoices') return labels[id]
+    return id
+  }
 
   return (
     <div className="space-y-8">
@@ -82,27 +90,23 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
 
       <section aria-labelledby="tools-heading">
         <h2 id="tools-heading" className="mb-4 font-bold">{text.tools}</h2>
-        {project.capabilities.length === 0 ? <p className="text-sm text-muted">{text.noTools}</p> : (
+        {workspaceTools.length === 0 ? <p className="text-sm text-muted">{text.noTools}</p> : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {project.capabilities.map(capability => {
-              const key = capability.capability_key
-              const accountCapability = key === 'invoices' || key === 'bonuses_reports'
-              const toolId = key === 'bonuses_reports' ? 'bonuses' : key
-              const tool = selectedTools.get(toolId)
-              const accountHref = key === 'invoices' ? '/cliente/facturas' : key === 'bonuses_reports' ? '/cliente/bonos' : '/cliente/servicios'
-              const href = accountCapability ? (tool ? accountHref : null) : key === 'products'
-                ? capability.state === 'active' ? `/cliente/proyectos/${encodeURIComponent(project.slug)}#products` : null
-                : tool?.href
-              if (!href) return null
+            {workspaceTools.map(tool => {
+              if (!tool.href) return null
+              const label = toolLabel(tool.id)
+              const accountCapability = tool.id === 'invoices' || tool.id === 'reports' || tool.id === 'bonuses'
+              const title = `${label}${accountCapability ? '' : ` · ${project.name}`}`
+              const action = `${text.open} ${title}`
               return (
-                <article id={key} key={key} className="rounded-2xl border border-line bg-white p-6">
-                  <h3 className="font-semibold">{labels[key]}{accountCapability ? '' : ` · ${project.name}`}</h3>
+                <article id={tool.id} key={tool.id} className="rounded-2xl border border-line bg-white p-6">
+                  <h3 className="font-semibold">{title}</h3>
                   <p className="mt-1 break-all text-sm text-muted">{accountCapability ? text.aggregated : project.domain}</p>
-                  {key === 'hosting' && project.hosting_label ? <p className="mt-2 text-sm">{project.hosting_label}</p> : null}
-                  <Link href={href} className="mt-4 inline-block text-sm font-semibold text-brand underline">
-                    {text.open} {labels[key]}{accountCapability ? '' : ` · ${project.name}`}
-                  </Link>
-                  {key === 'blogger' ? <p className="mt-2 text-xs text-muted">{text.bloggerNote}</p> : null}
+                  {tool.id === 'hosting' && project.hosting_label ? <p className="mt-2 text-sm">{project.hosting_label}</p> : null}
+                  {tool.id === 'website'
+                    ? <a href={tool.href} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block text-sm font-semibold text-brand underline">{action}</a>
+                    : <Link href={tool.href} className="mt-4 inline-block text-sm font-semibold text-brand underline">{action}</Link>}
+                  {tool.id === 'blogger' ? <p className="mt-2 text-xs text-muted">{text.bloggerNote}</p> : null}
                 </article>
               )
             })}

@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildProjectTools } from '../src/lib/projects/tools.mjs';
+import * as projectTools from '../src/lib/projects/tools.mjs';
+
+const { buildProjectTools } = projectTools;
 
 const capability = (capability_key, state = 'active', extra = {}) => ({
   capability_key,
@@ -28,6 +30,18 @@ const project = (extra = {}) => ({
 });
 
 const byId = tools => Object.fromEntries(tools.map(tool => [tool.id, tool]));
+
+test('product tiers use the approved localized labels and safe fallback', () => {
+  assert.equal(typeof projectTools.productTierLabel, 'function');
+  for (const [tier, expected] of [['lite', 'Lite'], ['express', 'Express'], ['pro', 'Pro']]) {
+    assert.equal(projectTools.productTierLabel(tier, 'es'), expected);
+    assert.equal(projectTools.productTierLabel(tier, 'en'), expected);
+  }
+  assert.equal(projectTools.productTierLabel(null, 'es'), 'Por confirmar');
+  assert.equal(projectTools.productTierLabel(null, 'en'), 'To confirm');
+  assert.equal(projectTools.productTierLabel('enterprise', 'es'), 'Por confirmar');
+  assert.equal(projectTools.productTierLabel('enterprise', 'en'), 'To confirm');
+});
 
 test('active Blogger uses the authorized internal route and exposes no runtime configuration', () => {
   const input = project({ capabilities: [capability('blogger', 'active', {

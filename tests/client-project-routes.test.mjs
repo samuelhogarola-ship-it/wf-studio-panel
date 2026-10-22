@@ -63,16 +63,40 @@ test('entry sends every active client to Inicio and preserves the administrator 
 
 test('project index renders the universal selector for one project in either historical mode', async () => {
   for (const mode of ['legacy', 'dynamic']) {
-    const html = render(await setup({ mode }).page('proyectos'));
+    const html = render(await setup({ mode, locale: 'en' }).page('proyectos'));
     assert.match(html, /Example/);
+    assert.match(html, /To confirm/);
     assert.match(html, /href="\/cliente\/proyectos\/example"/);
   }
 });
 
-test('multiple projects render a linked accessible selector with website identity', async () => {
-  const html = render(await setup({ projects: [project, second], locale: 'en' }).page('proyectos'));
+test('multiple projects render tiered workspace cards with active tool summaries only', async () => {
+  const html = render(await setup({
+    projects: [
+      { ...project, product_tier: 'pro', analytics_registry_key: 'example' },
+      { ...second, product_tier: 'express' },
+      { ...second, id: 'foreign', slug: 'foreign', name: 'Foreign Site', client_id: otherClientId, product_tier: 'lite' },
+    ],
+    capabilities: [
+      cap('analytics'),
+      cap('blogger', { launch_url: 'https://example.com/admin/blogger/', validated_at: project.created_at, metadata: { provisioning_confirmed: true, secret: 'never-render' } }),
+      cap('analytics', { id: 'second-analytics', project_id: second.id }),
+      cap('blogger', { id: 'second-blogger', project_id: second.id, state: 'available' }),
+      cap('hosting', { id: 'second-hosting', project_id: second.id, state: 'unavailable' }),
+      cap('analytics', { id: 'foreign-analytics', project_id: 'foreign' }),
+    ],
+    configuredAnalytics: true,
+    configuredBlogger: true,
+    locale: 'en',
+  }).page('proyectos'));
   for (const value of ['Example', 'example.com', 'Second Site', 'second.example', 'Choose a project']) assert.ok(html.includes(value), value);
   for (const slug of ['example', 'second-site']) assert.match(html, new RegExp(`href="/cliente/proyectos/${slug}"`));
+  const firstCard = html.slice(html.indexOf('Example'), html.indexOf('Second Site'));
+  const secondCard = html.slice(html.indexOf('Second Site'));
+  for (const value of ['Pro', 'Statistics', 'Blogger']) assert.match(firstCard, new RegExp(value));
+  assert.match(secondCard, /Express/);
+  assert.doesNotMatch(secondCard, /Statistics|Blogger/);
+  assert.doesNotMatch(html, /Foreign Site|never-render|\/estadisticas|\/blogger/);
   assert.doesNotMatch(html, /<select|disabled|useEffect/);
 });
 
@@ -193,15 +217,22 @@ test('project overview identifies its website and opens Blogger inside the autho
   const html = render(await s.page('proyectos/[slug]', { params: Promise.resolve({ slug: 'example' }) }));
   assert.match(html, /Example/);
   assert.match(html, /example\.com/);
+  assert.match(html, /href="https:\/\/example\.com"/);
   assert.match(html, /Blogger/);
   assert.match(html, /href="\/cliente\/proyectos\/example\/blogger"/);
   assert.doesNotMatch(html, /\/cliente\/(facturas|packs|bonos|historial|informes|servicios)/);
 });
 
-test('project overview omits available and invalid tools, keeping baseline access', async () => {
-  const s = setup({ capabilities: [cap('blogger', { launch_url: 'https://foreign.example/admin', validated_at: project.created_at }), cap('analytics'), cap('products', { state: 'available' })] });
+test('project overview omits available, unavailable, invalid and unsupported raw capabilities', async () => {
+  const s = setup({ capabilities: [
+    cap('blogger', { launch_url: 'https://foreign.example/admin', validated_at: project.created_at }),
+    cap('analytics'),
+    cap('products'),
+    cap('domains', { state: 'available' }),
+    cap('hosting', { state: 'unavailable' }),
+  ] });
   const html = render(await s.page('proyectos/[slug]', { params: Promise.resolve({ slug: 'example' }) }));
-  assert.doesNotMatch(html, /foreign\.example|estadisticas|#products/);
+  assert.doesNotMatch(html, /foreign\.example|estadisticas|#products|#domains|#hosting/);
   assert.match(html, /\/cliente\/pendientes/);
   assert.match(html, /\/cliente\/mensajeria/);
 });
