@@ -54,27 +54,19 @@ function setup({ mode = 'dynamic', projects = [project], capabilities = [], loca
   return { db, load, page, identity };
 }
 
-test('entry preserves explicit legacy and administrator destinations', async () => {
-  for (const [options, destination] of [[{ mode: 'legacy' }, '/cliente/dashboard'], [{ identityRole: 'admin' }, '/paneladmin/inicio']]) {
+test('entry sends every active client to Inicio and preserves the administrator destination', async () => {
+  for (const [options, destination] of [[{ mode: 'legacy' }, '/cliente/dashboard'], [{ mode: 'dynamic' }, '/cliente/dashboard'], [{ identityRole: 'admin' }, '/paneladmin/inicio']]) {
     const s = setup(options);
     await assert.rejects(() => s.load('src/app/cliente/page.tsx').default({}), { message: `redirect:${destination}` });
   }
 });
 
-for (const [name, projects, destination] of [
-  ['one project', [project], '/cliente/proyectos/example'],
-  ['multiple projects', [project, second], '/cliente/proyectos'],
-  ['zero projects', [], '/cliente/proyectos'],
-]) {
-  test(`dynamic entry sends ${name} to its controlled destination`, async () => {
-    const s = setup({ projects });
-    await assert.rejects(() => s.load('src/app/cliente/page.tsx').default({}), { message: `redirect:${destination}` });
-  });
-}
-
-test('project index directly enters a single project and preserves legacy dashboard', async () => {
-  await assert.rejects(() => setup().page('proyectos'), { message: 'redirect:/cliente/proyectos/example' });
-  await assert.rejects(() => setup({ mode: 'legacy' }).page('proyectos'), { message: 'redirect:/cliente/dashboard' });
+test('project index renders the universal selector for one project in either historical mode', async () => {
+  for (const mode of ['legacy', 'dynamic']) {
+    const html = render(await setup({ mode }).page('proyectos'));
+    assert.match(html, /Example/);
+    assert.match(html, /href="\/cliente\/proyectos\/example"/);
+  }
 });
 
 test('multiple projects render a linked accessible selector with website identity', async () => {
@@ -93,24 +85,14 @@ test('zero projects render a controlled empty state with baseline actions and no
   assert.deepEqual(s.db.calls.filter(call => accountTables.has(call.table)), []);
 });
 
-test('dynamic dashboard uses the controlled overview before any legacy summary reads', async () => {
-  const s = setup({ projects: [] });
-  await assert.rejects(() => s.page('dashboard'), { message: 'redirect:/cliente/proyectos' });
-  assert.deepEqual(s.db.calls.filter(call => accountTables.has(call.table)), []);
-});
-
-test('default authenticated dashboard entry sends a single project directly to its overview', async () => {
-  const s = setup();
-  await assert.rejects(() => s.page('dashboard'), { message: 'redirect:/cliente/proyectos/example' });
-  assert.deepEqual(s.db.calls.filter(call => accountTables.has(call.table)), []);
-});
-
-test('legacy dashboard retains account summary and legacy service links', async () => {
-  const s = setup({ mode: 'legacy' });
-  const html = render(await s.page('dashboard'));
-  assert.match(html, /Hola, Ana/);
-  assert.match(html, /href="\/cliente\/servicios\?new=1"/);
-  assert.ok(s.db.calls.some(call => call.table === 'invoices'));
+test('dashboard renders the shared account summary without redirecting for either historical mode', async () => {
+  for (const mode of ['legacy', 'dynamic']) {
+    const s = setup({ mode, projects: [] });
+    const html = render(await s.page('dashboard'));
+    assert.match(html, /Hola, Ana/);
+    assert.match(html, /href="\/cliente\/servicios\?new=1"/);
+    assert.ok(s.db.calls.some(call => call.table === 'invoices'));
+  }
 });
 
 test('server layout provides identical desktop/mobile actions, labels and accessible current state', async () => {
@@ -123,7 +105,7 @@ test('server layout provides identical desktop/mobile actions, labels and access
   const navs = [...html.matchAll(/<nav\b[^>]*>([\s\S]*?)<\/nav>/g)].map(match => match[1]);
   assert.equal(navs.length, 2);
   const actions = nav => [...nav.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/g)].map(match => [match[1], match[2].replace(/<[^>]*>/g, '')]);
-  const expected = [['/cliente/dashboard', 'Resumen'], ['/cliente/pendientes', 'Pendientes'], ['/cliente/mensajeria', 'Mensajería'], ['/cliente/facturas', 'Facturas'], ['/cliente/proyectos/example/blogger', 'Blogger · Example']];
+  const expected = [['/cliente/dashboard', 'Inicio'], ['/cliente/proyectos', 'Webs'], ['/cliente/informes', 'Informes'], ['/cliente/actualizaciones', 'Actualizaciones'], ['/cliente/fotografias', 'Fotografías'], ['/cliente/servicios', 'Servicios'], ['/cliente/pendientes', 'Pendientes'], ['/cliente/facturas', 'Facturas'], ['/cliente/historial', 'Historial'], ['/cliente/mensajeria', 'Mensajería']];
   assert.deepEqual(actions(navs[0]), expected);
   assert.deepEqual(actions(navs[1]), expected);
   assert.equal((html.match(/aria-current="page"/g) ?? []).length, 2);
@@ -138,36 +120,52 @@ test('shell consumes supplied navigation without generating extra actions or dup
   assert.doesNotMatch(html, /aria-current="page"/);
 });
 
-test('legacy layout retains the exact legacy navigation on both screen sizes', async () => {
-  const s = setup({ mode: 'legacy', projects: [] });
-  const html = render(await s.load(`${protectedRoot}/layout.tsx`).default({ children: 'Legacy' }));
-  for (const href of ['informes', 'actualizaciones', 'fotografias', 'dashboard', 'servicios', 'pendientes', 'facturas', 'historial', 'mensajeria']) {
-    assert.equal((html.match(new RegExp(`href="/cliente/${href}"`, 'g')) ?? []).length, 2, href);
-  }
-});
-
-for (const route of ['facturas', 'bonos', 'packs', 'historial', 'informes', 'servicios']) {
-  test(`dynamic guessed ${route} is denied before loading account data`, async () => {
-    for (const state of ['available', 'unavailable']) {
-      const s = setup({ capabilities: [cap('invoices', { state }), cap('bonuses_reports', { state }), cap('products', { state })] });
-      await assert.rejects(() => s.page(route), { message: 'redirect:/cliente/proyectos' });
-      assert.deepEqual(s.db.calls.filter(call => accountTables.has(call.table)), []);
+test('both historical modes retain the exact universal account navigation on both screen sizes', async () => {
+  for (const mode of ['legacy', 'dynamic']) {
+    const s = setup({ mode, projects: [] });
+    const html = render(await s.load(`${protectedRoot}/layout.tsx`).default({ children: 'Universal' }));
+    for (const href of ['dashboard', 'proyectos', 'informes', 'actualizaciones', 'fotografias', 'servicios', 'pendientes', 'facturas', 'historial', 'mensajeria']) {
+      assert.equal((html.match(new RegExp(`href="/cliente/${href}"`, 'g')) ?? []).length, 2, `${mode}: ${href}`);
     }
-  });
-}
-
-test('archived, hidden and foreign projects cannot grant guessed account routes', async () => {
-  for (const replacement of [{ status: 'archived' }, { client_access_enabled: false }, { client_id: otherClientId }]) {
-    const s = setup({ projects: [{ ...project, ...replacement }], capabilities: [cap('invoices')] });
-    await assert.rejects(() => s.page('facturas'), { message: 'redirect:/cliente/proyectos' });
-    assert.deepEqual(s.db.calls.filter(call => call.table === 'invoices'), []);
   }
 });
 
-test('active but misconfigured capabilities do not grant account routes', async () => {
-  const s = setup({ capabilities: [cap('invoices', { launch_url: 'https://foreign.example/admin' })] });
-  await assert.rejects(() => s.page('facturas'), { message: 'redirect:/cliente/proyectos' });
-  assert.deepEqual(s.db.calls.filter(call => call.table === 'invoices'), []);
+test('all account pages retain access without project capabilities in either historical mode', async () => {
+  for (const mode of ['legacy', 'dynamic']) {
+    for (const route of ['facturas', 'bonos', 'packs', 'historial', 'informes', 'servicios', 'fotografias', 'actualizaciones']) {
+      const s = setup({ mode, projects: [] });
+      assert.ok(render(await s.page(route)).length > 0, `${mode}: ${route}`);
+    }
+  }
+});
+
+test('universal account routes remain RLS-scoped to the authenticated client', async () => {
+  const s = setup({ mode: 'dynamic', projects: [], seed: {
+    invoices: [invoice('Own invoice'), invoice('Foreign invoice', otherClientId)],
+    packs: [pack('Own service'), { ...pack('Foreign service'), client_id: otherClientId }],
+  } });
+  const invoices = render(await s.page('facturas'));
+  assert.match(invoices, /Own invoice/);
+  assert.doesNotMatch(invoices, /Foreign invoice/);
+  const services = render(await s.page('servicios'));
+  assert.match(services, /Own service/);
+  assert.doesNotMatch(services, /Foreign service/);
+});
+
+test('legacy clients can open assigned projects while project tools stay capability-gated', async () => {
+  const overview = render(await setup({ mode: 'legacy' }).page('proyectos/[slug]', { params: Promise.resolve({ slug: 'example' }) }));
+  assert.match(overview, /Example/);
+  const blogger = setup({ mode: 'legacy' });
+  await assert.rejects(() => blogger.page('proyectos/[slug]/blogger', { params: Promise.resolve({ slug: 'example' }) }), { message: '404' });
+});
+
+test('project routes still hide archived, client-hidden and foreign projects in either historical mode', async () => {
+  for (const mode of ['legacy', 'dynamic']) {
+    const s = setup({ mode, projects: [project, { ...second, slug: 'archived', status: 'archived' }, { ...second, slug: 'hidden', client_access_enabled: false }, { ...second, slug: 'foreign', client_id: otherClientId }] });
+    for (const slug of ['unknown', 'archived', 'hidden', 'foreign']) {
+      await assert.rejects(() => s.page('proyectos/[slug]', { params: Promise.resolve({ slug }) }), { message: '404' });
+    }
+  }
 });
 
 test('invoices and closed packs aggregate by authenticated client, regardless of selected website', async () => {
@@ -184,18 +182,10 @@ test('invoices and closed packs aggregate by authenticated client, regardless of
   assert.doesNotMatch(packs, /Foreign pack|Hours only|Próximamente/);
 });
 
-test('all legacy account pages retain access without any active project capability', async () => {
-  for (const route of ['facturas', 'bonos', 'packs', 'historial', 'informes', 'servicios']) {
-    const s = setup({ mode: 'legacy', projects: [] });
-    assert.ok(render(await s.page(route)).length > 0, route);
-  }
-});
-
-test('services show only categories enabled anywhere on accessible client projects', async () => {
+test('services retain all authenticated client categories independent of project capabilities', async () => {
   const s = setup({ capabilities: [cap('domains')], seed: { packs: [pack('Allowed domain', 'domain'), pack('Hidden hosting', 'hosting'), pack('Hidden hours', 'hours'), pack('Hidden tasks'), pack('Hidden product', 'service')] } });
   const html = render(await s.page('servicios'));
-  assert.match(html, /Allowed domain/);
-  assert.doesNotMatch(html, /Hidden hosting|Hidden hours|Hidden tasks|Hidden product/);
+  for (const name of ['Allowed domain', 'Hidden hosting', 'Hidden hours', 'Hidden tasks', 'Hidden product']) assert.match(html, new RegExp(name));
 });
 
 test('project overview identifies its website and opens Blogger inside the authorized portal', async () => {
@@ -318,14 +308,6 @@ test('overview authorizes the selected project before reading any entitled servi
     await assert.rejects(() => s.page('proyectos/[slug]', { params: Promise.resolve({ slug }) }), { message: '404' });
   }
   assert.deepEqual(s.db.calls.filter(call => accountTables.has(call.table)), []);
-});
-
-test('dynamic clients cannot guess legacy-only photo or update pages', async () => {
-  for (const route of ['fotografias', 'actualizaciones']) {
-    const s = setup();
-    await assert.rejects(() => s.page(route), { message: 'redirect:/cliente/proyectos' });
-    assert.deepEqual(s.db.calls.filter(call => accountTables.has(call.table)), []);
-  }
 });
 
 test('account capability destinations stay in the aggregate portal even if an external launch URL is stored', async () => {

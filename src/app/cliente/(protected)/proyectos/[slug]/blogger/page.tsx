@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 
 import { getAccessibleClientProject, getClientPortalContext } from '@/lib/data/projects'
 import { getBloggerEditorTarget } from '@/lib/blogger/editor.mjs'
@@ -9,7 +9,6 @@ export const dynamic = 'force-dynamic'
 
 export default async function ClientBloggerPage({ params }: { params: Promise<{ slug: string }> }) {
   const [{ slug }, context] = await Promise.all([params, getClientPortalContext()])
-  if (context.mode === 'legacy') redirect('/cliente/dashboard')
   const project = await getAccessibleClientProject(slug)
   if (!project?.capabilities.some(capability => capability.capability_key === 'blogger' && capability.state === 'active')) notFound()
   let site

@@ -246,13 +246,15 @@ test('new catalog and workspace controls respect the selected administrator loca
   assert.match(detail, /Configuration warnings/);
 });
 
-test('access preview includes only assigned visible projects and exact dynamic links', async () => {
+test('access preview includes only assigned visible projects and universal account links', async () => {
   const load = setup({ clients: [{ ...client, portal_mode: 'dynamic' }], client_projects: [project, { ...project, id: 'other', slug: 'foreign', name: 'Foreign', client_id: 'foreign-client' }], project_capabilities: [{ ...capability, capability_key: 'invoices', state: 'active' }] });
   const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;
   const html = render(await Page({ params: Promise.resolve({ id: projectId }) }));
   assert.match(html, /Vista previa/);
-  assert.match(html, /href="\/cliente\/facturas"/);
-  assert.doesNotMatch(html, /Foreign|\/cliente\/informes/);
+  for (const href of ['dashboard', 'proyectos', 'informes', 'actualizaciones', 'fotografias', 'servicios', 'pendientes', 'facturas', 'historial', 'mensajeria']) {
+    assert.match(html, new RegExp(`href="/cliente/${href}"`));
+  }
+  assert.doesNotMatch(html, /Foreign/);
   assert.match(html, /Invitar cliente/);
 });
 

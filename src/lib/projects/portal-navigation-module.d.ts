@@ -1,5 +1,5 @@
 declare module '@/lib/projects/portal-navigation.mjs' {
-  import type { Database, CapabilityKey, PortalMode } from '@/lib/supabase/types';
+  import type { Database, PortalMode } from '@/lib/supabase/types';
 
   /** RLS-filtered project rows enriched with capability rows by the caller. */
   export type PortalProject = Readonly<Pick<
@@ -19,11 +19,9 @@ declare module '@/lib/projects/portal-navigation.mjs' {
     id: string;
     href: string;
     label: string;
-    projectId?: string;
-    projectSlug?: string;
-    capability?: CapabilityKey;
   }>;
 
+  /** `mode` remains accepted for compatibility but does not change account navigation. */
   export function buildPortalNavigation(input: {
     mode: PortalMode;
     projects?: readonly PortalProject[];

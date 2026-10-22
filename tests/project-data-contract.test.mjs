@@ -42,11 +42,15 @@ test('inventory combines search, client, lifecycle and active capability filters
   assert.deepEqual(s.events.slice(0, 2), ['admin', 'session-db']);
 });
 
-test('detail includes capability audit and exact navigation across all assigned projects', async () => {
+test('detail includes capability audit and universal navigation across all assigned projects', async () => {
   const s = setup({ clients: [{ ...client, portal_mode: 'dynamic' }], project_capabilities: [{ ...capability, capability_key: 'invoices', state: 'active' }], project_capability_audit: [{ id: 'audit', project_id: projectId, capability_key: 'blogger', actor_id: 'actor', operation: 'UPDATE', old_record: { state: 'available' }, new_record: { state: 'active' }, created_at: project.created_at }] });
   const detail = await s.data().getAdminProject(projectId);
   assert.equal(detail.audit[0].actor_id, 'actor');
-  assert.deepEqual(detail.preview.navigation.map(item => item.href), ['/cliente/dashboard', '/cliente/pendientes', '/cliente/mensajeria', '/cliente/facturas']);
+  assert.deepEqual(detail.preview.navigation.map(item => item.href), [
+    '/cliente/dashboard', '/cliente/proyectos', '/cliente/informes', '/cliente/actualizaciones',
+    '/cliente/fotografias', '/cliente/servicios', '/cliente/pendientes', '/cliente/facturas',
+    '/cliente/historial', '/cliente/mensajeria',
+  ]);
   assert.equal(await s.data().getAdminProject('missing'), null);
 });
 

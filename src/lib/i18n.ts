@@ -391,7 +391,8 @@ export const translations = {
 
     // Client shell nav
     'clientNav.navigation': 'Navegación del portal',
-    'clientNav.dashboard': 'Resumen',
+    'clientNav.dashboard': 'Inicio',
+    'clientNav.projects': 'Webs',
     'clientNav.informes': 'Informes',
     'clientNav.actualizaciones': 'Actualizaciones',
     'clientNav.fotografias': 'Fotografías',
@@ -754,7 +755,8 @@ export const translations = {
     // Client dashboard page
     // Client shell nav
     'clientNav.navigation': 'Portal navigation',
-    'clientNav.dashboard': 'Overview',
+    'clientNav.dashboard': 'Home',
+    'clientNav.projects': 'Websites',
     'clientNav.informes': 'Reports',
     'clientNav.actualizaciones': 'Updates',
     'clientNav.fotografias': 'Photos',

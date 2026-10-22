@@ -1,24 +1,35 @@
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
-import { getAccessibleClientProject, getClientPortalContext } from '@/lib/data/projects'
+import { notFound } from 'next/navigation'
+import { getAccessibleClientProject, getCapabilityConfigurationIssue, getClientPortalContext } from '@/lib/data/projects'
 import { getClientPendingItems, getClientFacturasData, getClientServicesData } from '@/lib/data/client'
 import { clientPortalTranslations, projectTranslations } from '@/lib/i18n'
 import { getLocale } from '@/lib/locale'
+import { buildProjectTools } from '@/lib/projects/tools.mjs'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ClientProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const [locale, { slug }, context] = await Promise.all([getLocale(), params, getClientPortalContext()])
-  if (context.mode === 'legacy') redirect('/cliente/dashboard')
   const project = await getAccessibleClientProject(slug)
   if (!project) notFound()
   const text = clientPortalTranslations[locale]
   const labels = projectTranslations[locale].capabilities
-  const hasInvoices = context.navigation.some(item => item.id === 'facturas')
-  const hasPacks = context.navigation.some(item => item.id === 'packs')
-  const hasProducts = context.navigation.some(item => item.capability === 'products')
-  const hasDomains = context.navigation.some(item => item.capability === 'domains')
-  const hasHosting = context.navigation.some(item => item.capability === 'hosting')
+  const projectTools = new Map(context.projects.map(candidate => {
+    const configurationIssues = Object.fromEntries(candidate.capabilities.flatMap(capability => {
+      const issue = getCapabilityConfigurationIssue(candidate, capability)
+      return issue ? [[capability.capability_key, issue]] : []
+    }))
+    return [candidate.id, new Map(buildProjectTools({ project: candidate, viewer: 'client', configurationIssues }).map(tool => [tool.id, tool]))]
+  }))
+  const selectedTools = projectTools.get(project.id) ?? new Map()
+  const hasTool = (id: 'domains' | 'hosting' | 'invoices' | 'reports') => [...projectTools.values()].some(tools => tools.has(id))
+  const hasActive = (key: string) => context.projects.some(candidate => candidate.capabilities.some(capability =>
+    capability.capability_key === key && capability.state === 'active'))
+  const hasInvoices = hasTool('invoices')
+  const hasPacks = hasTool('reports')
+  const hasProducts = hasActive('products')
+  const hasDomains = hasTool('domains')
+  const hasHosting = hasTool('hosting')
   const hasRenewableServices = hasProducts || hasDomains || hasHosting
   const hasServices = hasPacks || hasRenewableServices
   const [pending, invoices, services] = await Promise.all([
@@ -76,9 +87,12 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
             {project.capabilities.map(capability => {
               const key = capability.capability_key
               const accountCapability = key === 'invoices' || key === 'bonuses_reports'
-              const navigation = context.navigation.find(item => item.projectId === project.id && item.capability === key)
+              const toolId = key === 'bonuses_reports' ? 'bonuses' : key
+              const tool = selectedTools.get(toolId)
               const accountHref = key === 'invoices' ? '/cliente/facturas' : key === 'bonuses_reports' ? '/cliente/bonos' : '/cliente/servicios'
-              const href = accountCapability ? accountHref : key === 'blogger' || key === 'analytics' ? navigation?.href : capability.launch_url ?? (key === 'hosting' ? project.hosting_management_url : null) ?? accountHref
+              const href = accountCapability ? (tool ? accountHref : null) : key === 'products'
+                ? capability.state === 'active' ? `/cliente/proyectos/${encodeURIComponent(project.slug)}#products` : null
+                : tool?.href
               if (!href) return null
               return (
                 <article id={key} key={key} className="rounded-2xl border border-line bg-white p-6">
