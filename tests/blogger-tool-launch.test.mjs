@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
+import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 
 import {
   capability,
@@ -12,10 +14,9 @@ import {
 } from './helpers/project-harness.mjs'
 import * as projectTools from '../src/lib/projects/tools.mjs'
 import { getBloggerHandoff, getSiteByKey } from '../src/lib/sites/registry.mjs'
-import {
-  getBloggerExchangeSecret,
-  renderLaunchForm,
-} from '../src/lib/tools/launch-tickets.mjs'
+import * as launchTickets from '../src/lib/tools/launch-tickets.mjs'
+
+const { getBloggerExchangeSecret } = launchTickets
 
 const migrationUrl = new URL(
   '../supabase/migrations/202610170004_tool_launch_tickets.sql',
@@ -48,24 +49,78 @@ test('public Blogger entry generation does not replace administrator or client i
   assert.equal(clientTools.find(tool => tool.id === 'blogger')?.href, '/cliente/proyectos/first-site/blogger')
 })
 
-test('Sport launch keeps the exchange secret server-side and serializes only the bounded handoff form', () => {
+test('Sport browser delivery serializes the exact v1 contract into a fragment-only redirect', () => {
   const site = getSiteByKey('sportmassagefuengirola')
   const handoff = getBloggerHandoff(site)
   assert.ok(handoff)
+  assert.equal(typeof launchTickets.buildLaunchRedirectLocation, 'function')
 
   const secretName = 'WF_BLOGGER_HANDOFF_SECRET_SPORTMASSAGEFUENGIROLA'
   const secretValue = 'sport-handoff-test-secret'
   assert.equal(getBloggerExchangeSecret(site.key, { [secretName]: secretValue }), secretValue)
 
-  const html = renderLaunchForm({
-    action: handoff.launchUrl,
+  const location = launchTickets.buildLaunchRedirectLocation({
+    destination: handoff.url,
     code: 'S'.repeat(43),
     siteKey: site.key,
   })
-  assert.match(html, /action="https:\/\/sportmassagefuengirola\.com\/admin\/blogger\/launch"/)
-  assert.match(html, /name="protocol" value="wf-blogger-handoff\/v1"/)
-  assert.match(html, /name="siteKey" value="sportmassagefuengirola"/)
-  assert.doesNotMatch(html, new RegExp(`${secretName}|${secretValue}|password|hash|filesystem|api\\/posts|api\\/build`, 'i'))
+  assert.equal(location, `https://sportmassagefuengirola.com/admin/blogger/#protocol=wf-blogger-handoff%2Fv1&code=${'S'.repeat(43)}&siteKey=sportmassagefuengirola`)
+  const requestTarget = new URL(location)
+  requestTarget.hash = ''
+  assert.equal(requestTarget.toString(), 'https://sportmassagefuengirola.com/admin/blogger/')
+  assert.doesNotMatch(requestTarget.toString(), /code|wf-blogger-handoff|sport-handoff-test-secret/i)
+  assert.doesNotMatch(location, new RegExp(`${secretName}|${secretValue}|password|hash|filesystem|api\\/posts|api\\/build`, 'i'))
+})
+
+test('exchange response serializer emits protocol, siteKey, audience and bounded subject only', () => {
+  assert.equal(typeof launchTickets.serializeExchangeResponse, 'function')
+  const payload = launchTickets.serializeExchangeResponse({
+    protocol,
+    siteKey: 'sportmassagefuengirola',
+    audience: 'https://sportmassagefuengirola.com',
+    projectId: project.id,
+    clientId: null,
+    userId: claims().userId,
+    actorRole: 'admin',
+    expiresAt: new Date(now + 60_000).toISOString(),
+  })
+  assert.deepEqual(payload, {
+    protocol,
+    siteKey: 'sportmassagefuengirola',
+    audience: 'https://sportmassagefuengirola.com',
+    subject: { role: 'admin', userId: claims().userId, clientId: null, projectId: project.id },
+  })
+})
+
+test('administrator and assigned client Blogger pages invoke the protected same-origin launch operation', async () => {
+  const site = {
+    key: 'example', name: 'Example', domain: 'example.com',
+    blogger: { enabled: true, runtime: 'external', url: 'https://example.com/admin/blogger/', launchUrl: 'https://example.com/admin/blogger/launch' },
+  }
+  const registry = { getSiteByKey: () => site, getBloggerHandoff: () => site.blogger }
+  const editor = { getBloggerEditorTarget: () => ({ kind: 'external', href: site.blogger.url }) }
+  const adminPage = loadProjectModule('src/app/paneladmin/(protected)/blogger/[siteKey]/page.tsx', {
+    '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
+    '@/lib/locale': { getLocale: async () => 'es' },
+    '@/lib/sites/registry.mjs': registry,
+    '@/lib/blogger/editor.mjs': editor,
+    '@/components/layout/app-shell': { AdminShell: ({ children }) => React.createElement('main', null, children) },
+    'next/navigation': { notFound() { throw new Error('404') } },
+  }).default
+  const clientPage = loadProjectModule('src/app/cliente/(protected)/proyectos/[slug]/blogger/page.tsx', {
+    '@/lib/data/projects': { getAccessibleClientProject: async () => ({ ...project, slug: 'example', domain: 'example.com', capabilities: [{ capability_key: 'blogger', state: 'active' }] }) },
+    '@/lib/sites/registry.mjs': registry,
+    '@/lib/blogger/editor.mjs': editor,
+    'next/navigation': { notFound() { throw new Error('404') } },
+  }).default
+
+  for (const html of [
+    renderToStaticMarkup(await adminPage({ params: Promise.resolve({ siteKey: 'example' }) })),
+    renderToStaticMarkup(await clientPage({ params: Promise.resolve({ slug: 'example' }) })),
+  ]) {
+    assert.match(html, /<form[^>]*action="\/api\/tools\/blogger\/example\/launch"[^>]*method="post"/)
+    assert.doesNotMatch(html, /href="https:\/\/example\.com\/admin\/blogger\//)
+  }
 })
 
 const configuredSite = {
@@ -271,8 +326,8 @@ function launchSetup({ role = 'client', active = true, configured = true } = {})
         created.push(input)
         return { protocol, code: 'A'.repeat(43), expiresAt: new Date(now + 60_000).toISOString() }
       },
-      renderLaunchForm({ action, code, siteKey }) {
-        return `<!doctype html><form method="post" action="${action}"><input name="protocol" value="${protocol}"><input name="code" value="${code}"><input name="siteKey" value="${siteKey}"></form>`
+      buildLaunchRedirectLocation({ destination, code, siteKey }) {
+        return `${destination}#protocol=wf-blogger-handoff%2Fv1&code=${code}&siteKey=${siteKey}`
       },
       buildLaunchSecurityHeaders(formAction) {
         return {
@@ -288,22 +343,21 @@ function launchSetup({ role = 'client', active = true, configured = true } = {})
   return { created, db, request }
 }
 
-test('launch POST authorizes active configured Blogger access for both clients and administrators', async () => {
+test('launch POST authorizes active configured Blogger access and redirects both roles with fragment delivery', async () => {
   for (const role of ['client', 'admin']) {
     const setup = launchSetup({ role })
     const response = await setup.request()
-    const html = await response.text()
+    const body = await response.text()
 
-    assert.equal(response.status, 200, role)
+    assert.equal(response.status, 303, role)
     assert.equal(setup.created.length, 1, role)
     assert.equal(setup.created[0].siteKey, 'example')
     assert.equal(setup.created[0].audience, 'https://example.com')
     assert.equal(setup.created[0].actorRole, role)
-    assert.match(html, /method="post"/i)
-    assert.match(html, /action="https:\/\/example\.com\/admin\/blogger\/launch"/)
-    assert.doesNotMatch(html, /supabase|service.?role|bearer|secret|token/i)
+    assert.equal(response.headers.get('location'), `https://example.com/admin/blogger/#protocol=wf-blogger-handoff%2Fv1&code=${'A'.repeat(43)}&siteKey=example`)
+    assert.equal(body, '')
     responseSecurity(response)
-    assert.match(response.headers.get('content-security-policy') ?? '', /form-action https:\/\/example\.com(?:;|\s)/)
+    assert.match(response.headers.get('content-security-policy') ?? '', /form-action 'none'/)
   }
 })
 
@@ -376,6 +430,7 @@ test('exchange POST authenticates the target server and returns only audience-bo
   assert.deepEqual(payload, {
     protocol,
     siteKey: 'example',
+    audience: 'https://example.com',
     subject: {
       role: 'client',
       userId: claims().userId,

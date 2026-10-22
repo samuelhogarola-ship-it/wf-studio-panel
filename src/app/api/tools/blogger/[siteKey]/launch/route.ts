@@ -8,8 +8,8 @@ import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import {
   buildLaunchSecurityHeaders,
+  buildLaunchRedirectLocation,
   createLaunchTicket,
-  renderLaunchForm,
 } from '@/lib/tools/launch-tickets.mjs'
 
 export const dynamic = 'force-dynamic'
@@ -107,11 +107,12 @@ export async function POST(
       userId: identity.userId,
       actorRole: identity.role as 'admin' | 'client',
     })
-    return new NextResponse(renderLaunchForm({ action: target.toString(), code: ticket.code, siteKey }), {
-      status: 200,
+    const location = buildLaunchRedirectLocation({ destination: handoff.url, code: ticket.code, siteKey })
+    return new NextResponse(null, {
+      status: 303,
       headers: {
-        ...buildLaunchSecurityHeaders(target.origin),
-        'Content-Type': 'text/html; charset=utf-8',
+        ...buildLaunchSecurityHeaders(),
+        Location: location,
       },
     })
   } catch {
