@@ -1,3 +1,5 @@
+import { buildProjectTools } from './tools.mjs';
+
 const labels = {
   es: {
     dashboard: 'Inicio', projects: 'Webs', informes: 'Informes', actualizaciones: 'Actualizaciones',
@@ -22,10 +24,13 @@ export function buildPortalNavigation({ mode, projects = [], locale = 'es' }) {
   const accountItem = key => ({ id: key, href: key === 'projects' ? '/cliente/proyectos' : `/cliente/${key}`, label: text[key] });
   const freeze = items => Object.freeze(items.map(item => Object.freeze(item)));
   const visible = projects.filter(project => project.status === 'active' && project.client_access_enabled === true);
-  const hasActive = (project, key) => (project.capabilities ?? []).some(capability =>
-    capability.capability_key === key && capability.state === 'active');
+  const projectTools = visible.map(project => buildProjectTools({
+    project,
+    viewer: 'client',
+    configurationIssues: project.configurationIssues,
+  }));
   const keys = ['dashboard', 'projects', 'informes', 'actualizaciones', 'fotografias', 'servicios'];
-  if (visible.some(project => hasActive(project, 'bonuses_reports'))) keys.push('bonos', 'packs');
+  if (projectTools.some(tools => tools.some(tool => tool.id === 'reports'))) keys.push('bonos', 'packs');
   keys.push('pendientes', 'facturas', 'historial', 'mensajeria');
   const items = keys.map(accountItem);
   return freeze(items);

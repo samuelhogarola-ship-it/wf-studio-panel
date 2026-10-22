@@ -40,6 +40,19 @@ test('active reports capability adds only the existing global bonus and pack rou
   assert.equal(new Set(items.map(item => item.id)).size, items.length);
 });
 
+test('active misconfigured reports capability hides bonus and pack routes in both historical modes', () => {
+  const configured = project({
+    capabilities: [capability('bonuses_reports')],
+    configurationIssues: { bonuses_reports: 'destination' },
+  });
+  for (const mode of ['legacy', 'dynamic']) {
+    const items = navigation(mode, [configured]);
+    assert.equal(items.some(item => item.id === 'bonos'), false);
+    assert.equal(items.some(item => item.id === 'packs'), false);
+    assert.deepEqual(items.slice(0, 2).map(item => item.id), ['dashboard', 'projects']);
+  }
+});
+
 test('project-specific tools are never flattened into universal navigation', () => {
   const items = navigation('dynamic', [project({ capabilities: [
     capability('products'), capability('domains'), capability('hosting'), capability('blogger', 'active', {

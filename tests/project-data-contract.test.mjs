@@ -54,6 +54,24 @@ test('detail includes capability audit and universal navigation across all assig
   assert.equal(await s.data().getAdminProject('missing'), null);
 });
 
+test('project previews hide active reports with invalid destinations in both historical modes', async () => {
+  for (const portal_mode of ['legacy', 'dynamic']) {
+    const s = setup({
+      clients: [{ ...client, portal_mode }],
+      project_capabilities: [{
+        ...capability,
+        capability_key: 'bonuses_reports',
+        state: 'active',
+        launch_url: 'https://evil.com/reports',
+      }],
+    });
+    const detail = await s.data().getAdminProject(projectId);
+    assert.deepEqual(detail.preview.navigation.slice(0, 2).map(item => item.id), ['dashboard', 'projects']);
+    assert.equal(detail.preview.navigation.some(item => item.id === 'bonos'), false);
+    assert.equal(detail.preview.navigation.some(item => item.id === 'packs'), false);
+  }
+});
+
 test('favorites preserve administrator position while resolving only current non-archived project capabilities', async () => {
   const secondProjectId = '55555555-5555-4555-8555-555555555555';
   const archivedProjectId = '66666666-6666-4666-8666-666666666666';

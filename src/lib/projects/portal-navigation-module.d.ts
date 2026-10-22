@@ -13,6 +13,7 @@ declare module '@/lib/projects/portal-navigation.mjs' {
       Database['public']['Tables']['project_capabilities']['Row'],
       'launch_url' | 'validated_at'
     >>>>;
+    readonly configurationIssues?: Readonly<Record<string, string>>;
   };
 
   export type PortalNavigationItem = Readonly<{
