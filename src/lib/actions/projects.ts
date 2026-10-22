@@ -16,7 +16,8 @@ const uuid = z.string().uuid()
 const projectSchema = z.object({
   id: z.union([uuid, z.literal('')]), slug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(100),
   name: z.string().trim().min(1).max(200), domain: z.string().trim().toLowerCase().transform(value => value.replace(/^www\./, '')),
-  status: z.enum(['draft', 'active', 'archived']), hosting_label: z.string().trim().max(200),
+  status: z.enum(['draft', 'active', 'archived']), product_tier: z.union([z.enum(['lite', 'express', 'pro']), z.literal('')]).transform(value => value || null),
+  hosting_label: z.string().trim().max(200),
   hosting_management_url: z.string().trim().max(2048), analytics_registry_key: z.string().trim().max(100),
 })
 const capabilitySchema = z.object({
@@ -50,7 +51,7 @@ function saved(id?: string): ProjectFormState {
 
 export async function upsertProjectAction(_previous: ProjectFormState, form: FormData): Promise<ProjectFormState> {
   await requireAdmin()
-  const parsed = projectSchema.safeParse(Object.fromEntries(['id', 'slug', 'name', 'domain', 'status', 'hosting_label', 'hosting_management_url', 'analytics_registry_key'].map(key => [key, read(form, key)])))
+  const parsed = projectSchema.safeParse(Object.fromEntries(['id', 'slug', 'name', 'domain', 'status', 'product_tier', 'hosting_label', 'hosting_management_url', 'analytics_registry_key'].map(key => [key, read(form, key)])))
   if (!parsed.success) return failure()
   const { id, ...values } = parsed.data
   if (!validateProjectDestination(`https://${values.domain}`, values.domain, true) ||

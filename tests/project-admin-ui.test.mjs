@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { loadProjectModule, database, boundary, project, capability, client, projectId } from './helpers/project-harness.mjs';
+import { loadProjectModule, database, boundary, project, capability, client, projectId, form } from './helpers/project-harness.mjs';
 
 const render = element => renderToStaticMarkup(element);
 function setup(seed = {}, extra = {}) {
@@ -267,6 +267,51 @@ test('forms expose explicit capability state, provisioning and separate assignme
   const access = render(React.createElement(ProjectClientAccessForm, { project, clients: [client], locale: 'en' }));
   for (const field of ['client_id', 'enabled', 'portal_mode']) assert.match(access, new RegExp(`name="${field}"`));
   assert.match(access, /dynamic/);
+});
+
+test('project form renders the four product tier choices', () => {
+  const load = setup();
+  const { ProjectForm } = load('src/components/admin/project-form.tsx');
+  const html = render(React.createElement(ProjectForm, { project, locale: 'es' }));
+
+  const select = html.slice(html.indexOf('name="product_tier"'), html.indexOf('</select>', html.indexOf('name="product_tier"')));
+  assert.match(select, /value=""[^>]*>Por confirmar<\/option>/);
+  assert.match(select, /value="lite">Lite<\/option>/);
+  assert.match(select, /value="express">Express<\/option>/);
+  assert.match(select, /value="pro">Pro<\/option>/);
+});
+
+test('project action accepts only exact product tiers and persists an empty choice as null', async () => {
+  for (const [value, expected] of [['', null], ['lite', 'lite'], ['express', 'express'], ['pro', 'pro']]) {
+    const db = database({ client_projects: [] });
+    const load = relative => loadProjectModule(relative, boundary(db).mocks);
+    const { upsertProjectAction } = load('src/lib/actions/projects.ts');
+    const result = await upsertProjectAction({}, form({
+      slug: `tier-${value || 'null'}`,
+      name: 'Tier project',
+      domain: 'example.com',
+      status: 'draft',
+      product_tier: value,
+    }));
+
+    assert.ok(result.success, `expected ${value || 'empty'} to be accepted`);
+    const write = db.calls.find(call => call.table === 'client_projects' && call.operation === 'insert');
+    assert.equal(write.payload.product_tier, expected);
+  }
+
+  const db = database({ client_projects: [] });
+  const load = relative => loadProjectModule(relative, boundary(db).mocks);
+  const { upsertProjectAction } = load('src/lib/actions/projects.ts');
+  const result = await upsertProjectAction({}, form({
+    slug: 'tier-enterprise',
+    name: 'Tier project',
+    domain: 'example.com',
+    status: 'draft',
+    product_tier: 'enterprise',
+  }));
+
+  assert.ok(result.error);
+  assert.equal(db.calls.some(call => call.table === 'client_projects' && ['insert', 'update'].includes(call.operation)), false);
 });
 
 test('capability controls show their own configuration validation result', () => {

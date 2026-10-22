@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises'
 const root = new URL('../', import.meta.url)
 const migrationUrl = new URL('supabase/migrations/202610170002_client_portal_platform.sql', root)
 const agamaForwardMigrationUrl = new URL('supabase/migrations/202610180001_agama_client_project.sql', root)
+const productTierMigrationUrl = new URL('supabase/migrations/202610220001_client_project_product_tier.sql', root)
 const sql = () => readFile(migrationUrl, 'utf8').catch(error => {
   assert.fail(`Client portal migration must exist (${error.code})`)
 })
@@ -138,4 +139,24 @@ test('Supabase types expose project and capability rows, relationships, exact un
   assert.match(types, /export type CapabilityKey = 'products' \| 'domains' \| 'hosting' \| 'invoices' \| 'bonuses_reports' \| 'blogger' \| 'analytics'/)
   assert.match(types, /export type CapabilityState = 'unavailable' \| 'available' \| 'active'/)
   assert.match(types, /project_capability_audit: \{[\s\S]*?Insert: never\s+Update: never/)
+})
+
+test('product tier migration adds a nullable constrained field and idempotently classifies aGama and TodoPlástico as pro', async () => {
+  const source = await readFile(productTierMigrationUrl, 'utf8').catch(error => {
+    assert.fail(`Product tier migration must exist (${error.code})`)
+  })
+
+  assert.match(source, /alter table public\.client_projects\s+add column if not exists product_tier text;/i)
+  assert.doesNotMatch(source, /product_tier text not null/i)
+  assert.match(source, /constraint client_projects_product_tier_check\s+check \(product_tier is null or product_tier in \('lite', 'express', 'pro'\)\)/i)
+  assert.match(source, /update public\.client_projects\s+set product_tier = 'pro'\s+where lower\(btrim\(slug\)\) in \('agama', 'todoplastico'\)\s+and product_tier is distinct from 'pro';/i)
+})
+
+test('Supabase project types expose the exact nullable product tier union', async () => {
+  const types = await readFile(new URL('src/lib/supabase/types.ts', root), 'utf8')
+
+  assert.match(types, /export type ProductTier = 'lite' \| 'express' \| 'pro'/)
+  assert.match(types, /client_projects: \{[\s\S]*?Row: \{[^}]*product_tier: ProductTier \| null/)
+  assert.match(types, /client_projects: \{[\s\S]*?Insert: \{[^}]*product_tier\?: ProductTier \| null/)
+  assert.match(types, /client_projects: \{[\s\S]*?Update: \{[^}]*product_tier\?: ProductTier \| null/)
 })

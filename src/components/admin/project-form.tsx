@@ -30,6 +30,12 @@ export function ProjectForm({ project, locale }: { project?: Project; locale: Lo
           {(['draft', 'active', 'archived'] as const).map(status => <option key={status} value={status}>{copy.statusLabels[status]}</option>)}
         </Select>
       </div>
+      <div><Label htmlFor="project-product-tier">{copy.productTier}</Label>
+        <Select id="project-product-tier" name="product_tier" defaultValue={project?.product_tier ?? ''}>
+          <option value="">{copy.productTierLabels.unconfirmed}</option>
+          {(['lite', 'express', 'pro'] as const).map(tier => <option key={tier} value={tier}>{copy.productTierLabels[tier]}</option>)}
+        </Select>
+      </div>
       <div className="md:col-span-2"><FormMessage {...state} /><Button type="submit" disabled={pending}>{pending ? copy.saving : copy.save}</Button></div>
     </form>
   </Card>
