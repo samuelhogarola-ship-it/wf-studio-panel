@@ -20,6 +20,7 @@ import {
   fetchUmamiDashboard,
   getAnalyticsProject,
   getAnalyticsRange,
+  normalizeSessionRows,
   normalizePeriod,
 } from '../src/lib/analytics/umami-dashboard.mjs'
 import * as analyticsDashboard from '../src/lib/analytics/umami-dashboard.mjs'
@@ -288,6 +289,41 @@ test('request coordinator aborts stale work and only accepts the latest response
   assert.equal(second.signal.aborted, true)
 })
 
+test('session rows expose useful anonymous activity without leaking Umami identifiers', () => {
+  assert.deepEqual(normalizeSessionRows({ data: [{
+    id: 'private-session-id',
+    websiteId: 'private-website-id',
+    country: 'MX',
+    region: 'MX-CMX',
+    city: 'Mexico City',
+    device: 'mobile',
+    browser: 'chrome',
+    os: 'Android OS',
+    screen: '390x844',
+    language: 'es-MX',
+    views: 5,
+    visits: 2,
+    firstAt: '2026-10-22T10:00:00.000Z',
+    lastAt: '2026-10-22T10:04:30.000Z',
+  }] }), [{
+    country: 'MX',
+    region: 'MX-CMX',
+    city: 'Mexico City',
+    device: 'mobile',
+    browser: 'chrome',
+    operatingSystem: 'Android OS',
+    screen: '390x844',
+    language: 'es-MX',
+    views: 5,
+    visits: 2,
+    firstAt: '2026-10-22T10:00:00.000Z',
+    lastAt: '2026-10-22T10:04:30.000Z',
+    durationSeconds: 270,
+  }])
+  assert.deepEqual(normalizeSessionRows({ data: null }), [])
+  assert.doesNotMatch(JSON.stringify(normalizeSessionRows({ data: [{ id: 'secret' }] })), /secret|websiteId|"id":/)
+})
+
 test('analytics project registry covers every WF Panel project and explains missing ids', () => {
   assert.deepEqual(
     ANALYTICS_PROJECTS.map((project) => project.key),
@@ -354,6 +390,14 @@ test('dashboard resolves website id and returns all supported Umami dimensions',
         sessions: [{ x: '2026-08-25T10:00:00Z', y: 5 }],
       })
     }
+    if (url.pathname.endsWith('/sessions')) {
+      return jsonResponse({ data: [{
+        id: 'private-session-id', country: 'ES', region: 'ES-AN', city: 'Mijas',
+        device: 'mobile', browser: 'chrome', os: 'Android OS', screen: '390x844',
+        language: 'es-ES', views: 4, visits: 2,
+        firstAt: '2026-08-25T10:00:00.000Z', lastAt: '2026-08-25T10:03:00.000Z',
+      }] })
+    }
     if (url.pathname.endsWith('/metrics')) {
       const type = url.searchParams.get('type')
       if (type === 'path') return jsonResponse({ message: 'unsupported' }, 400)
@@ -388,6 +432,12 @@ test('dashboard resolves website id and returns all supported Umami dimensions',
   assert.equal(dashboard.metrics.entries[0].x, 'entry-value')
   assert.equal(dashboard.metrics.cities[0].x, 'city-value')
   assert.equal(dashboard.metrics.events[0].x, 'event-value')
+  assert.deepEqual(dashboard.sessions, [{
+    country: 'ES', region: 'ES-AN', city: 'Mijas', device: 'mobile', browser: 'chrome',
+    operatingSystem: 'Android OS', screen: '390x844', language: 'es-ES', views: 4, visits: 2,
+    firstAt: '2026-08-25T10:00:00.000Z', lastAt: '2026-08-25T10:03:00.000Z', durationSeconds: 180,
+  }])
+  assert.ok(requests.some((request) => request.includes('/sessions?') && request.includes('pageSize=20')))
   assert.ok(requests.some((request) => request.includes('/api/websites?')))
 })
 

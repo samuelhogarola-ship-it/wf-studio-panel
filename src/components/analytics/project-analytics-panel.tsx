@@ -9,11 +9,12 @@ import type {
   AnalyticsPeriod,
   MetricRow,
   MetricValue,
+  SessionRow,
   TimeSeriesRow,
 } from '@/lib/analytics/umami-dashboard.mjs'
 
 type DashboardResponse = AnalyticsDashboard | AnalyticsConfigurationError
-type AnalyticsTab = 'content' | 'acquisition' | 'audience' | 'technology' | 'events'
+type AnalyticsTab = 'content' | 'acquisition' | 'audience' | 'technology' | 'events' | 'sessions'
 
 const HISTORY_PERIODS: Array<{ key: AnalyticsPeriod; label: string }> = [
   { key: '7d', label: '7 días' },
@@ -29,6 +30,7 @@ const TAB_LABELS: Array<{ key: AnalyticsTab; label: string }> = [
   { key: 'audience', label: 'Audiencia' },
   { key: 'technology', label: 'Tecnología' },
   { key: 'events', label: 'Eventos' },
+  { key: 'sessions', label: 'Sesiones' },
 ]
 
 const METRIC_GROUPS: Record<AnalyticsTab, Array<{ key: string; label: string }>> = {
@@ -60,6 +62,7 @@ const METRIC_GROUPS: Record<AnalyticsTab, Array<{ key: string; label: string }>>
   events: [
     { key: 'events', label: 'Eventos registrados' },
   ],
+  sessions: [],
 }
 
 export function ProjectAnalyticsPanel({
@@ -247,11 +250,15 @@ export function ProjectAnalyticsPanel({
               </div>
             </div>
 
-            <div className="grid gap-px bg-line md:grid-cols-2 xl:grid-cols-3">
-              {METRIC_GROUPS[activeTab].map((group) => (
-                <MetricList key={group.key} title={group.label} rows={okDashboard.metrics[group.key] || []} />
-              ))}
-            </div>
+            {activeTab === 'sessions' ? (
+              <SessionTable rows={okDashboard.sessions || []} />
+            ) : (
+              <div className="grid gap-px bg-line md:grid-cols-2 xl:grid-cols-3">
+                {METRIC_GROUPS[activeTab].map((group) => (
+                  <MetricList key={group.key} title={group.label} rows={okDashboard.metrics[group.key] || []} />
+                ))}
+              </div>
+            )}
 
             <div className="border-t border-line px-5 py-3 text-right text-[11px] text-muted">
               Actualizado {new Date(okDashboard.generatedAt).toLocaleString('es-ES')}
@@ -362,6 +369,46 @@ function MetricList({ title, rows }: { title: string; rows: MetricRow[] }) {
   )
 }
 
+function SessionTable({ rows }: { rows: SessionRow[] }) {
+  if (!rows.length) {
+    return <p className="px-5 py-8 text-sm text-muted">Todavía no hay sesiones disponibles para este periodo.</p>
+  }
+
+  return (
+    <div className="overflow-x-auto bg-white">
+      <table className="w-full min-w-[900px] text-left text-xs">
+        <thead className="border-b border-line bg-slate-50 text-muted">
+          <tr>
+            <th className="px-4 py-3 font-bold">Última actividad</th>
+            <th className="px-4 py-3 font-bold">Lugar</th>
+            <th className="px-4 py-3 font-bold">Dispositivo</th>
+            <th className="px-4 py-3 font-bold">Navegador y sistema</th>
+            <th className="px-4 py-3 text-right font-bold">Páginas</th>
+            <th className="px-4 py-3 text-right font-bold">Visitas</th>
+            <th className="px-4 py-3 text-right font-bold">Permanencia</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line">
+          {rows.map((row, index) => (
+            <tr key={`${row.lastAt || 'sin-fecha'}-${index}`}>
+              <td className="whitespace-nowrap px-4 py-3 font-semibold text-foreground">{formatSessionDate(row.lastAt)}</td>
+              <td className="px-4 py-3 text-slate-700">{[row.city, row.region, row.country].filter(Boolean).join(' · ') || 'Sin ubicación'}</td>
+              <td className="px-4 py-3 text-slate-700">{[row.device, row.screen].filter(Boolean).join(' · ') || 'Sin dato'}</td>
+              <td className="px-4 py-3 text-slate-700">{[row.browser, row.operatingSystem].filter(Boolean).join(' · ') || 'Sin dato'}</td>
+              <td className="px-4 py-3 text-right font-bold text-foreground">{formatNumber(row.views)}</td>
+              <td className="px-4 py-3 text-right font-bold text-foreground">{formatNumber(row.visits)}</td>
+              <td className="px-4 py-3 text-right font-bold text-foreground">{formatDuration(row.durationSeconds)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="border-t border-line px-5 py-3 text-[11px] text-muted">
+        Sesiones anónimas: no se muestran identificadores, direcciones IP ni datos personales.
+      </p>
+    </div>
+  )
+}
+
 function StatusMessage({ title, message }: { title: string; message: string }) {
   return (
     <div className="border-b border-amber-200 bg-amber-50 px-5 py-5">
@@ -385,4 +432,13 @@ function formatChartDate(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short' }).format(date)
+}
+
+function formatSessionDate(value: string | null) {
+  if (!value) return 'Sin fecha'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Sin fecha'
+  return new Intl.DateTimeFormat('es-ES', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+  }).format(date)
 }
