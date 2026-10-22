@@ -42,12 +42,34 @@ test('inventory combines search, client, lifecycle and active capability filters
   assert.deepEqual(s.events.slice(0, 2), ['admin', 'session-db']);
 });
 
-test('detail includes capability audit and exact navigation across all assigned projects', async () => {
+test('detail includes capability audit and universal navigation across all assigned projects', async () => {
   const s = setup({ clients: [{ ...client, portal_mode: 'dynamic' }], project_capabilities: [{ ...capability, capability_key: 'invoices', state: 'active' }], project_capability_audit: [{ id: 'audit', project_id: projectId, capability_key: 'blogger', actor_id: 'actor', operation: 'UPDATE', old_record: { state: 'available' }, new_record: { state: 'active' }, created_at: project.created_at }] });
   const detail = await s.data().getAdminProject(projectId);
   assert.equal(detail.audit[0].actor_id, 'actor');
-  assert.deepEqual(detail.preview.navigation.map(item => item.href), ['/cliente/dashboard', '/cliente/pendientes', '/cliente/mensajeria', '/cliente/facturas']);
+  assert.deepEqual(detail.preview.navigation.map(item => item.href), [
+    '/cliente/dashboard', '/cliente/proyectos', '/cliente/informes', '/cliente/actualizaciones',
+    '/cliente/fotografias', '/cliente/servicios', '/cliente/pendientes', '/cliente/facturas',
+    '/cliente/historial', '/cliente/mensajeria',
+  ]);
   assert.equal(await s.data().getAdminProject('missing'), null);
+});
+
+test('project previews hide active reports with invalid destinations in both historical modes', async () => {
+  for (const portal_mode of ['legacy', 'dynamic']) {
+    const s = setup({
+      clients: [{ ...client, portal_mode }],
+      project_capabilities: [{
+        ...capability,
+        capability_key: 'bonuses_reports',
+        state: 'active',
+        launch_url: 'https://evil.com/reports',
+      }],
+    });
+    const detail = await s.data().getAdminProject(projectId);
+    assert.deepEqual(detail.preview.navigation.slice(0, 2).map(item => item.id), ['dashboard', 'projects']);
+    assert.equal(detail.preview.navigation.some(item => item.id === 'bonos'), false);
+    assert.equal(detail.preview.navigation.some(item => item.id === 'packs'), false);
+  }
 });
 
 test('favorites preserve administrator position while resolving only current non-archived project capabilities', async () => {
@@ -85,16 +107,21 @@ test('favorites preserve administrator position while resolving only current non
 
 test('client repository uses session identity and denies guessed, archived, hidden and foreign projects', async () => {
   const s = setup({
-    client_projects: [project, { ...project, id: 'foreign', slug: 'foreign', client_id: otherClientId }, { ...project, id: 'hidden', slug: 'hidden', client_access_enabled: false }, { ...project, id: 'archived', slug: 'archived', status: 'archived' }],
-    project_capabilities: [{
-      ...capability,
-      state: 'active',
-      launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
-      metadata: { provisioning_confirmed: true },
-      validated_at: project.created_at,
-    }],
+    client_projects: [{ ...project, product_tier: 'pro' }, { ...project, id: 'foreign', slug: 'foreign', client_id: otherClientId, product_tier: 'lite' }, { ...project, id: 'hidden', slug: 'hidden', client_access_enabled: false }, { ...project, id: 'archived', slug: 'archived', status: 'archived' }],
+    project_capabilities: [
+      {
+        ...capability,
+        state: 'active',
+        launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+        metadata: { provisioning_confirmed: true },
+        validated_at: project.created_at,
+      },
+      { ...capability, id: 'foreign-capability', project_id: 'foreign', capability_key: 'analytics', state: 'active' },
+    ],
   }, configuredBlogger);
-  assert.deepEqual((await s.data().getClientPortalContext()).projects.map(p => p.slug), ['example']);
+  const context = await s.data().getClientPortalContext();
+  assert.deepEqual(context.projects.map(p => [p.slug, p.product_tier]), [['example', 'pro']]);
+  assert.equal(context.projects[0].capabilities.some(item => item.project_id === 'foreign'), false);
   assert.equal((await s.data().getAccessibleClientProject('example')).id, projectId);
   for (const slug of ['foreign', 'hidden', 'archived', 'unknown']) assert.equal(await s.data().getAccessibleClientProject(slug), null);
   assert.equal((await s.data().getActiveClientCapability('example', 'blogger')).capability_key, 'blogger');

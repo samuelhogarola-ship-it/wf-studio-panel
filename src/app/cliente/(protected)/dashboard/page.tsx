@@ -1,8 +1,8 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { requireClientAccess } from '@/lib/auth'
-import { getClientPortalContext } from '@/lib/data/projects'
+import { RotatingAnalyticsSummary } from '@/components/client/rotating-analytics-summary'
+import { getClientAnalyticsSummaries } from '@/lib/analytics/client-summary'
 import { getClientDashboardData, getClientFacturasData } from '@/lib/data/client'
+import { getClientPortalContext } from '@/lib/data/projects'
 import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -24,16 +24,11 @@ function isExpired(renewalDate: string | null) {
 }
 
 export default async function ClientDashboardPage() {
-  const identity = await requireClientAccess()
-  if (identity.client.portal_mode !== 'legacy') {
-    const context = await getClientPortalContext()
-    redirect(context.projects.length === 1
-      ? `/cliente/proyectos/${encodeURIComponent(context.projects[0].slug)}`
-      : '/cliente/proyectos')
-  }
-  const [data, invoices] = await Promise.all([
-    getClientDashboardData(identity.client.id),
-    getClientFacturasData(identity.client.id),
+  const context = await getClientPortalContext()
+  const [data, invoices, analyticsSummaries] = await Promise.all([
+    getClientDashboardData(context.client.id),
+    getClientFacturasData(context.client.id),
+    getClientAnalyticsSummaries(context.projects),
   ])
 
   const pendingInvoices = invoices.filter((i) => i.status === 'pending')
@@ -45,9 +40,55 @@ export default async function ClientDashboardPage() {
     <>
       <div className="mb-8">
         <h1 className="text-2xl font-black tracking-tight text-foreground">
-          Hola, {identity.client.name}
+          Hola, {context.client.name}
         </h1>
         <p className="mt-1 text-slate-500">Estado de tus servicios con WF-Studio.</p>
+      </div>
+
+      <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section aria-labelledby="news-heading" className="rounded-2xl border border-slate-200 bg-white p-5">
+          <h2 id="news-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Novedades</h2>
+          {data.notifications.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">No hay novedades disponibles todavía.</p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {data.notifications.slice(0, 3).map((notification) => (
+                <li key={notification.id}>
+                  <p className="text-sm font-semibold text-foreground">{notification.title}</p>
+                  {notification.body ? <p className="line-clamp-2 text-xs text-slate-500">{notification.body}</p> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <RotatingAnalyticsSummary summaries={analyticsSummaries} intervalMs={6000} />
+
+        <section aria-labelledby="messages-heading" className="rounded-2xl border border-slate-200 bg-white p-5">
+          <h2 id="messages-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Mensajes</h2>
+          {data.messages.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">No tienes mensajes recibidos.</p>
+          ) : (
+            <>
+              <p className="mt-4 text-sm font-semibold text-foreground">{data.messages[0].subject}</p>
+              <p className="mt-1 text-xs text-slate-500">{data.unreadMessageCount} sin leer</p>
+            </>
+          )}
+          <Link href="/cliente/mensajeria" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">Ver mensajes →</Link>
+        </section>
+
+        <section aria-labelledby="reports-heading" className="rounded-2xl border border-slate-200 bg-white p-5">
+          <h2 id="reports-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Informes</h2>
+          {data.reports.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500">Todavía no hay informes disponibles.</p>
+          ) : (
+            <>
+              <p className="mt-4 text-sm font-semibold text-foreground">{data.reports[0].title}</p>
+              <p className="mt-1 text-xs text-slate-500">{data.reports.length === 1 ? '1 informe reciente' : `${data.reports.length} informes recientes`}</p>
+            </>
+          )}
+          <Link href="/cliente/informes" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">Ver informes →</Link>
+        </section>
       </div>
 
       {/* Alerts */}

@@ -278,3 +278,67 @@ test('the statistics page preserves authentication redirects and infrastructure 
     { message: 'redirect:/acceso?next=%2Fcliente%2Fproyectos%2Fmy-site%2Festadisticas' },
   )
 })
+
+test('home analytics summaries query only valid active tools and expose public values only', async () => {
+  const calls = []
+  const fetchDashboard = async (options) => {
+    calls.push(options)
+    return {
+      ...analyticsResult(options.projectKey),
+      summary: {
+        pageviews: { value: 321 },
+        visitors: { value: 123 },
+        visits: { value: 210 },
+      },
+    }
+  }
+  const { getClientAnalyticsSummaries } = loadProjectModule('src/lib/analytics/client-summary.ts', {
+    '@/lib/data/projects': {
+      getCapabilityConfigurationIssue: (candidate) => candidate.slug === 'misconfigured' ? 'analytics' : null,
+    },
+  })
+  const valid = { ...configuredProject, capabilities: [activeAnalytics] }
+  const projects = [
+    valid,
+    { ...valid, id: 'available', slug: 'available', analytics_registry_key: 'available-key', capabilities: [{ ...activeAnalytics, project_id: 'available', state: 'available' }] },
+    { ...valid, id: 'inactive', slug: 'inactive', status: 'archived', analytics_registry_key: 'inactive-key' },
+    { ...valid, id: 'hidden', slug: 'hidden', client_access_enabled: false, analytics_registry_key: 'hidden-key' },
+    { ...valid, id: 'misconfigured', slug: 'misconfigured', analytics_registry_key: 'secret-registry-key' },
+  ]
+
+  const summaries = await getClientAnalyticsSummaries(projects, { fetchDashboard })
+
+  assert.deepEqual(calls, [{ projectKey: 'webfuengirola', summaryOnly: true }])
+  assert.deepEqual(summaries, [{ projectSlug: 'my-site', projectName: 'My Site', pageviews: 321, visitors: 123, visits: 210 }])
+  assert.doesNotMatch(JSON.stringify(summaries), /webfuengirola|secret-registry-key|website-id|UMAMI|credential/i)
+})
+
+test('home analytics summaries isolate project failures and return an empty safe result on total failure', async () => {
+  const { getClientAnalyticsSummaries } = loadProjectModule('src/lib/analytics/client-summary.ts', {
+    '@/lib/data/projects': { getCapabilityConfigurationIssue: () => null },
+  })
+  const first = { ...configuredProject, capabilities: [activeAnalytics] }
+  const second = {
+    ...first,
+    id: 'second-project',
+    slug: 'second-site',
+    name: 'Second Site',
+    analytics_registry_key: 'second-registry',
+    capabilities: [{ ...activeAnalytics, project_id: 'second-project' }],
+  }
+  const partial = await getClientAnalyticsSummaries([first, second], {
+    fetchDashboard: async ({ projectKey }) => {
+      if (projectKey === 'webfuengirola') throw new Error('https://umami.internal token=server-secret')
+      return { ...analyticsResult(projectKey), summary: {
+        pageviews: { value: 40 }, visitors: { value: 25 }, visits: { value: 30 },
+      } }
+    },
+  })
+  assert.deepEqual(partial, [{ projectSlug: 'second-site', projectName: 'Second Site', pageviews: 40, visitors: 25, visits: 30 }])
+  assert.doesNotMatch(JSON.stringify(partial), /umami|secret|registry/i)
+
+  const empty = await getClientAnalyticsSummaries([first, second], {
+    fetchDashboard: async () => { throw new Error('upstream endpoint and credentials') },
+  })
+  assert.deepEqual(empty, [])
+})

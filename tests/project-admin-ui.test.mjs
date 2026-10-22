@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { loadProjectModule, database, boundary, project, capability, client, projectId } from './helpers/project-harness.mjs';
+import { loadProjectModule, database, boundary, project, capability, client, projectId, form } from './helpers/project-harness.mjs';
 
 const render = element => renderToStaticMarkup(element);
 function setup(seed = {}, extra = {}) {
@@ -246,13 +246,15 @@ test('new catalog and workspace controls respect the selected administrator loca
   assert.match(detail, /Configuration warnings/);
 });
 
-test('access preview includes only assigned visible projects and exact dynamic links', async () => {
+test('access preview includes only assigned visible projects and universal account links', async () => {
   const load = setup({ clients: [{ ...client, portal_mode: 'dynamic' }], client_projects: [project, { ...project, id: 'other', slug: 'foreign', name: 'Foreign', client_id: 'foreign-client' }], project_capabilities: [{ ...capability, capability_key: 'invoices', state: 'active' }] });
   const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;
   const html = render(await Page({ params: Promise.resolve({ id: projectId }) }));
   assert.match(html, /Vista previa/);
-  assert.match(html, /href="\/cliente\/facturas"/);
-  assert.doesNotMatch(html, /Foreign|\/cliente\/informes/);
+  for (const href of ['dashboard', 'proyectos', 'informes', 'actualizaciones', 'fotografias', 'servicios', 'pendientes', 'facturas', 'historial', 'mensajeria']) {
+    assert.match(html, new RegExp(`href="/cliente/${href}"`));
+  }
+  assert.doesNotMatch(html, /Foreign/);
   assert.match(html, /Invitar cliente/);
 });
 
@@ -267,6 +269,72 @@ test('forms expose explicit capability state, provisioning and separate assignme
   const access = render(React.createElement(ProjectClientAccessForm, { project, clients: [client], locale: 'en' }));
   for (const field of ['client_id', 'enabled', 'portal_mode']) assert.match(access, new RegExp(`name="${field}"`));
   assert.match(access, /dynamic/);
+});
+
+test('project form renders the four product tier choices', () => {
+  const load = setup();
+  const { ProjectForm } = load('src/components/admin/project-form.tsx');
+  const html = render(React.createElement(ProjectForm, { project, locale: 'es' }));
+
+  const select = html.slice(html.indexOf('name="product_tier"'), html.indexOf('</select>', html.indexOf('name="product_tier"')));
+  assert.match(select, /value=""[^>]*>Por confirmar<\/option>/);
+  assert.match(select, /value="lite">Lite<\/option>/);
+  assert.match(select, /value="express">Express<\/option>/);
+  assert.match(select, /value="pro">Pro<\/option>/);
+});
+
+test('project action accepts only exact product tiers and persists an empty choice as null', async () => {
+  for (const [value, expected] of [['', null], ['lite', 'lite'], ['express', 'express'], ['pro', 'pro']]) {
+    const db = database({ client_projects: [] });
+    const load = relative => loadProjectModule(relative, boundary(db).mocks);
+    const { upsertProjectAction } = load('src/lib/actions/projects.ts');
+    const result = await upsertProjectAction({}, form({
+      slug: `tier-${value || 'null'}`,
+      name: 'Tier project',
+      domain: 'example.com',
+      status: 'draft',
+      product_tier: value,
+    }));
+
+    assert.ok(result.success, `expected ${value || 'empty'} to be accepted`);
+    const write = db.calls.find(call => call.table === 'client_projects' && call.operation === 'insert');
+    assert.equal(write.payload.product_tier, expected);
+  }
+
+  const db = database({ client_projects: [] });
+  const load = relative => loadProjectModule(relative, boundary(db).mocks);
+  const { upsertProjectAction } = load('src/lib/actions/projects.ts');
+  const result = await upsertProjectAction({}, form({
+    slug: 'tier-enterprise',
+    name: 'Tier project',
+    domain: 'example.com',
+    status: 'draft',
+    product_tier: 'enterprise',
+  }));
+
+  assert.ok(result.error);
+  assert.equal(db.calls.some(call => call.table === 'client_projects' && ['insert', 'update'].includes(call.operation)), false);
+});
+
+test('project update persists product tier through the optimistic project snapshot', async () => {
+  const db = database({ client_projects: [{ ...project, product_tier: null }] });
+  const load = relative => loadProjectModule(relative, boundary(db).mocks);
+  const { upsertProjectAction } = load('src/lib/actions/projects.ts');
+
+  const result = await upsertProjectAction({}, form({
+    id: projectId,
+    slug: project.slug,
+    name: project.name,
+    domain: project.domain,
+    status: project.status,
+    product_tier: 'pro',
+  }));
+
+  assert.ok(result.success);
+  assert.equal(db.tables.client_projects[0].product_tier, 'pro');
+  const update = db.calls.find(call => call.table === 'client_projects' && call.operation === 'update');
+  assert.equal(update.payload.product_tier, 'pro');
+  assert.equal(update.filters.length, 3, 'update must match id, updated_at and the validated owner snapshot');
 });
 
 test('capability controls show their own configuration validation result', () => {

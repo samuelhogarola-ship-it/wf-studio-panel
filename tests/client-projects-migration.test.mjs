@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises'
 const root = new URL('../', import.meta.url)
 const migrationUrl = new URL('supabase/migrations/202610170002_client_portal_platform.sql', root)
 const agamaForwardMigrationUrl = new URL('supabase/migrations/202610180001_agama_client_project.sql', root)
+const productTierMigrationUrl = new URL('supabase/migrations/202610220001_client_project_product_tier.sql', root)
+const angelAssignmentMigrationUrl = new URL('supabase/migrations/202610220002_angel_agama_todoplastico_projects.sql', root)
 const sql = () => readFile(migrationUrl, 'utf8').catch(error => {
   assert.fail(`Client portal migration must exist (${error.code})`)
 })
@@ -138,4 +140,95 @@ test('Supabase types expose project and capability rows, relationships, exact un
   assert.match(types, /export type CapabilityKey = 'products' \| 'domains' \| 'hosting' \| 'invoices' \| 'bonuses_reports' \| 'blogger' \| 'analytics'/)
   assert.match(types, /export type CapabilityState = 'unavailable' \| 'available' \| 'active'/)
   assert.match(types, /project_capability_audit: \{[\s\S]*?Insert: never\s+Update: never/)
+})
+
+test('product tier migration adds a nullable constrained field and idempotently classifies aGama and TodoPlástico as pro', async () => {
+  const source = await readFile(productTierMigrationUrl, 'utf8').catch(error => {
+    assert.fail(`Product tier migration must exist (${error.code})`)
+  })
+
+  assert.match(source, /alter table public\.client_projects\s+add column if not exists product_tier text;/i)
+  assert.doesNotMatch(source, /product_tier text not null/i)
+  assert.match(source, /constraint client_projects_product_tier_check\s+check \(product_tier is null or product_tier in \('lite', 'express', 'pro'\)\)/i)
+  assert.match(source, /update public\.client_projects\s+set product_tier = 'pro'\s+where \(lower\(btrim\(slug\)\) = 'agama'\s+and lower\(btrim\(domain\)\) = 'agama\.com\.mx'\s+or lower\(btrim\(slug\)\) = 'todoplastico'\s+and lower\(btrim\(domain\)\) = 'todo-plastico\.com'\)\s+and product_tier is distinct from 'pro';/i)
+})
+
+test('Supabase project types expose the exact nullable product tier union', async () => {
+  const types = await readFile(new URL('src/lib/supabase/types.ts', root), 'utf8')
+
+  assert.match(types, /export type ProductTier = 'lite' \| 'express' \| 'pro'/)
+  assert.match(types, /client_projects: \{[\s\S]*?Row: \{[^}]*product_tier: ProductTier \| null/)
+  assert.match(types, /client_projects: \{[\s\S]*?Insert: \{[^}]*product_tier\?: ProductTier \| null/)
+  assert.match(types, /client_projects: \{[\s\S]*?Update: \{[^}]*product_tier\?: ProductTier \| null/)
+})
+
+test('Ángel assignment resolves exactly one active wf-studio client by normalized email without creating clients', async () => {
+  const source = await readFile(angelAssignmentMigrationUrl, 'utf8').catch(error => {
+    assert.fail(`Ángel assignment migration must exist (${error.code})`)
+  })
+
+  assert.match(source, /^begin;[\s\S]*commit;\s*$/i)
+  assert.match(source, /lower\(btrim\(c\.email\)\) = '547@agama\.com\.mx'/i)
+  assert.match(source, /c\.project = 'wf-studio'/i)
+  assert.match(source, /c\.status = 'active'/i)
+  assert.match(source, /if v_client_count <> 1 then[\s\S]*raise exception 'Expected exactly one active wf-studio client for normalized email 547@agama\.com\.mx; found %'/i)
+  assert.doesNotMatch(source, /insert\s+into\s+public\.clients/i)
+  assert.doesNotMatch(source, /update\s+public\.clients/i)
+})
+
+test('Ángel assignment guards both exact project identities and scopes the project update to their resolved ids', async () => {
+  const source = await readFile(angelAssignmentMigrationUrl, 'utf8')
+
+  for (const [slug, domain, variable] of [
+    ['agama', 'agama\\.com\\.mx', 'v_agama'],
+    ['todoplastico', 'todo-plastico\\.com', 'v_todoplastico'],
+  ]) {
+    assert.match(source, new RegExp(`lower\\(btrim\\(p\\.slug\\)\\) = '${slug}'`, 'i'))
+    assert.match(source, new RegExp(`lower\\(btrim\\(p\\.domain\\)\\) = '${domain}'`, 'i'))
+    assert.match(source, new RegExp(`if ${variable}_count <> 1 or not coalesce\\(${variable}_identity_valid, false\\) then[\\s\\S]*raise exception`, 'i'))
+  }
+  assert.match(source, /update public\.client_projects\s+set client_id = v_client_id,\s*status = 'active',\s*client_access_enabled = true,\s*product_tier = 'pro'\s+where id = any \(array\[v_agama_id, v_todoplastico_id\]\)/i)
+  assert.doesNotMatch(source, /where\s+lower\(btrim\((?:slug|domain)\)\)\s+in/i)
+})
+
+test('Ángel assignment activates only intended analytics and validated aGama Blogger capabilities', async () => {
+  const source = await readFile(angelAssignmentMigrationUrl, 'utf8')
+
+  assert.match(source, /values\s*\(v_agama_id, 'analytics', 'active', null, '\{\}'::jsonb, v_validated_at\),\s*\(v_todoplastico_id, 'analytics', 'active', null, '\{\}'::jsonb, v_validated_at\)/i)
+  assert.match(source, /on conflict \(project_id, capability_key\) do update\s+set state = 'active',[\s\S]*validated_at = coalesce\(public\.project_capabilities\.validated_at, excluded\.validated_at\)/i)
+  assert.match(source, /v_agama_id,\s*'blogger',\s*'active',\s*'https:\/\/admin\.webfuengirola\.com\/paneladmin\/blogger\/agama',\s*'\{"provisioning_confirmed": true\}'::jsonb,\s*v_validated_at/i)
+  assert.match(source, /metadata = public\.project_capabilities\.metadata \|\| excluded\.metadata/i)
+})
+
+test('Ángel assignment rejects unexpected analytics registry keys before activating normalized analytics rows', async () => {
+  const source = await readFile(angelAssignmentMigrationUrl, 'utf8')
+  const analyticsInsert = source.indexOf('insert into public.project_capabilities')
+
+  for (const [variable, expected] of [
+    ['v_agama_analytics_registry_key', 'agama'],
+    ['v_todoplastico_analytics_registry_key', 'todoplastico'],
+  ]) {
+    const guard = source.indexOf(`if ${variable} is distinct from '${expected}' then`)
+    assert.ok(guard > 0 && guard < analyticsInsert, `${variable} must be guarded before capability writes`)
+    assert.match(source.slice(guard, analyticsInsert), /raise exception 'Expected analytics registry key [^']+';/i)
+  }
+
+  const analyticsUpsert = source.slice(analyticsInsert, source.indexOf("v_agama_id,\n    'blogger'"))
+  assert.match(analyticsUpsert, /set state = 'active',\s*launch_url = null,\s*validated_at = coalesce/i)
+  assert.match(analyticsUpsert, /or public\.project_capabilities\.launch_url is not null/i)
+})
+
+test('Ángel assignment keeps TodoPlástico Blogger dormant and preserves unrelated data on reruns', async () => {
+  const source = await readFile(angelAssignmentMigrationUrl, 'utf8')
+
+  const todoBlogger = source.slice(source.indexOf('-- TodoPlástico Blogger adapter handoff'))
+  assert.ok(todoBlogger.startsWith('-- TodoPlástico Blogger adapter handoff'))
+  assert.match(todoBlogger, /v_todoplastico_id,\s*'blogger',\s*'available',\s*null,\s*'\{\}'::jsonb,\s*null/i)
+  assert.match(todoBlogger, /on conflict \(project_id, capability_key\) do update\s+set state = 'available',\s*launch_url = null,\s*metadata = public\.project_capabilities\.metadata - 'provisioning_confirmed',\s*validated_at = null/i)
+  assert.match(todoBlogger, /where not \(public\.project_capabilities\.state = 'active'\s+and public\.project_capabilities\.launch_url is not null\s+and public\.project_capabilities\.metadata @> '\{"provisioning_confirmed": true\}'::jsonb\s+and public\.project_capabilities\.validated_at is not null\)/i)
+  assert.match(todoBlogger, /application adapter[\s\S]*end-to-end/i)
+
+  assert.doesNotMatch(source, /(?:insert into|update|delete from) public\.(?:services|packs|activities|invoices|notifications|client_resources)\b/i)
+  assert.doesNotMatch(source, /delete\s+from\s+public\.project_capabilities/i)
+  assert.doesNotMatch(source, /validated_at\s*=\s*(?:now\(\)|v_validated_at)(?![^;]*coalesce)/i)
 })

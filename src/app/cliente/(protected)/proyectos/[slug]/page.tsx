@@ -1,24 +1,35 @@
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
-import { getAccessibleClientProject, getClientPortalContext } from '@/lib/data/projects'
+import { notFound } from 'next/navigation'
+import { getAccessibleClientProject, getCapabilityConfigurationIssue, getClientPortalContext } from '@/lib/data/projects'
 import { getClientPendingItems, getClientFacturasData, getClientServicesData } from '@/lib/data/client'
 import { clientPortalTranslations, projectTranslations } from '@/lib/i18n'
 import { getLocale } from '@/lib/locale'
+import { buildProjectTools } from '@/lib/projects/tools.mjs'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ClientProjectPage({ params }: { params: Promise<{ slug: string }> }) {
   const [locale, { slug }, context] = await Promise.all([getLocale(), params, getClientPortalContext()])
-  if (context.mode === 'legacy') redirect('/cliente/dashboard')
   const project = await getAccessibleClientProject(slug)
   if (!project) notFound()
   const text = clientPortalTranslations[locale]
   const labels = projectTranslations[locale].capabilities
-  const hasInvoices = context.navigation.some(item => item.id === 'facturas')
-  const hasPacks = context.navigation.some(item => item.id === 'packs')
-  const hasProducts = context.navigation.some(item => item.capability === 'products')
-  const hasDomains = context.navigation.some(item => item.capability === 'domains')
-  const hasHosting = context.navigation.some(item => item.capability === 'hosting')
+  const projectTools = new Map(context.projects.map(candidate => {
+    const configurationIssues = Object.fromEntries(candidate.capabilities.flatMap(capability => {
+      const issue = getCapabilityConfigurationIssue(candidate, capability)
+      return issue ? [[capability.capability_key, issue]] : []
+    }))
+    return [candidate.id, new Map(buildProjectTools({ project: candidate, viewer: 'client', configurationIssues }).map(tool => [tool.id, tool]))]
+  }))
+  const selectedTools = projectTools.get(project.id) ?? new Map()
+  const hasTool = (id: 'domains' | 'hosting' | 'invoices' | 'reports') => [...projectTools.values()].some(tools => tools.has(id))
+  const hasActive = (key: string) => context.projects.some(candidate => candidate.capabilities.some(capability =>
+    capability.capability_key === key && capability.state === 'active'))
+  const hasInvoices = hasTool('invoices')
+  const hasPacks = hasTool('reports')
+  const hasProducts = hasActive('products')
+  const hasDomains = hasTool('domains')
+  const hasHosting = hasTool('hosting')
   const hasRenewableServices = hasProducts || hasDomains || hasHosting
   const hasServices = hasPacks || hasRenewableServices
   const [pending, invoices, services] = await Promise.all([
@@ -37,6 +48,14 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
   const hoursCount = packs.filter(pack => pack.pack_type === 'hours').length
   const closedCount = packs.length - hoursCount
   const numberLocale = locale === 'en' ? 'en-GB' : 'es-ES'
+  const workspaceTools = [...selectedTools.values()]
+  const toolLabel = (id: string) => {
+    if (id === 'website') return text.website
+    if (id === 'reports') return text.reports
+    if (id === 'bonuses') return text.bonuses
+    if (id === 'blogger' || id === 'analytics' || id === 'domains' || id === 'hosting' || id === 'invoices') return labels[id]
+    return id
+  }
 
   return (
     <div className="space-y-8">
@@ -71,24 +90,23 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
 
       <section aria-labelledby="tools-heading">
         <h2 id="tools-heading" className="mb-4 font-bold">{text.tools}</h2>
-        {project.capabilities.length === 0 ? <p className="text-sm text-muted">{text.noTools}</p> : (
+        {workspaceTools.length === 0 ? <p className="text-sm text-muted">{text.noTools}</p> : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {project.capabilities.map(capability => {
-              const key = capability.capability_key
-              const accountCapability = key === 'invoices' || key === 'bonuses_reports'
-              const navigation = context.navigation.find(item => item.projectId === project.id && item.capability === key)
-              const accountHref = key === 'invoices' ? '/cliente/facturas' : key === 'bonuses_reports' ? '/cliente/bonos' : '/cliente/servicios'
-              const href = accountCapability ? accountHref : key === 'blogger' || key === 'analytics' ? navigation?.href : capability.launch_url ?? (key === 'hosting' ? project.hosting_management_url : null) ?? accountHref
-              if (!href) return null
+            {workspaceTools.map(tool => {
+              if (!tool.href) return null
+              const label = toolLabel(tool.id)
+              const accountCapability = tool.id === 'invoices' || tool.id === 'reports' || tool.id === 'bonuses'
+              const title = `${label}${accountCapability ? '' : ` · ${project.name}`}`
+              const action = `${text.open} ${title}`
               return (
-                <article id={key} key={key} className="rounded-2xl border border-line bg-white p-6">
-                  <h3 className="font-semibold">{labels[key]}{accountCapability ? '' : ` · ${project.name}`}</h3>
+                <article id={tool.id} key={tool.id} className="rounded-2xl border border-line bg-white p-6">
+                  <h3 className="font-semibold">{title}</h3>
                   <p className="mt-1 break-all text-sm text-muted">{accountCapability ? text.aggregated : project.domain}</p>
-                  {key === 'hosting' && project.hosting_label ? <p className="mt-2 text-sm">{project.hosting_label}</p> : null}
-                  <Link href={href} className="mt-4 inline-block text-sm font-semibold text-brand underline">
-                    {text.open} {labels[key]}{accountCapability ? '' : ` · ${project.name}`}
-                  </Link>
-                  {key === 'blogger' ? <p className="mt-2 text-xs text-muted">{text.bloggerNote}</p> : null}
+                  {tool.id === 'hosting' && project.hosting_label ? <p className="mt-2 text-sm">{project.hosting_label}</p> : null}
+                  {tool.id === 'website'
+                    ? <a href={tool.href} target="_blank" rel="noopener noreferrer" className="mt-4 inline-block text-sm font-semibold text-brand underline">{action}</a>
+                    : <Link href={tool.href} className="mt-4 inline-block text-sm font-semibold text-brand underline">{action}</Link>}
+                  {tool.id === 'blogger' ? <p className="mt-2 text-xs text-muted">{text.bloggerNote}</p> : null}
                 </article>
               )
             })}

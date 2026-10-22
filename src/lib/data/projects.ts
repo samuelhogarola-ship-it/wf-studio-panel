@@ -13,6 +13,8 @@ import { getSiteByKey, getSites } from '@/lib/sites/registry.mjs'
 import { getConfiguredUmamiSites, getUmamiConnections } from '@/lib/analytics/umami-core.mjs'
 import type { Locale } from '@/lib/i18n'
 
+export type { ProductTier } from '@/lib/supabase/types'
+
 export const capabilityKeys: readonly CapabilityKey[] = ['products', 'domains', 'hosting', 'invoices', 'bonuses_reports', 'blogger', 'analytics']
 export type Project = Tables<'client_projects'>
 export type ProjectCapability = Tables<'project_capabilities'>

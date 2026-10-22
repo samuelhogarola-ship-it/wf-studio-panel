@@ -16,7 +16,8 @@ const uuid = z.string().uuid()
 const projectSchema = z.object({
   id: z.union([uuid, z.literal('')]), slug: z.string().trim().toLowerCase().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).max(100),
   name: z.string().trim().min(1).max(200), domain: z.string().trim().toLowerCase().transform(value => value.replace(/^www\./, '')),
-  status: z.enum(['draft', 'active', 'archived']), hosting_label: z.string().trim().max(200),
+  status: z.enum(['draft', 'active', 'archived']), product_tier: z.union([z.enum(['lite', 'express', 'pro']), z.literal('')]).transform(value => value || null),
+  hosting_label: z.string().trim().max(200),
   hosting_management_url: z.string().trim().max(2048), analytics_registry_key: z.string().trim().max(100),
 })
 const capabilitySchema = z.object({
@@ -50,22 +51,28 @@ function saved(id?: string): ProjectFormState {
 
 export async function upsertProjectAction(_previous: ProjectFormState, form: FormData): Promise<ProjectFormState> {
   await requireAdmin()
-  const parsed = projectSchema.safeParse(Object.fromEntries(['id', 'slug', 'name', 'domain', 'status', 'hosting_label', 'hosting_management_url', 'analytics_registry_key'].map(key => [key, read(form, key)])))
+  const parsed = projectSchema.safeParse(Object.fromEntries(['id', 'slug', 'name', 'domain', 'status', 'product_tier', 'hosting_label', 'hosting_management_url', 'analytics_registry_key'].map(key => [key, read(form, key)])))
   if (!parsed.success) return failure()
   const { id, ...values } = parsed.data
   if (!validateProjectDestination(`https://${values.domain}`, values.domain, true) ||
     (values.hosting_management_url && !validateProjectDestination(values.hosting_management_url, values.domain, true))) return failure('Dominio o destino de hosting no válido.')
   const db = await createSupabaseServerClient()
+  let current: Project | null = null
   if (id) {
-    const current = await findProject(db, id)
+    current = await findProject(db, id)
     if (!current || current.slug !== values.slug) return failure('El identificador del proyecto es estable y no se puede cambiar.')
+    const snapshot = current
     const { data: capabilities, error } = await db.from('project_capabilities').select('*').eq('project_id', id).eq('state', 'active')
     if (error) return failure()
-    if (capabilities?.some(capability => getCapabilityConfigurationIssue({ ...current, ...values }, capability))) return failure('Desactiva o reconfigura las capacidades antes de cambiar sus destinos.')
+    if (capabilities?.some(capability => getCapabilityConfigurationIssue({ ...snapshot, ...values }, capability))) return failure('Desactiva o reconfigura las capacidades antes de cambiar sus destinos.')
   }
   const payload = { ...values, hosting_label: values.hosting_label || null, hosting_management_url: values.hosting_management_url || null, analytics_registry_key: values.analytics_registry_key || null }
-  const result = id ? await db.from('client_projects').update(payload).eq('id', id).select('id').maybeSingle()
-    : await db.from('client_projects').insert(payload).select('id').single()
+  if (id && current) {
+    const result = await updateProjectSnapshot(db, current, payload).select('id').maybeSingle()
+    if (result.error) return failure()
+    return result.data ? saved(result.data.id) : failure('El proyecto ha cambiado. Recarga la página antes de modificarlo.')
+  }
+  const result = await db.from('client_projects').insert(payload).select('id').single()
   return result.error || !result.data ? failure() : saved(result.data.id)
 }
 

@@ -2,6 +2,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 export type PortalMode = 'legacy' | 'dynamic'
 export type ProjectStatus = 'draft' | 'active' | 'archived'
+export type ProductTier = 'lite' | 'express' | 'pro'
 export type CapabilityKey = 'products' | 'domains' | 'hosting' | 'invoices' | 'bonuses_reports' | 'blogger' | 'analytics'
 export type CapabilityState = 'unavailable' | 'available' | 'active'
 
@@ -16,9 +17,9 @@ export type Database = {
         Relationships: [{ foreignKeyName: "admin_project_favorites_project_id_fkey"; columns: ["project_id"]; isOneToOne: false; referencedRelation: "client_projects"; referencedColumns: ["id"] }]
       }
       client_projects: {
-        Row: { id: string; client_id: string | null; slug: string; name: string; domain: string; status: ProjectStatus; client_access_enabled: boolean; hosting_label: string | null; hosting_management_url: string | null; analytics_registry_key: string | null; created_at: string; updated_at: string }
-        Insert: { id?: string; client_id?: string | null; slug: string; name: string; domain: string; status?: ProjectStatus; client_access_enabled?: boolean; hosting_label?: string | null; hosting_management_url?: string | null; analytics_registry_key?: string | null; created_at?: string; updated_at?: string }
-        Update: { id?: string; client_id?: string | null; slug?: string; name?: string; domain?: string; status?: ProjectStatus; client_access_enabled?: boolean; hosting_label?: string | null; hosting_management_url?: string | null; analytics_registry_key?: string | null; created_at?: string; updated_at?: string }
+        Row: { id: string; client_id: string | null; slug: string; name: string; domain: string; status: ProjectStatus; product_tier: ProductTier | null; client_access_enabled: boolean; hosting_label: string | null; hosting_management_url: string | null; analytics_registry_key: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; client_id?: string | null; slug: string; name: string; domain: string; status?: ProjectStatus; product_tier?: ProductTier | null; client_access_enabled?: boolean; hosting_label?: string | null; hosting_management_url?: string | null; analytics_registry_key?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; client_id?: string | null; slug?: string; name?: string; domain?: string; status?: ProjectStatus; product_tier?: ProductTier | null; client_access_enabled?: boolean; hosting_label?: string | null; hosting_management_url?: string | null; analytics_registry_key?: string | null; created_at?: string; updated_at?: string }
         Relationships: [{ foreignKeyName: "client_projects_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
       project_capabilities: {

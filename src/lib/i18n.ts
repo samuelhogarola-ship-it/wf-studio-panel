@@ -5,6 +5,7 @@ export const clientPortalTranslations = {
     projects: 'Tus proyectos', choose: 'Elige un proyecto', empty: 'No hay proyectos accesibles.',
     emptyDescription: 'Tu acceso está activo. Contacta con WF-Studio para configurar tus proyectos.',
     back: 'Todos los proyectos', overview: 'Resumen del proyecto', active: 'Activo',
+    productTier: 'Producto contratado', activeTools: 'Herramientas activas', website: 'Sitio web', reports: 'Informes', bonuses: 'Bonos',
     tools: 'Servicios y herramientas activos', noTools: 'No hay herramientas activas para este proyecto.',
     open: 'Abrir', services: 'Ver servicios de la cuenta',
     bloggerNote: 'Este editor protegido puede requerir un inicio de sesión independiente.',
@@ -16,6 +17,7 @@ export const clientPortalTranslations = {
     projects: 'Your projects', choose: 'Choose a project', empty: 'No accessible projects.',
     emptyDescription: 'Your account is active. Contact WF-Studio to configure your projects.',
     back: 'All projects', overview: 'Project overview', active: 'Active',
+    productTier: 'Product tier', activeTools: 'Active tools', website: 'Website', reports: 'Reports', bonuses: 'Hours',
     tools: 'Active services and tools', noTools: 'No active tools for this project.',
     open: 'Open', services: 'View account services',
     bloggerNote: 'This protected editor may require a separate sign-in.',
@@ -28,9 +30,10 @@ export const clientPortalTranslations = {
 export const projectTranslations = {
   es: {
     title: 'Proyectos', description: 'Inventario y acceso de clientes a sus proyectos.', register: 'Registrar proyecto', edit: 'Configuración del proyecto',
-    name: 'Nombre', slug: 'Identificador estable', domain: 'Dominio canónico', status: 'Estado', client: 'Cliente', hosting: 'Hosting', hostingUrl: 'Destino de gestión de hosting', analyticsKey: 'Clave del registro de analítica',
+    name: 'Nombre', slug: 'Identificador estable', domain: 'Dominio canónico', status: 'Estado', productTier: 'Producto contratado', client: 'Cliente', hosting: 'Hosting', hostingUrl: 'Destino de gestión de hosting', analyticsKey: 'Clave del registro de analítica',
     save: 'Guardar', saving: 'Guardando…', search: 'Buscar proyectos', filter: 'Filtrar', all: 'Todos', unassigned: 'Sin asignar', capability: 'Capacidad activa', empty: 'No hay proyectos con estos filtros.',
     statusLabels: { draft: 'Borrador', active: 'Activo', archived: 'Archivado' },
+    productTierLabels: { unconfirmed: 'Por confirmar', lite: 'Lite', express: 'Express', pro: 'Pro' },
     capabilities: { products: 'Productos y servicios', domains: 'Dominios', hosting: 'Hosting', invoices: 'Facturas', bonuses_reports: 'Bonos e informes', blogger: 'Blogger', analytics: 'Estadísticas' },
     states: { unavailable: 'No disponible', available: 'Disponible', active: 'Activo' },
     destination: 'Destino protegido', lastValidation: 'Última validación', never: 'Sin validar', open: 'Abrir destino', validationReady: 'Configuración lista.',
@@ -43,9 +46,10 @@ export const projectTranslations = {
   },
   en: {
     title: 'Projects', description: 'Project inventory and client access.', register: 'Register project', edit: 'Project settings',
-    name: 'Name', slug: 'Stable identifier', domain: 'Canonical domain', status: 'Status', client: 'Client', hosting: 'Hosting', hostingUrl: 'Hosting management destination', analyticsKey: 'Analytics registry key',
+    name: 'Name', slug: 'Stable identifier', domain: 'Canonical domain', status: 'Status', productTier: 'Product tier', client: 'Client', hosting: 'Hosting', hostingUrl: 'Hosting management destination', analyticsKey: 'Analytics registry key',
     save: 'Save', saving: 'Saving…', search: 'Search projects', filter: 'Filter', all: 'All', unassigned: 'Unassigned', capability: 'Active capability', empty: 'No projects match these filters.',
     statusLabels: { draft: 'Draft', active: 'Active', archived: 'Archived' },
+    productTierLabels: { unconfirmed: 'To confirm', lite: 'Lite', express: 'Express', pro: 'Pro' },
     capabilities: { products: 'Products and services', domains: 'Domains', hosting: 'Hosting', invoices: 'Invoices', bonuses_reports: 'Hours and reports', blogger: 'Blogger', analytics: 'Statistics' },
     states: { unavailable: 'Unavailable', available: 'Available', active: 'Active' },
     destination: 'Protected destination', lastValidation: 'Last validation', never: 'Not validated', open: 'Open destination', validationReady: 'Configuration ready.',
@@ -389,7 +393,8 @@ export const translations = {
 
     // Client shell nav
     'clientNav.navigation': 'Navegación del portal',
-    'clientNav.dashboard': 'Resumen',
+    'clientNav.dashboard': 'Inicio',
+    'clientNav.projects': 'Webs',
     'clientNav.informes': 'Informes',
     'clientNav.actualizaciones': 'Actualizaciones',
     'clientNav.fotografias': 'Fotografías',
@@ -752,7 +757,8 @@ export const translations = {
     // Client dashboard page
     // Client shell nav
     'clientNav.navigation': 'Portal navigation',
-    'clientNav.dashboard': 'Overview',
+    'clientNav.dashboard': 'Home',
+    'clientNav.projects': 'Websites',
     'clientNav.informes': 'Reports',
     'clientNav.actualizaciones': 'Updates',
     'clientNav.fotografias': 'Photos',

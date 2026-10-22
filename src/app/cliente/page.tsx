@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import { ClientLoginForm } from '@/components/auth/client-login-form'
 import { FormMessage } from '@/components/ui/form-message'
 import { getOptionalIdentity } from '@/lib/auth'
-import { getClientPortalContext } from '@/lib/data/projects'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
 import { buildCanonicalClientDestinationUrl, isDirectBloggerDestination, sanitizeClientDestination } from '@/lib/security/redirects.mjs'
@@ -44,11 +43,7 @@ export default async function ClientLoginPage({ searchParams }: ClientLoginPageP
     if (params?.redirectedFrom !== undefined) redirect(isDirectBloggerDestination(destination)
       ? buildCanonicalClientDestinationUrl(destination).toString()
       : destination)
-    const context = await getClientPortalContext()
-    if (context.mode === 'legacy') redirect('/cliente/dashboard')
-    redirect(context.projects.length === 1
-      ? `/cliente/proyectos/${encodeURIComponent(context.projects[0].slug)}`
-      : '/cliente/proyectos')
+    redirect('/cliente/dashboard')
   }
 
   const locale = await getLocale()
