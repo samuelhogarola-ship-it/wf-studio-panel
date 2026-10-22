@@ -20,6 +20,7 @@ import {
   fetchUmamiDashboard,
   getAnalyticsProject,
   getAnalyticsRange,
+  mergeSummaryRefresh,
   normalizeSessionRows,
   normalizePeriod,
 } from '../src/lib/analytics/umami-dashboard.mjs'
@@ -437,6 +438,7 @@ test('dashboard resolves website id and returns all supported Umami dimensions',
     operatingSystem: 'Android OS', screen: '390x844', language: 'es-ES', views: 4, visits: 2,
     firstAt: '2026-08-25T10:00:00.000Z', lastAt: '2026-08-25T10:03:00.000Z', durationSeconds: 180,
   }])
+  assert.equal(dashboard.sessionsAvailable, true)
   assert.ok(requests.some((request) => request.includes('/sessions?') && request.includes('pageSize=20')))
   assert.ok(requests.some((request) => request.includes('/api/websites?')))
 })
@@ -473,6 +475,8 @@ test('dashboard keeps working when optional metrics are unsupported', async () =
   assert.equal(dashboard.status, 'ok')
   assert.deepEqual(dashboard.metrics.pages, [])
   assert.deepEqual(dashboard.metrics.countries, [])
+  assert.deepEqual(dashboard.sessions, [])
+  assert.equal(dashboard.sessionsAvailable, false)
   assert.equal(dashboard.summary.bounceRate.value, 0)
   assert.deepEqual(new Set(origins), new Set(['https://agama-analytics.example.com']))
 })
@@ -514,6 +518,30 @@ test('summary refresh skips dimension requests and uses the exact event count', 
   assert.equal(dashboard.summary.events.previous, 29)
   assert.deepEqual(dashboard.metrics, {})
   assert.deepEqual(requestedMetricTypes, [])
+})
+
+test('summary refresh preserves complete dimensions and session availability', () => {
+  const current = {
+    status: 'ok',
+    summary: { pageviews: { value: 10 } },
+    metrics: { countries: [{ x: 'ES', y: 4 }] },
+    sessions: [{ country: 'ES', durationSeconds: 30 }],
+    sessionsAvailable: true,
+  }
+  const refresh = {
+    status: 'ok',
+    summary: { pageviews: { value: 12 } },
+    metrics: {},
+    sessions: [],
+    sessionsAvailable: false,
+  }
+
+  assert.deepEqual(mergeSummaryRefresh(current, refresh), {
+    ...refresh,
+    metrics: current.metrics,
+    sessions: current.sessions,
+    sessionsAvailable: true,
+  })
 })
 
 test('event summary falls back to the v2 event metric without counting pageviews', async () => {

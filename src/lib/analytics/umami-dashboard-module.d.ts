@@ -49,6 +49,7 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
     series: { pageviews: TimeSeriesRow[]; visitors: TimeSeriesRow[] }
     metrics: Record<string, MetricRow[]>
     sessions: SessionRow[]
+    sessionsAvailable: boolean
   }
 
   export type AnalyticsConfigurationError = {
@@ -72,6 +73,7 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
   }
   export function normalizePeriod(period?: string): AnalyticsPeriod
   export function normalizeSessionRows(response: unknown): SessionRow[]
+  export function mergeSummaryRefresh<T extends { status: string }>(current: T | null, refresh: T): T
   export function toClientAnalyticsPayload(
     dashboard: AnalyticsDashboard | AnalyticsConfigurationError,
   ): ClientAnalyticsDashboard | ClientAnalyticsConfigurationError

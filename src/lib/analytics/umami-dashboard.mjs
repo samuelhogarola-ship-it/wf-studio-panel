@@ -57,6 +57,16 @@ export function normalizeSessionRows(response) {
   })
 }
 
+export function mergeSummaryRefresh(current, refresh) {
+  if (current?.status !== 'ok' || refresh?.status !== 'ok') return refresh
+  return {
+    ...refresh,
+    metrics: current.metrics,
+    sessions: current.sessions,
+    sessionsAvailable: current.sessionsAvailable,
+  }
+}
+
 export const ANALYTICS_PROJECTS = getLegacyAnalyticsProjects()
 const CANONICAL_ANALYTICS_PROJECTS = getSites().map(site => ({
   key: site.key,
@@ -442,15 +452,15 @@ export async function fetchUmamiDashboard({
         return result
       })
   const sessionsPromise = summaryOnly
-    ? Promise.resolve([])
+    ? Promise.resolve({ rows: [], available: false })
     : requestJson(apiUrl(baseUrl, `/api/websites/${websiteId}/sessions`, {
         ...baseParams,
         page: 1,
         pageSize: 20,
         orderBy: 'lastAt',
       }), { token, fetchImpl, timeoutMs })
-      .then(normalizeSessionRows)
-      .catch(() => [])
+      .then((response) => ({ rows: normalizeSessionRows(response), available: true }))
+      .catch(() => ({ rows: [], available: false }))
 
   const [[activeResult, statsResult, pageviewsResult, eventsResult], metrics, sessions] = await Promise.all([
     corePromise,
@@ -497,6 +507,7 @@ export async function fetchUmamiDashboard({
       visitors: Array.isArray(pageviewsResult.value?.sessions) ? pageviewsResult.value.sessions : [],
     },
     metrics,
-    sessions,
+    sessions: sessions.rows,
+    sessionsAvailable: sessions.available,
   }
 }

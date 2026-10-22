@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { createRequestCoordinator } from '@/lib/analytics/umami-dashboard.mjs'
+import { createRequestCoordinator, mergeSummaryRefresh } from '@/lib/analytics/umami-dashboard.mjs'
 import type {
   AnalyticsConfigurationError,
   AnalyticsDashboard,
@@ -105,7 +105,7 @@ export function ProjectAnalyticsPanel({
       if (!request.isLatest()) return
       setDashboard((current) => {
         if (summaryOnly && current?.status === 'ok' && payload.status === 'ok') {
-          return { ...payload, metrics: current.metrics }
+          return mergeSummaryRefresh(current, payload)
         }
         return payload
       })
@@ -251,7 +251,7 @@ export function ProjectAnalyticsPanel({
             </div>
 
             {activeTab === 'sessions' ? (
-              <SessionTable rows={okDashboard.sessions || []} />
+              <SessionTable rows={okDashboard.sessions || []} available={okDashboard.sessionsAvailable} />
             ) : (
               <div className="grid gap-px bg-line md:grid-cols-2 xl:grid-cols-3">
                 {METRIC_GROUPS[activeTab].map((group) => (
@@ -369,7 +369,10 @@ function MetricList({ title, rows }: { title: string; rows: MetricRow[] }) {
   )
 }
 
-function SessionTable({ rows }: { rows: SessionRow[] }) {
+function SessionTable({ rows, available }: { rows: SessionRow[]; available: boolean }) {
+  if (!available) {
+    return <p className="px-5 py-8 text-sm text-muted">El detalle de sesiones no está disponible en esta versión de Umami.</p>
+  }
   if (!rows.length) {
     return <p className="px-5 py-8 text-sm text-muted">Todavía no hay sesiones disponibles para este periodo.</p>
   }
