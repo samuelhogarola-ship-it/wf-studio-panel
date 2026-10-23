@@ -37,10 +37,13 @@ const clientRouteMatrix = [
 ]
 
 const clientMutationMatrix = [
+  { id: 'src/lib/actions/auth.ts#adminLoginAction', name: 'adminLoginAction', route: '/paneladmin', kind: 'manifest-sibling-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
   { id: 'src/lib/actions/auth.ts#clientPasswordLoginAction', name: 'clientPasswordLoginAction', route: '/cliente', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
   { id: 'src/lib/actions/auth.ts#clientMagicLinkAction', name: 'clientMagicLinkAction', route: '/cliente', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
   { id: 'src/lib/actions/auth.ts#clientRegisterAction', name: 'clientRegisterAction', route: '/cliente/registro', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
   { id: 'src/lib/actions/auth.ts#resetPasswordAction', name: 'resetPasswordAction', route: '/cliente/recuperar', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
+  { id: 'src/lib/actions/auth.ts#signOutAction', name: 'signOutAction', route: '/paneladmin + auth', kind: 'manifest-sibling-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
+  { id: 'src/lib/actions/auth.ts#updatePasswordAction', name: 'updatePasswordAction', route: '/auth/actualizar-contrasena', kind: 'manifest-sibling-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
   { id: 'src/lib/actions/messages.ts#sendMessageAction', name: 'sendMessageAction', route: '/cliente/mensajeria', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked', evidence: 'readonly-action-test' },
   { id: 'src/lib/actions/messages.ts#sendRequestAction', name: 'sendRequestAction', route: '/cliente/bonos + /cliente/servicios', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked', evidence: 'readonly-action-test' },
   { id: 'src/lib/actions/messages.ts#markMessageReadAction', name: 'markMessageReadAction', route: '/cliente/mensajeria', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked', evidence: 'readonly-action-test' },
@@ -48,6 +51,7 @@ const clientMutationMatrix = [
   { id: 'src/lib/data/client.ts#markClientInboundMessagesRead', name: 'markClientInboundMessagesRead', route: '/cliente/mensajeria', kind: 'render-side-effect', owner: 'task4', evidence: 'support-render-regression' },
   { id: 'src/lib/actions/resources.ts#publishResource', name: 'publishResource', route: '/paneladmin/clientes/[id]/recursos', kind: 'server-action', owner: 'task4-defense', clientBundlePolicy: 'admin-not-bundled', evidence: 'readonly-action-test' },
   { id: 'src/lib/actions/support-preview.ts#endSupportPreviewAction', name: 'endSupportPreviewAction', route: 'support banner + client shell', kind: 'support-session-action', owner: 'task3', clientBundlePolicy: 'support-lifecycle', evidence: 'task3-support-exit-test' },
+  { id: 'src/lib/actions/support-preview.ts#startSupportPreviewAction', name: 'startSupportPreviewAction', route: '/paneladmin support forms', kind: 'manifest-sibling-support-action', owner: 'task3', clientBundlePolicy: 'support-lifecycle', evidence: 'task3-support-start-test' },
   { id: 'POST /auth/sign-out', name: 'POST /auth/sign-out', route: 'client shell', kind: 'route-handler', owner: 'task3', clientBundlePolicy: 'support-lifecycle', evidence: 'task3-support-exit-test' },
   { id: 'POST /api/tools/blogger/[siteKey]/launch', name: 'POST /api/tools/blogger/[siteKey]/launch', route: '/cliente/proyectos/[slug]/blogger', kind: 'route-handler', owner: 'task6', clientBundlePolicy: 'task6-deferred', evidence: 'task6-plan-boundary' },
 ]
@@ -70,6 +74,16 @@ test('mutation discovery reaches unclassified actions imported by descendant cli
     'src/lib/actions/barrel.ts#barrelFixtureAction',
     'src/lib/actions/default.ts#default',
     'src/lib/actions/dynamic.ts#dynamicFixtureAction',
+    'src/lib/actions/namespace-target.ts#namespaceFixtureAction',
+    'src/lib/actions/runtime-common.cts#ctsFixtureAction',
+    'src/lib/actions/runtime-module.mts#mtsFixtureAction',
+    'src/lib/actions/runtime-view.tsx#jsxFixtureAction',
+    'src/lib/actions/runtime.ts#jsFixtureAction',
+    'src/lib/actions/server-all.ts#default',
+    'src/lib/actions/server-all.ts#reexportedFixtureAction',
+    'src/lib/actions/server-all.ts#selectedFixtureAction',
+    'src/lib/actions/server-all.ts#siblingFixtureAction',
+    'src/lib/actions/server-all.ts#starFixtureAction',
     'src/lib/actions/unclassified.ts#unclassifiedFixtureAction',
   ])
 })
@@ -87,6 +101,7 @@ test('the mutation matrix classifies every action and mutation route reachable f
   const allowedActionPolicies = new Set(['public-auth', 'support-blocked', 'support-lifecycle'])
   assert.deepEqual(inventory.actions.filter(action => !allowedActionPolicies.has(rows.get(action.id)?.clientBundlePolicy)).map(action => action.id), [])
   assert.deepEqual(inventory.routes.filter(route => !rows.get(route.id)?.evidence).map(route => route.id), [])
+  assert.deepEqual(inventory.dynamicMutations, [], 'reachable dynamic mutation surfaces must be made static and classified')
   assert.equal(inventory.actions.some(action => action.id === 'src/lib/actions/resources.ts#publishResource'), false)
 })
 
