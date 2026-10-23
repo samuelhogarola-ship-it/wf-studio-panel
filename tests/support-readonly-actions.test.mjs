@@ -1,11 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync } from 'node:fs'
+import { readdirSync } from 'node:fs'
 import path from 'node:path'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
 import { client, clientId, database, form, loadProjectModule } from './helpers/project-harness.mjs'
+import { inventoryClientMutations } from './helpers/client-mutation-graph.mjs'
 
 const readonlyResult = {
   ok: false,
@@ -36,19 +37,19 @@ const clientRouteMatrix = [
 ]
 
 const clientMutationMatrix = [
-  { name: 'clientPasswordLoginAction', route: '/cliente', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth' },
-  { name: 'clientMagicLinkAction', route: '/cliente', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth' },
-  { name: 'clientRegisterAction', route: '/cliente/registro', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth' },
-  { name: 'resetPasswordAction', route: '/cliente/recuperar', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth' },
-  { name: 'sendMessageAction', route: '/cliente/mensajeria', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked' },
-  { name: 'sendRequestAction', route: '/cliente/bonos + /cliente/servicios', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked' },
-  { name: 'markMessageReadAction', route: '/cliente/mensajeria', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked' },
-  { name: 'uploadClientPhoto', route: '/cliente/fotografias', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked' },
-  { name: 'markClientInboundMessagesRead', route: '/cliente/mensajeria', kind: 'render-side-effect', owner: 'task4' },
-  { name: 'publishResource', route: '/paneladmin/clientes/[id]/recursos', kind: 'server-action', owner: 'task4-defense', clientBundlePolicy: 'admin-not-bundled' },
-  { name: 'endSupportPreviewAction', route: 'support banner + client shell', kind: 'support-session-action', owner: 'task3', clientBundlePolicy: 'support-lifecycle' },
-  { name: 'POST /auth/sign-out', route: 'client shell', kind: 'route-handler', owner: 'task3' },
-  { name: 'POST /api/tools/blogger/[siteKey]/launch', route: '/cliente/proyectos/[slug]/blogger', kind: 'route-handler', owner: 'task6' },
+  { id: 'src/lib/actions/auth.ts#clientPasswordLoginAction', name: 'clientPasswordLoginAction', route: '/cliente', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
+  { id: 'src/lib/actions/auth.ts#clientMagicLinkAction', name: 'clientMagicLinkAction', route: '/cliente', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
+  { id: 'src/lib/actions/auth.ts#clientRegisterAction', name: 'clientRegisterAction', route: '/cliente/registro', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
+  { id: 'src/lib/actions/auth.ts#resetPasswordAction', name: 'resetPasswordAction', route: '/cliente/recuperar', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth', evidence: 'public-entry' },
+  { id: 'src/lib/actions/messages.ts#sendMessageAction', name: 'sendMessageAction', route: '/cliente/mensajeria', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked', evidence: 'readonly-action-test' },
+  { id: 'src/lib/actions/messages.ts#sendRequestAction', name: 'sendRequestAction', route: '/cliente/bonos + /cliente/servicios', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked', evidence: 'readonly-action-test' },
+  { id: 'src/lib/actions/messages.ts#markMessageReadAction', name: 'markMessageReadAction', route: '/cliente/mensajeria', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked', evidence: 'readonly-action-test' },
+  { id: 'src/lib/actions/client-resources.ts#uploadClientPhoto', name: 'uploadClientPhoto', route: '/cliente/fotografias', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked', evidence: 'readonly-action-test' },
+  { id: 'src/lib/data/client.ts#markClientInboundMessagesRead', name: 'markClientInboundMessagesRead', route: '/cliente/mensajeria', kind: 'render-side-effect', owner: 'task4', evidence: 'support-render-regression' },
+  { id: 'src/lib/actions/resources.ts#publishResource', name: 'publishResource', route: '/paneladmin/clientes/[id]/recursos', kind: 'server-action', owner: 'task4-defense', clientBundlePolicy: 'admin-not-bundled', evidence: 'readonly-action-test' },
+  { id: 'src/lib/actions/support-preview.ts#endSupportPreviewAction', name: 'endSupportPreviewAction', route: 'support banner + client shell', kind: 'support-session-action', owner: 'task3', clientBundlePolicy: 'support-lifecycle', evidence: 'task3-support-exit-test' },
+  { id: 'POST /auth/sign-out', name: 'POST /auth/sign-out', route: 'client shell', kind: 'route-handler', owner: 'task3', clientBundlePolicy: 'support-lifecycle', evidence: 'task3-support-exit-test' },
+  { id: 'POST /api/tools/blogger/[siteKey]/launch', name: 'POST /api/tools/blogger/[siteKey]/launch', route: '/cliente/proyectos/[slug]/blogger', kind: 'route-handler', owner: 'task6', clientBundlePolicy: 'task6-deferred', evidence: 'task6-plan-boundary' },
 ]
 
 function walkPages(directory) {
@@ -58,15 +59,36 @@ function walkPages(directory) {
   })
 }
 
-function importedServerActions(files) {
-  return files.flatMap(file => {
-    const source = readFileSync(file, 'utf8')
-    return [...source.matchAll(/import\s*\{([^}]+)\}\s*from '@\/lib\/actions\/[^']+'/gs)]
-      .flatMap(match => match[1].split(','))
-      .map(value => value.trim())
-      .filter(value => value && !value.startsWith('type '))
+test('mutation discovery reaches unclassified actions imported by descendant client components', () => {
+  const inventory = inventoryClientMutations({
+    projectRoot: 'tests/fixtures/client-mutation-graph',
+    sourceRoot: 'src',
+    entryDir: 'src/app/cliente',
   })
-}
+
+  assert.deepEqual(inventory.actions.map(action => action.id), [
+    'src/lib/actions/barrel.ts#barrelFixtureAction',
+    'src/lib/actions/default.ts#default',
+    'src/lib/actions/dynamic.ts#dynamicFixtureAction',
+    'src/lib/actions/unclassified.ts#unclassifiedFixtureAction',
+  ])
+})
+
+test('the mutation matrix classifies every action and mutation route reachable from cliente entries', () => {
+  const inventory = inventoryClientMutations()
+  const classified = new Set(clientMutationMatrix.map(entry => entry.id).filter(Boolean))
+  const discovered = [
+    ...inventory.actions.map(action => action.id),
+    ...inventory.routes.map(route => route.id),
+  ]
+
+  assert.deepEqual([...new Set(discovered)].filter(id => !classified.has(id)), [])
+  const rows = new Map(clientMutationMatrix.map(entry => [entry.id, entry]))
+  const allowedActionPolicies = new Set(['public-auth', 'support-blocked', 'support-lifecycle'])
+  assert.deepEqual(inventory.actions.filter(action => !allowedActionPolicies.has(rows.get(action.id)?.clientBundlePolicy)).map(action => action.id), [])
+  assert.deepEqual(inventory.routes.filter(route => !rows.get(route.id)?.evidence).map(route => route.id), [])
+  assert.equal(inventory.actions.some(action => action.id === 'src/lib/actions/resources.ts#publishResource'), false)
+})
 
 test('every current /cliente page is classified as read-only or mapped to an explicit mutation boundary', () => {
   const actual = walkPages('src/app/cliente').map(value => value.split(path.sep).join('/')).sort()
@@ -80,41 +102,6 @@ test('every current /cliente page is classified as read-only or mapped to an exp
     'sendRequestAction',
     'uploadClientPhoto',
   ])
-})
-
-test('the mutation matrix names every server action imported by the client-facing components', () => {
-  const clientSurfaceActions = importedServerActions([
-    'src/components/auth/client-login-form.tsx',
-    'src/components/auth/client-register-form.tsx',
-    'src/components/auth/reset-password-form.tsx',
-    'src/components/client/message-composer.tsx',
-    'src/components/client/request-form.tsx',
-    'src/components/client/resource-form.tsx',
-    'src/components/client/support-preview-banner.tsx',
-    'src/components/layout/client-shell.tsx',
-  ])
-  const classified = new Set(clientMutationMatrix.map(entry => entry.name))
-  assert.deepEqual([...new Set(clientSurfaceActions)].filter(name => !classified.has(name)), [])
-  const policies = new Map(clientMutationMatrix.map(entry => [entry.name, entry.clientBundlePolicy]))
-  const allowedPolicies = new Set(['public-auth', 'support-blocked', 'support-lifecycle'])
-  assert.deepEqual([...new Set(clientSurfaceActions)].filter(name => !allowedPolicies.has(policies.get(name))), [])
-  assert.equal(clientSurfaceActions.includes('publishResource'), false)
-})
-
-test('the mutation matrix names every POST route submitted by protected client UI', () => {
-  const files = [
-    ...walkPages('src/app/cliente/(protected)'),
-    'src/components/layout/client-shell.tsx',
-  ]
-  const submittedRoutes = files.flatMap(file => {
-    const source = readFileSync(file, 'utf8')
-    return [...source.matchAll(/<form[^>]*action=(?:"([^"]+)"|\{`([^`]+)`\})[^>]*method="post"/g)]
-      .map(match => match[1] ?? match[2])
-      .map(value => value.replace('${encodeURIComponent(site.key)}', '[siteKey]'))
-      .map(value => `POST ${value}`)
-  })
-  const classified = new Set(clientMutationMatrix.filter(entry => entry.kind === 'route-handler').map(entry => entry.name))
-  assert.deepEqual([...new Set(submittedRoutes)].filter(name => !classified.has(name)), [])
 })
 
 function supportActionSetup() {
@@ -162,13 +149,22 @@ function supportActionSetup() {
   return { effects, mocks, poisonForm }
 }
 
-for (const [modulePath, exportName, invoke] of [
-  ['src/lib/actions/messages.ts', 'sendMessageAction', (action, setup) => action({}, setup.poisonForm)],
-  ['src/lib/actions/messages.ts', 'sendRequestAction', (action, setup) => action({}, setup.poisonForm)],
-  ['src/lib/actions/messages.ts', 'markMessageReadAction', action => action('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')],
-  ['src/lib/actions/client-resources.ts', 'uploadClientPhoto', (action, setup) => action({}, setup.poisonForm)],
-  ['src/lib/actions/resources.ts', 'publishResource', (action, setup) => action({}, setup.poisonForm)],
-]) {
+const supportActionCases = [
+  { id: 'src/lib/actions/messages.ts#sendMessageAction', modulePath: 'src/lib/actions/messages.ts', exportName: 'sendMessageAction', invoke: (action, setup) => action({}, setup.poisonForm) },
+  { id: 'src/lib/actions/messages.ts#sendRequestAction', modulePath: 'src/lib/actions/messages.ts', exportName: 'sendRequestAction', invoke: (action, setup) => action({}, setup.poisonForm) },
+  { id: 'src/lib/actions/messages.ts#markMessageReadAction', modulePath: 'src/lib/actions/messages.ts', exportName: 'markMessageReadAction', invoke: action => action('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') },
+  { id: 'src/lib/actions/client-resources.ts#uploadClientPhoto', modulePath: 'src/lib/actions/client-resources.ts', exportName: 'uploadClientPhoto', invoke: (action, setup) => action({}, setup.poisonForm) },
+  { id: 'src/lib/actions/resources.ts#publishResource', modulePath: 'src/lib/actions/resources.ts', exportName: 'publishResource', invoke: (action, setup) => action({}, setup.poisonForm) },
+]
+
+test('every reachable support-blocked action has a direct read-only regression', () => {
+  const inventory = inventoryClientMutations()
+  const rows = new Map(clientMutationMatrix.map(entry => [entry.id, entry]))
+  const tested = new Set(supportActionCases.map(entry => entry.id))
+  assert.deepEqual(inventory.actions.filter(action => rows.get(action.id)?.clientBundlePolicy === 'support-blocked' && !tested.has(action.id)).map(action => action.id), [])
+})
+
+for (const { modulePath, exportName, invoke } of supportActionCases) {
   test(`${exportName} rejects support before parsing or any side effect`, async () => {
     const setup = supportActionSetup()
     const action = loadProjectModule(modulePath, setup.mocks)[exportName]
