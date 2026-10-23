@@ -1,51 +1,96 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, copyFile, writeFile, readFile, rm, chmod } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { spawnSync } from 'node:child_process'
+import { runnerFixture, waitForFile } from './helpers/support-runner-harness.mjs'
 
-test('database runner reports the failing phase, hides credentials and always stops its stack', async () => {
+test('database runner reports the failing phase, hides credentials and always stops its owned stack', async () => {
   for (const fail of ['', 'start', 'db reset', 'status', 'test', 'malformed', 'stop']) {
-    const root = await mkdtemp(join(tmpdir(), 'wf-support-runner-'))
+    const fixture = await runnerFixture()
     try {
-      await Promise.all(['scripts', 'node_modules/.bin', 'tests/fixtures/support-postgres', 'supabase/migrations'].map(dir => mkdir(join(root, dir), { recursive: true })))
-      await copyFile(new URL('../scripts/test-support-postgres.mjs', import.meta.url), join(root, 'scripts/test-support-postgres.mjs'))
-      await writeFile(join(root, 'supabase/config.toml'), 'project_id = "wf-studio-support-test"\n')
-      await writeFile(join(root, 'supabase/migrations/202610230001_original.sql'), '-- original migration bytes\n')
-      await writeFile(join(root, 'tests/fixtures/support-postgres/202606210002_test_compat.sql'), '-- test-only prerequisites\n')
-      const cli = join(root, 'node_modules/.bin/supabase')
-      await writeFile(cli, `#!/usr/bin/env node
-const fs = require('node:fs');
-const args = process.argv.slice(2);
-if (process.env.SUPABASE_TELEMETRY_DISABLED !== 'true' || process.env.DO_NOT_TRACK !== '1') process.exit(9);
-fs.appendFileSync(process.env.WF_RUNNER_CALLS_PATH, JSON.stringify({ args, cwd: process.cwd() }) + '\\n');
-if (process.cwd() === process.env.WF_RUNNER_SOURCE_ROOT) { console.error('must use disposable stack workspace'); process.exit(8); }
-if (fs.readFileSync('supabase/migrations/202610230001_original.sql', 'utf8') !== '-- original migration bytes\\n') process.exit(7);
-if (!fs.existsSync('supabase/migrations/202606210002_test_compat.sql')) process.exit(6);
-if (args.join(' ').startsWith(process.env.WF_RUNNER_FAIL) && process.env.WF_RUNNER_FAIL && process.env.WF_RUNNER_FAIL !== 'test') { console.error('private-credential-sentinel'); process.exit(2); }
-if (args[0] === 'status') console.log(process.env.WF_RUNNER_FAIL === 'malformed' ? 'leaksecret' : JSON.stringify({ DB_URL: 'postgresql://private-credential-sentinel@127.0.0.1/test' }));
-if (args[0] === 'start') console.log('private-credential-sentinel');
-`)
-      await chmod(cli, 0o755)
-      await writeFile(join(root, 'tests/support-session-postgres.test.mjs'), `import test from 'node:test'; import assert from 'node:assert/strict'; test('receives database URL in memory', () => { assert.ok(process.env.WF_SUPPORT_TEST_DATABASE_URL.includes('private-credential-sentinel')); assert.notEqual(process.env.WF_RUNNER_FAIL, 'test'); });`)
-      const env = { ...process.env, WF_RUNNER_FAIL: fail, WF_RUNNER_CALLS_PATH: join(root, 'calls.jsonl'), WF_RUNNER_SOURCE_ROOT: root }
-      // The subprocess is a fresh test runner, not a worker of this node:test run.
-      delete env.NODE_TEST_CONTEXT
-      const result = spawnSync(process.execPath, ['scripts/test-support-postgres.mjs'], { cwd: root, env, encoding: 'utf8' })
+      const result = await fixture.start({ WF_RUNNER_FAIL: fail }).done
       assert.equal(result.status, fail ? 1 : 0, `scenario ${fail || 'success'}: ${result.stderr}`)
       assert.doesNotMatch(result.stdout + result.stderr, /private-credential|leaksecret/)
-      const records = (await readFile(join(root, 'calls.jsonl'), 'utf8')).trim().split('\n').map(line => JSON.parse(line))
-      const calls = records.map(record => record.args)
-      await assert.rejects(readFile(join(records[0].cwd, 'supabase/config.toml')), { code: 'ENOENT' })
-      assert.equal(await readFile(join(root, 'supabase/migrations/202610230001_original.sql'), 'utf8'), '-- original migration bytes\n')
-      assert.deepEqual(calls[0], ['start'])
-      assert.deepEqual(calls.at(-1), ['stop', '--no-backup'])
+      const calls = (await fixture.calls()).filter(call => call.args)
+      await assert.rejects(readFile(join(calls[0].cwd, 'supabase/config.toml')), { code: 'ENOENT' })
+      assert.equal(await readFile(join(fixture.root, 'supabase/migrations/202610230001_original.sql'), 'utf8'), '-- original migration bytes\n')
+      assert.equal(calls[0].args[0], 'start')
+      assert.deepEqual(calls.at(-1).args, ['stop', '--no-backup'])
       if (!fail || fail === 'test') {
-        assert.deepEqual(calls[1], ['db', 'reset', '--local', '--no-seed'])
-        assert.deepEqual(calls[2], ['status', '--output', 'json'])
+        assert.deepEqual(calls[1].args.slice(0, 4), ['db', 'reset', '--local', '--no-seed'])
+        assert.deepEqual(calls[2].args, ['status', '--output', 'json'])
       }
       if (['start', 'db reset', 'status'].includes(fail)) assert.match(result.stderr, new RegExp(`failed.*${fail}`))
-    } finally { await rm(root, { recursive: true, force: true }) }
+      assert.deepEqual(await fixture.state(), { containers: [], volumes: [], networks: [] })
+    } finally { await fixture.cleanup() }
   }
+})
+
+test('pre-existing running/stopped containers or volumes are never reset or removed', async () => {
+  const label = { 'com.supabase.cli.project': 'wf-studio-support-test' }
+  for (const resource of [
+    { containers: [{ Id: 'foreign-running', Name: '/supabase_db_wf-studio-support-test', State: 'running', Config: { Labels: label } }] },
+    { containers: [{ Id: 'foreign-stopped', Name: '/supabase_db_wf-studio-support-test', State: 'exited', Config: { Labels: {} } }] },
+    { volumes: [{ Name: 'supabase_db_wf-studio-support-test', Labels: {} }] },
+    { volumes: [{ Name: 'arbitrary-volume-name', Labels: label }] },
+  ]) {
+    const fixture = await runnerFixture()
+    const state = { containers: [], volumes: [], networks: [], ...resource }
+    try {
+      await fixture.seed(state)
+      const result = await fixture.start().done
+      assert.equal(result.status, 1, 'must reject an existing stack before starting')
+      assert.match(result.stderr, /pre-existing.*support.*resources/i)
+      assert.deepEqual((await fixture.calls()).filter(call => call.args), [])
+      assert.deepEqual(await fixture.state(), state)
+    } finally { await fixture.cleanup() }
+  }
+})
+
+test('concurrent runners from different checkouts cannot reset or stop the first invocation', async () => {
+  const first = await runnerFixture()
+  const second = await runnerFixture(first.stateRoot)
+  const gate = join(first.root, 'start-gate')
+  const running = first.start({ WF_RUNNER_GATE: gate })
+  try {
+    await waitForFile(`${gate}.ready`)
+    const before = await first.state()
+    const collision = await second.start({ TMPDIR: second.root }).done
+    assert.equal(collision.status, 1)
+    assert.match(collision.stderr, /support.*runner.*lock|runner.*already/i)
+    assert.deepEqual((await second.calls()).filter(call => call.args), [])
+    assert.deepEqual(await first.state(), before)
+  } finally {
+    await writeFile(`${gate}.release`, 'release')
+    const result = await running.done
+    await second.cleanup()
+    await first.cleanup()
+    assert.equal(result.status, 0, result.stderr)
+  }
+})
+
+test('cleanup removes only this invocation resources when foreign resources appear later', async () => {
+  const fixture = await runnerFixture()
+  try {
+    const result = await fixture.start({ WF_RUNNER_FOREIGN: '1' }).done
+    assert.equal(result.status, 1)
+    const state = await fixture.state()
+    assert.deepEqual(state.containers.map(item => item.Id), ['foreign-new'])
+    assert.deepEqual(state.volumes.map(item => item.Name), ['foreign-volume'])
+    assert.deepEqual(state.networks, [])
+    assert.equal((await fixture.calls()).some(call => call.args?.[0] === 'stop'), false, 'project-wide stop must not touch foreign resources')
+  } finally { await fixture.cleanup() }
+})
+
+test('a database volume replaced outside the authorized reset is preserved', async () => {
+  const fixture = await runnerFixture()
+  try {
+    const result = await fixture.start({ WF_RUNNER_REPLACE_DB: '1' }).done
+    assert.equal(result.status, 1)
+    const state = await fixture.state()
+    assert.deepEqual(state.containers, [])
+    assert.deepEqual(state.volumes.map(item => item.Name), ['supabase_db_wf-studio-support-test'])
+    assert.deepEqual(state.networks, [])
+    assert.equal((await fixture.calls()).some(call => call.args?.[0] === 'stop'), false)
+  } finally { await fixture.cleanup() }
 })
