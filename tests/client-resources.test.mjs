@@ -8,7 +8,7 @@ const routePath = 'src/app/api/client-resources/[id]/route.ts'
 const ownResourceId = '55555555-5555-4555-8555-555555555555'
 const foreignResourceId = '66666666-6666-4666-8666-666666666666'
 
-function routeSetup({ mode }) {
+function routeSetup({ mode, ownStoragePath = `${clientId}/own.png` }) {
  const supportIdentity = { userId: 'support-admin', email: 'support@example.com', role: 'admin' }
  const ordinaryAdmin = { userId: 'ordinary-admin', email: 'admin@example.com', role: 'admin' }
  const clientIdentity = { userId: 'session-client', email: client.email, role: 'client', client }
@@ -17,7 +17,7 @@ function routeSetup({ mode }) {
   ? { mode: 'support', identity, client, supportSessionId: 'support-session', expiresAt: '2099-10-23T10:15:00.000Z', returnPath: '/paneladmin/inicio' }
   : { mode: 'client', identity: clientIdentity, client }
  const resources = [
-  { id: ownResourceId, client_id: clientId, kind: 'photo', title: 'Own', body: '', report_path: null, storage_path: `${clientId}/own.png`, content_type: 'image/png', created_by: null, created_at: '2026-10-23T10:00:00Z' },
+  { id: ownResourceId, client_id: clientId, kind: 'photo', title: 'Own', body: '', report_path: null, storage_path: ownStoragePath, content_type: 'image/png', created_by: null, created_at: '2026-10-23T10:00:00Z' },
   { id: foreignResourceId, client_id: otherClientId, kind: 'photo', title: 'Foreign', body: '', report_path: null, storage_path: `${otherClientId}/foreign.png`, content_type: 'image/png', created_by: null, created_at: '2026-10-23T10:00:00Z' },
  ]
  const sessionDb = database({ client_resources: resources })
@@ -63,6 +63,31 @@ test('support cannot download another client resource by UUID', async () => {
  assert.deepEqual(s.storageCalls, [])
 })
 
+test('support rejects an owned row whose storage path belongs to another client', async () => {
+ const s = routeSetup({ mode: 'support', ownStoragePath: `${otherClientId}/borrowed.png` })
+ const response = await s.get(ownResourceId)
+ assert.equal(response.status, 404)
+ assert.deepEqual(s.storageCalls, [])
+})
+
+test('portal downloads reject encoded, traversal, backslash and malformed storage paths', async t => {
+ const invalidPaths = [
+  `${clientId}/%2e%2e/foreign.png`,
+  `${clientId}/../foreign.png`,
+  `${clientId}\\foreign.png`,
+  `/${clientId}/own.png`,
+  `${clientId}//own.png`,
+  `${clientId}/`,
+ ]
+ for (const storagePath of invalidPaths) {
+  await t.test(storagePath, async () => {
+   const s = routeSetup({ mode: 'support', ownStoragePath: storagePath })
+   assert.equal((await s.get(ownResourceId)).status, 404)
+   assert.deepEqual(s.storageCalls, [])
+  })
+ }
+})
+
 test('normal client resource downloads preserve own access and cross-client denial', async () => {
  const s = routeSetup({ mode: 'client' })
  assert.equal((await s.get(ownResourceId)).status, 200)
@@ -78,8 +103,14 @@ test('ordinary administrator outside support preserves panel resource access exp
  assert.deepEqual(s.storageCalls, [`${otherClientId}/foreign.png`])
 })
 
+test('ordinary administrator rejects a resource whose row and storage owner disagree', async () => {
+ const s = routeSetup({ mode: 'admin', ownStoragePath: `${otherClientId}/borrowed.png` })
+ assert.equal((await s.get(ownResourceId)).status, 404)
+ assert.deepEqual(s.storageCalls, [])
+})
+
 test('private client resource objects have authenticated read policies for session downloads', async () => {
- const migration = await readFile(new URL('../supabase/migrations/202610230002_client_resource_storage_read.sql', import.meta.url), 'utf8')
+ const migration = await readFile(new URL('../supabase/migrations/202610230003_client_resource_storage_read.sql', import.meta.url), 'utf8')
  assert.match(migration, /create policy client_resource_objects_admin_read on storage\.objects\s+for select to authenticated\s+using \(bucket_id = 'client-resources' and private\.is_admin\(\)\)/i)
  assert.match(migration, /create policy client_resource_objects_own_read on storage\.objects\s+for select to authenticated\s+using \(\s*bucket_id = 'client-resources'\s+and \(storage\.foldername\(name\)\)\[1\] = private\.current_portal_client_id\(\)::text\s*\)/i)
 })

@@ -11,11 +11,11 @@ test('Postgres enforces support ownership, lifetime, atomic replacement and appe
   const b = new Client({ connectionString: process.env.WF_SUPPORT_TEST_DATABASE_URL })
   const adminA = randomUUID(), adminB = randomUUID(), clientUser = randomUUID(), clientId = randomUUID(), inactiveId = randomUUID(), foreignId = randomUUID(), projectId = randomUUID()
   const userIds = [adminA, adminB, clientUser]
-  const queryAs = async (connection, uid, sql, params = []) => {
+  const queryAs = async (connection, uid, sql, params = [], email = `${uid}@support.test`) => {
     await connection.query('begin')
     try {
       await connection.query('set local role authenticated')
-      await connection.query("select set_config('request.jwt.claim.sub', $1, true), set_config('request.jwt.claim.role', 'authenticated', true)", [uid])
+      await connection.query("select set_config('request.jwt.claim.sub', $1, true), set_config('request.jwt.claim.role', 'authenticated', true), set_config('request.jwt.claims', $2, true)", [uid, JSON.stringify({ sub: uid, role: 'authenticated', email })])
       const result = await connection.query(sql, params)
       await connection.query('commit')
       return result
@@ -63,6 +63,18 @@ test('Postgres enforces support ownership, lifetime, atomic replacement and appe
       }
       assert.equal((await queryAs(a, adminB, "select public.end_admin_support_session($1, 'manual') as ended", [digest('first')])).rows[0].ended, false)
       await assert.rejects(queryAs(a, clientUser, "select public.end_admin_support_session($1, 'manual')", [digest('first')]), /administrator required/i)
+    })
+    await t.test('Storage RLS limits clients to their folder while support and ordinary admins retain reads', async () => {
+      const ownObject = randomUUID(), foreignObject = randomUUID()
+      const names = [`${clientId}/own.png`, `${foreignId}/foreign.png`]
+      await a.query('insert into storage.objects (id, bucket_id, name) values ($1, $3, $4), ($2, $3, $5)', [ownObject, foreignObject, 'client-resources', ...names])
+      const clientRows = await queryAs(a, clientUser, "select name from storage.objects where bucket_id = 'client-resources' order by name", [], `${clientId}@support.test`)
+      assert.deepEqual(clientRows.rows.map(row => row.name), [names[0]])
+      const supportRows = await queryAs(a, adminA, "select name from storage.objects where bucket_id = 'client-resources' order by name")
+      const ordinaryAdminRows = await queryAs(a, adminB, "select name from storage.objects where bucket_id = 'client-resources' order by name")
+      assert.deepEqual(supportRows.rows.map(row => row.name), [...names].sort())
+      assert.deepEqual(ordinaryAdminRows.rows.map(row => row.name), [...names].sort())
+      await a.query('delete from storage.objects where id = any($1::uuid[])', [[ownObject, foreignObject]])
     })
     await t.test('failed replacement rolls back and expiry is recorded before replacement', async () => {
       await assert.rejects(start(a, adminA, 'first'), { code: '23505' })
