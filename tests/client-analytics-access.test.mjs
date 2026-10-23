@@ -78,6 +78,13 @@ function setup({
         return identity
       },
     },
+    '@/lib/support/portal-viewer': {
+      requirePortalViewer: async () => {
+        if (clientAccessError) throw clientAccessError
+        return { mode: 'client', identity, client: identity.client }
+      },
+      getOptionalSupportViewer: async () => null,
+    },
     '@/lib/supabase/server': { createSupabaseServerClient: async () => db },
     '@/lib/analytics/umami-core.mjs': {
       getConfiguredUmamiSites: () => configuredSites,

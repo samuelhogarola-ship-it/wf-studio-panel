@@ -1,4 +1,4 @@
-import { requireClientAccess } from '@/lib/auth'
+import { requirePortalViewer } from '@/lib/support/portal-viewer'
 import { getClientMessages, getClientPendingItems, markClientInboundMessagesRead } from '@/lib/data/client'
 import { MessageComposer } from '@/components/client/message-composer'
 import { formatDate } from '@/lib/utils'
@@ -12,7 +12,7 @@ export default async function MensajeriaPage({
 }: {
   searchParams: Promise<{ tab?: string; reply?: string; new?: string; pending?: string }>
 }) {
-  const identity = await requireClientAccess()
+  const identity = await requirePortalViewer()
   const params = await searchParams
   const tab = (params.tab ?? 'recibidos') as Tab
   const [messages, pendingItems] = await Promise.all([

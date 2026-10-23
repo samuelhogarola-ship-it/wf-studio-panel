@@ -16,6 +16,7 @@ type DatabaseClient = SupabaseClient<Database>
 type SessionInput = { adminUserId: string; token: string | null | undefined }
 type TestOptions = { now?: () => Date; randomBytes?: (size: number) => Uint8Array }
 const maxAge = 30 * 60
+export const SUPPORT_COOKIE_NAME = '__Host-wf_support_preview'
 const returnPathPattern = /^\/paneladmin\/[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$/
 const reasons: readonly SupportEndReason[] = ['manual', 'expired', 'replaced', 'client_inactive', 'access_revoked']
 
@@ -88,7 +89,7 @@ export async function endSupportSession(db: DatabaseClient, input: SessionInput,
 }
 
 function cookie(value: string, seconds: number) {
-  return { name: '__Host-wf_support_preview', value, httpOnly: true, secure: true, sameSite: 'lax' as const, path: '/', maxAge: Number.isFinite(seconds) ? Math.max(0, Math.min(maxAge, Math.floor(seconds))) : 0 }
+  return { name: SUPPORT_COOKIE_NAME, value, httpOnly: true, secure: true, sameSite: 'lax' as const, path: '/', maxAge: Number.isFinite(seconds) ? Math.max(0, Math.min(maxAge, Math.floor(seconds))) : 0 }
 }
 
 export function supportCookie(token: string, maxAgeSeconds: number) {

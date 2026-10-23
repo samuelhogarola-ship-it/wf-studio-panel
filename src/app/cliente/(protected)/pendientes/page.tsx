@@ -1,4 +1,4 @@
-import { requireClientAccess } from '@/lib/auth'
+import { requirePortalViewer } from '@/lib/support/portal-viewer'
 import { getClientPendingItems } from '@/lib/data/client'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
@@ -22,7 +22,7 @@ function getPendingStatusMeta(status: string) {
 }
 
 export default async function ClientPendingItemsPage() {
-  const identity = await requireClientAccess()
+  const identity = await requirePortalViewer()
   const items = await getClientPendingItems(identity.client.id)
   const pendingCount = items.filter((item) => item.status === 'pending').length
 

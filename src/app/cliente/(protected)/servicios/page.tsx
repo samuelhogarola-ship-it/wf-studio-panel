@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requireClientAccess } from '@/lib/auth'
+import { requirePortalViewer } from '@/lib/support/portal-viewer'
 import { getClientServicesData } from '@/lib/data/client'
 import { RequestForm } from '@/components/client/request-form'
 import { formatDate, formatDuration } from '@/lib/utils'
@@ -224,7 +224,7 @@ export default async function ClientServiciosPage({
 }: {
   searchParams: Promise<{ new?: string; open?: string }>
 }) {
-  const identity = await requireClientAccess()
+  const identity = await requirePortalViewer()
   const [params, data] = await Promise.all([searchParams, getClientServicesData(identity.client.id)])
   const showForm = params.new === '1'
   const openId = params.open ?? null
