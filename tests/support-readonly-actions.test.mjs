@@ -53,7 +53,11 @@ const clientMutationMatrix = [
   { id: 'src/lib/actions/support-preview.ts#endSupportPreviewAction', name: 'endSupportPreviewAction', route: 'support banner + client shell', kind: 'support-session-action', owner: 'task3', clientBundlePolicy: 'support-lifecycle', evidence: 'task3-support-exit-test' },
   { id: 'src/lib/actions/support-preview.ts#startSupportPreviewAction', name: 'startSupportPreviewAction', route: '/paneladmin support forms', kind: 'manifest-sibling-support-action', owner: 'task3', clientBundlePolicy: 'support-lifecycle', evidence: 'task3-support-start-test' },
   { id: 'POST /auth/sign-out', name: 'POST /auth/sign-out', route: 'client shell', kind: 'route-handler', owner: 'task3', clientBundlePolicy: 'support-lifecycle', evidence: 'task3-support-exit-test' },
-  { id: 'POST /api/tools/blogger/[siteKey]/launch', name: 'POST /api/tools/blogger/[siteKey]/launch', route: '/cliente/proyectos/[slug]/blogger', kind: 'route-handler', owner: 'task6', clientBundlePolicy: 'task6-deferred', evidence: 'task6-plan-boundary' },
+  {
+    id: 'POST /api/tools/blogger/[siteKey]/launch', name: 'POST /api/tools/blogger/[siteKey]/launch', route: '/cliente/proyectos/[slug]/blogger',
+    kind: 'route-handler', owner: 'task6', clientBundlePolicy: 'task6-deferred', evidence: 'task6-plan-boundary',
+    dynamicSurface: { source: `${protectedRoot}/proyectos/[slug]/blogger/page.tsx`, kind: 'form', reason: 'url' },
+  },
 ]
 
 function walkPages(directory) {
@@ -101,7 +105,12 @@ test('the mutation matrix classifies every action and mutation route reachable f
   const allowedActionPolicies = new Set(['public-auth', 'support-blocked', 'support-lifecycle'])
   assert.deepEqual(inventory.actions.filter(action => !allowedActionPolicies.has(rows.get(action.id)?.clientBundlePolicy)).map(action => action.id), [])
   assert.deepEqual(inventory.routes.filter(route => !rows.get(route.id)?.evidence).map(route => route.id), [])
-  assert.deepEqual(inventory.dynamicMutations, [], 'reachable dynamic mutation surfaces must be made static and classified')
+  const dynamicKey = surface => `${surface.source}#${surface.kind}#${surface.reason}`
+  assert.deepEqual(
+    inventory.dynamicMutations.map(dynamicKey).sort(),
+    clientMutationMatrix.filter(entry => entry.dynamicSurface).map(entry => dynamicKey(entry.dynamicSurface)).sort(),
+    'reachable dynamic mutation surfaces must be explicitly classified one-for-one',
+  )
   assert.equal(inventory.actions.some(action => action.id === 'src/lib/actions/resources.ts#publishResource'), false)
 })
 

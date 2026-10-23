@@ -157,17 +157,6 @@ function dynamicDependencies(sourceFile) {
   return dependencies
 }
 
-function expressionName(node) {
-  if (ts.isIdentifier(node)) return node.text
-  if (ts.isPropertyAccessExpression(node)) {
-    const parent = expressionName(node.expression)
-    return parent ? `${parent}${node.name.text[0]?.toUpperCase() ?? ''}${node.name.text.slice(1)}` : node.name.text
-  }
-  if (ts.isElementAccessExpression(node) && node.argumentExpression) return expressionName(node.argumentExpression)
-  if (ts.isCallExpression(node) && node.arguments[0]) return expressionName(node.arguments[0])
-  return 'param'
-}
-
 function unwrapExpression(node) {
   if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isTypeAssertionExpression(node)
     || ts.isNonNullExpression(node) || ts.isSatisfiesExpression(node)) return unwrapExpression(node.expression)
@@ -225,7 +214,13 @@ function staticText(node, bindings, seen = new Set()) {
   }
   if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) return expression.text
   if (ts.isTemplateExpression(expression)) {
-    return expression.head.text + expression.templateSpans.map(span => `[${expressionName(span.expression)}]${span.literal.text}`).join('')
+    let value = expression.head.text
+    for (const span of expression.templateSpans) {
+      const spanValue = staticText(span.expression, bindings, new Set(seen))
+      if (spanValue === null) return null
+      value += spanValue + span.literal.text
+    }
+    return value
   }
   return null
 }

@@ -18,6 +18,8 @@ const deleteUrl = '/api/fixture/global-fetch'
 const computedMethodKey = 'method'
 const formMethod = 'PUT'
 const formAction = '/api/fixture/const-form'
+const staticTemplateSegment = 'static-template'
+const staticTemplateMethod = 'POST'
 
 declare function runtimeMethod(): string
 declare function runtimeUrl(): string
@@ -30,6 +32,9 @@ fetch('/api/fixture/dynamic-method', { method: runtimeMethod() })
 fetch('/api/fixture/computed-method', { [computedMethodKey]: runtimeMethod() })
 window.fetch(runtimeUrl(), { method: 'POST' })
 globalThis.fetch('/api/fixture/dynamic-options', runtimeOptions())
+fetch(`/api/${runtimeUrl()}`, { method: 'POST' })
+fetch('/api/x', { method: `${runtimeMethod()}` })
+fetch(`/api/fixture/${staticTemplateSegment}`, { method: `${staticTemplateMethod}` })
 
 export function AdversarialFixture() {
   void selectedFixtureAction

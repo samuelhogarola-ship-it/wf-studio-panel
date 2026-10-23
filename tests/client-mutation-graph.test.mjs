@@ -66,18 +66,21 @@ test('client mutation graph finds mutation routes independent of JSX attribute o
   })
 
   assert.deepEqual(inventory.routes.map(route => route.id), [
-    'DELETE /api/fixture/[fixtureId]/asset',
     'DELETE /api/fixture/global-fetch',
+    'DELETE /api/fixture/new/asset',
     'PATCH /api/fixture/alternate',
     'PATCH /api/fixture/shorthand-options',
-    'POST /api/fixture/[fixtureId]',
     'POST /api/fixture/const-options',
+    'POST /api/fixture/new',
+    'POST /api/fixture/static-template',
     'PUT /api/fixture/const-form',
   ])
   assert.deepEqual(inventory.dynamicMutations.map(surface => surface.reason).sort(), [
     'method',
     'method',
+    'method',
     'options',
+    'url',
     'url',
   ])
 })
