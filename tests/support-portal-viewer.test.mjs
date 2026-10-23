@@ -232,5 +232,29 @@ test('the clear route preserves an already recorded expiry reason and defaults u
   const response = await route.GET(new Request('https://studio.example.test/api/support-preview/clear?reason=access_revoked'))
 
   assert.equal(response.location, 'https://studio.example.test/paneladmin/inicio?supportPreview=expired')
-  assert.equal(expired.end_reason, 'expired')
+  assert.equal(s.db.tables.admin_support_sessions[0].end_reason, 'expired')
+})
+
+test('POST clear safely ends stale support state with a 303 and preserves the exact reason', async (t) => {
+  const expired = supportRow({
+    started_at: '2020-01-01T00:00:00.000Z',
+    expires_at: '2020-01-01T00:30:00.000Z',
+  })
+  const s = setup({ identity: admin, sessions: [expired] })
+  t.after(s.restore)
+  const cookieWrites = []
+  const route = loadProjectModule('src/app/api/support-preview/clear/route.ts', {
+    '@/lib/auth': { requireAdmin: async () => admin },
+    '@/lib/supabase/server': { createSupabaseServerClient: async () => s.db },
+    'next/headers': { cookies: async () => ({ get: () => ({ value: token }) }) },
+    'next/server': { NextResponse: { redirect(url, status) { return { location: url.toString(), status, cookies: { set(value) { cookieWrites.push(value) } } } } } },
+  })
+
+  const response = await route.POST(new Request('https://admin.webfuengirola.com/api/support-preview/clear', { method: 'POST' }))
+
+  assert.equal(response.status, 303)
+  assert.equal(response.location, `https://admin.webfuengirola.com${returnPath}?supportPreview=expired`)
+  assert.equal(s.db.tables.admin_support_sessions[0].end_reason, 'expired')
+  assert.equal(cookieWrites[0].name, '__Host-wf_support_preview')
+  assert.equal(cookieWrites[0].maxAge, 0)
 })

@@ -219,21 +219,43 @@ test('the client sign-out endpoint exits support without signing out the real ad
       createSupabaseRouteClient: () => ({ auth: { signOut: async () => { signOuts += 1 } } }),
     },
     'next/headers': { cookies: async () => ({ get: () => ({ value: token }) }) },
-    'next/server': { NextResponse: { redirect(url) { return { location: url.toString(), cookies: { set(value) { cookieWrites.push(value) } } } } } },
+    'next/server': { NextResponse: { redirect(url, status) { return { location: url.toString(), status, cookies: { set(value) { cookieWrites.push(value) } } } } } },
   })
   const request = {
-    url: 'https://studio.example.test/auth/sign-out',
+    url: 'https://admin.webfuengirola.com/auth/sign-out',
     headers: new Headers(),
     formData: async () => form({ redirect: 'client' }),
   }
 
   const response = await route.POST(request)
 
-  assert.equal(response.location, `https://studio.example.test${projectReturnPath}`)
+  assert.equal(response.location, `https://admin.webfuengirola.com${projectReturnPath}`)
+  assert.equal(response.status, 303)
   assert.equal(signOuts, 0)
   assert.deepEqual(ended, [{ input: { adminUserId: admin.userId, token }, reason: 'manual' }])
   assert.equal(cookieWrites[0].name, '__Host-wf_support_preview')
   assert.equal(cookieWrites[0].maxAge, 0)
+})
+
+test('stale support sign-out fails closed before the real administrator identity is signed out', async () => {
+  let signOuts = 0
+  const route = loadProjectModule('src/app/auth/sign-out/route.ts', {
+    '@/lib/support/portal-viewer': {
+      getOptionalSupportViewer: async () => { throw new Error('redirect:/api/support-preview/clear') },
+    },
+    '@/lib/supabase/server': {
+      createSupabaseRouteClient: () => ({ auth: { signOut: async () => { signOuts += 1 } } }),
+    },
+  })
+
+  await assert.rejects(
+    () => route.POST({
+      url: 'https://admin.webfuengirola.com/auth/sign-out', headers: new Headers(),
+      formData: async () => form({ redirect: 'client' }),
+    }),
+    { message: 'redirect:/api/support-preview/clear' },
+  )
+  assert.equal(signOuts, 0)
 })
 
 test('ordinary client and administrator sign-out remain unchanged outside support preview', async () => {
@@ -272,6 +294,20 @@ test('entry form names the client and explains why an unavailable target cannot 
   }))
   assert.match(unavailable, /<button[^>]*disabled/)
   assert.match(unavailable, /Asigna un cliente activo al proyecto\./)
+})
+
+test('entry form disables its submit control while support preview is starting', () => {
+  const { SupportPreviewForm } = loadProjectModule('src/components/admin/support-preview-form.tsx', {
+    'react-dom': { useFormStatus: () => ({ pending: true }) },
+    '@/lib/actions/support-preview': { startSupportPreviewAction() {} },
+  })
+
+  const html = render(React.createElement(SupportPreviewForm, {
+    clientId, clientName: 'Ana', returnPath: clientReturnPath, locale: 'es',
+  }))
+
+  assert.match(html, /<button[^>]*disabled/)
+  assert.match(html, /Abriendo vista de soporte…/)
 })
 
 test('responsive banner exposes client, countdown metadata, read-only explanation and return action', () => {

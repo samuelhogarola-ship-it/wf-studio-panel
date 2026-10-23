@@ -30,6 +30,7 @@ export const clientPortalTranslations = {
 export const supportPreviewTranslations = {
   es: {
     viewAs: 'Ver como',
+    starting: 'Abriendo vista de soporte…',
     mode: 'Modo soporte',
     viewingAs: 'Viendo como',
     readOnly: 'Solo lectura',
@@ -46,6 +47,7 @@ export const supportPreviewTranslations = {
   },
   en: {
     viewAs: 'View as',
+    starting: 'Opening support preview…',
     mode: 'Support mode',
     viewingAs: 'Viewing as',
     readOnly: 'Read only',

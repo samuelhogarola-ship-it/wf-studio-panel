@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const token = (await cookies()).get(SUPPORT_COOKIE_NAME)?.value
     const db = await createSupabaseServerClient()
     await endSupportSession(db, { adminUserId: supportViewer.identity.userId, token }, 'manual')
-    const response = NextResponse.redirect(new URL(supportViewer.returnPath, appUrl))
+    const response = NextResponse.redirect(new URL(supportViewer.returnPath, appUrl), 303)
     response.cookies.set(clearSupportCookie())
     return response
   }
