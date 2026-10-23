@@ -11,6 +11,13 @@ async function readMigration(name) {
   return readFile(path.join(repoRoot, "supabase", "migrations", name), "utf8");
 }
 
+test("support session migration follows the project platform and uses owner RLS", async () => {
+  const sql = await readMigration('202610230001_admin_support_sessions.sql');
+  assert.match(sql, /alter table public\.admin_support_sessions enable row level security/);
+  assert.match(sql, /alter table public\.admin_support_events enable row level security/);
+  assert.match(sql, /auth\.uid\(\) = admin_user_id and private\.is_admin\(\)/);
+});
+
 test("minutes compatibility migration exists before pack_type migration needs it", async () => {
   const compatSql = await readMigration(
     "202606220001_minutes_columns_compat.sql",
