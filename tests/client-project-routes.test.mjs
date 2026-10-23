@@ -79,6 +79,20 @@ test('the shared portal loader returns support metadata without the opaque cooki
   assert.equal(JSON.stringify(context).includes('__Host-wf_support_preview'), false);
 })
 
+test('support layout displays the selected client email without exposing the administrator email', async () => {
+  const s = setup({ viewerMode: 'support' });
+  const context = await s.load('src/lib/data/projects.ts').getClientPortalContext();
+  const Layout = s.load(`${protectedRoot}/layout.tsx`).default;
+  const element = await Layout({ children: 'Support preview' });
+  const html = render(element);
+
+  assert.equal(context.client.email, client.email);
+  assert.equal(context.email, undefined);
+  assert.equal(element.props.clientEmail, client.email);
+  assert.match(html, new RegExp(client.email));
+  assert.doesNotMatch(html, /support@example\.com/);
+})
+
 test('every protected client page resolves through PortalViewer for both clients and support administrators', async () => {
   const capabilities = [
     cap('analytics'),

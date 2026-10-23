@@ -198,7 +198,6 @@ export async function getClientPortalContext(locale: Locale = 'es') {
   const { viewer, projects } = await loadClientPortalData()
   const mode = viewer.client.portal_mode
   return {
-    ...viewer.identity,
     client: viewer.client,
     mode,
     projects,
