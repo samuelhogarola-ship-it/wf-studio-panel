@@ -51,9 +51,11 @@ Se añadirá `payments` con estos campos principales:
 - `notes`: notas administrativas opcionales; nunca se mostrarán en el panel cliente.
 - `created_at` y `updated_at`.
 
+Los cambios de estado y la vinculación con facturas producirán eventos en un registro de auditoría append-only con actor, fecha y valores anterior/nuevo. El estado `paid` significa **verificado manualmente por el administrador**; no implica confirmación automática de Stripe.
+
 Solo se aceptarán enlaces HTTPS pertenecientes a `stripe.com` o a un subdominio real de `stripe.com`, sin credenciales ni puertos personalizados. Esto cubre Payment Links, Checkout e invoices alojadas por Stripe sin convertir el campo en un enlace externo arbitrario.
 
-Un pago solo podrá apuntar a una factura. Generar dos veces la factura del mismo pago devolverá la factura ya vinculada en lugar de crear duplicados.
+Un pago solo podrá apuntar a una factura. Generar dos veces la factura del mismo pago devolverá la factura ya vinculada en lugar de crear duplicados. La emisión y la vinculación se ejecutarán dentro de una única transacción de base de datos.
 
 ### Facturas
 
@@ -64,6 +66,7 @@ Un pago solo podrá apuntar a una factura. Generar dos veces la factura del mism
 - `billing_email`: correo opcional.
 - `billing_tax_id`: NIF/CIF/VAT opcional.
 - `billing_address`: dirección fiscal multilínea opcional.
+- `status`: `pending`, `paid` o `void`; una factura emitida no se eliminará físicamente desde la interfaz.
 
 Para un cliente registrado, el formulario tomará sus datos actuales como punto de partida y los copiará a estos campos. El administrador podrá corregirlos antes de emitir. Después de crear la factura, cambios posteriores en el perfil del cliente no modificarán el documento histórico.
 
@@ -79,6 +82,7 @@ La migración rellenará los campos fiscales de las facturas existentes a partir
 - Las facturas externas quedarán fuera de cualquier política de lectura cliente.
 - El acceso de soporte en modo solo lectura podrá inspeccionar pagos y facturas del cliente seleccionado, sin crear, editar, marcar ni eliminar datos.
 - No se expondrán claves, configuración interna de Stripe ni identificadores de otros clientes.
+- El registro de auditoría financiera no podrá editarse ni eliminarse desde roles de navegador.
 
 ## Experiencia administrativa
 
@@ -92,7 +96,7 @@ La migración rellenará los campos fiscales de las facturas existentes a partir
 - Enlace a la factura vinculada cuando exista.
 - Confirmación visible cuando una acción falle; una escritura fallida nunca se presentará como correcta.
 
-El administrador podrá cambiar un pago entre pendiente, pagado y cancelado. `paid_at` tendrá valor únicamente mientras el estado sea `paid`; cualquier otro estado lo limpiará. Cancelar no borrará el historial.
+El administrador podrá cambiar un pago entre pendiente, pagado y cancelado. `paid_at` tendrá valor únicamente mientras el estado sea `paid`; cualquier otro estado lo limpiará. Cancelar no borrará el historial y cada transición quedará auditada.
 
 ### Facturas
 
@@ -101,7 +105,7 @@ La herramienta existente `/paneladmin/facturas` incorporará un selector de dest
 1. Cliente registrado: selecciona un cliente y precarga sus datos fiscales.
 2. Destinatario externo: muestra los campos fiscales manuales sin crear una cuenta.
 
-El generador conservará numeración, concepto, importe, método de pago, fecha, notas, estado e impresión actuales. Desde un pago, abrirá el mismo flujo con cliente, concepto e importe precargados; la emisión seguirá requiriendo una acción explícita del administrador.
+El generador conservará numeración, concepto, importe, método de pago, fecha, notas, estado e impresión actuales. Desde un pago, abrirá el mismo flujo con cliente, concepto e importe precargados; la emisión seguirá requiriendo una acción explícita del administrador. La numeración se reservará dentro de la misma transacción que inserta la factura, evitando duplicados en envíos concurrentes.
 
 ## Experiencia cliente
 
@@ -137,9 +141,9 @@ La factura no marcará automáticamente el pago como pagado y el pago no emitir�
 - El servidor validará de nuevo todos los campos; no se confiará en la validación del navegador.
 - Los enlaces Stripe inválidos no podrán guardarse ni activarse.
 - La generación desde pago comprobará nuevamente propiedad, estado del cliente y ausencia de una factura ya vinculada.
-- La asignación `payment.invoice_id` ocurrirá únicamente después de crear correctamente la factura.
-- Las acciones se diseñarán para evitar duplicados ante reintentos.
-- Las eliminaciones físicas se reservarán para errores administrativos explícitos; el flujo normal utilizará estados y conservará trazabilidad.
+- La creación de una factura desde un pago y la asignación `payment.invoice_id` serán una sola operación atómica.
+- Las acciones serán idempotentes ante reintentos y devolverán todos los errores de escritura a la interfaz.
+- Pagos y facturas emitidas utilizarán estados de cancelación/anulación y conservarán trazabilidad; la interfaz no ofrecerá eliminación física.
 
 ## Compatibilidad y migración
 
@@ -158,6 +162,8 @@ La implementación incluirá pruebas para:
 - Copia estable de datos fiscales para clientes registrados.
 - Creación directa y creación desde un pago.
 - Idempotencia al generar una factura desde el mismo pago.
+- Numeración única bajo emisiones concurrentes y rollback completo si falla la vinculación.
+- Auditoría append-only de cambios de estado y rechazo de eliminaciones físicas.
 - Imposibilidad de marcar o modificar datos en modo soporte.
 - Navegación administrativa, navegación cliente y diseño móvil.
 - Acceso protegido a la vista imprimible de factura.
