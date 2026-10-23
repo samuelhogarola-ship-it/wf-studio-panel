@@ -4,8 +4,8 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runnerFixture, waitForFile } from './helpers/support-runner-harness.mjs'
 
-test('database runner reports the failing phase, hides credentials and always stops its owned stack', async () => {
-  for (const fail of ['', 'start', 'db reset', 'status', 'test', 'malformed', 'stop']) {
+test('database runner reports the failing phase, hides credentials and cleans exact owned resources', async () => {
+  for (const fail of ['', 'start', 'status', 'test', 'malformed']) {
     const fixture = await runnerFixture()
     try {
       const result = await fixture.start({ WF_RUNNER_FAIL: fail }).done
@@ -15,15 +15,35 @@ test('database runner reports the failing phase, hides credentials and always st
       await assert.rejects(readFile(join(calls[0].cwd, 'supabase/config.toml')), { code: 'ENOENT' })
       assert.equal(await readFile(join(fixture.root, 'supabase/migrations/202610230001_original.sql'), 'utf8'), '-- original migration bytes\n')
       assert.equal(calls[0].args[0], 'start')
-      assert.deepEqual(calls.at(-1).args, ['stop', '--no-backup'])
+      assert.equal(calls.some(call => call.args[0] === 'db' && call.args[1] === 'reset'), false)
+      assert.equal(calls.some(call => call.args[0] === 'stop'), false)
       if (!fail || fail === 'test') {
-        assert.deepEqual(calls[1].args.slice(0, 4), ['db', 'reset', '--local', '--no-seed'])
-        assert.deepEqual(calls[2].args, ['status', '--output', 'json'])
+        assert.deepEqual(calls[1].args, ['status', '--output', 'json'])
       }
-      if (['start', 'db reset', 'status'].includes(fail)) assert.match(result.stderr, new RegExp(`failed.*${fail}`))
+      if (['start', 'status'].includes(fail)) assert.match(result.stderr, new RegExp(`failed.*${fail}`))
       assert.deepEqual(await fixture.state(), { containers: [], volumes: [], networks: [] })
     } finally { await fixture.cleanup() }
   }
+})
+
+test('a non-cooperating resource appearing immediately before reset is never reset or deleted', async () => {
+  const fixture = await runnerFixture()
+  try {
+    const result = await fixture.start({ WF_RUNNER_FOREIGN_BEFORE_RESET: '1' }).done
+    assert.equal(result.status, 1, 'foreign project resources must fail the run closed')
+    assert.equal((await fixture.calls()).some(call => call.args?.[0] === 'db' && call.args[1] === 'reset'), false)
+    assert.deepEqual((await fixture.state()).networks.map(item => item.Id), ['foreign-before-reset'])
+  } finally { await fixture.cleanup() }
+})
+
+test('a non-cooperating resource appearing immediately before project-wide stop survives exact cleanup', async () => {
+  const fixture = await runnerFixture()
+  try {
+    const result = await fixture.start({ WF_RUNNER_FOREIGN_BEFORE_STOP: '1' }).done
+    assert.equal(result.status, 0, result.stderr)
+    assert.equal((await fixture.calls()).some(call => call.args?.[0] === 'stop'), false)
+    assert.deepEqual((await fixture.state()).networks.map(item => item.Id), ['foreign-before-stop'])
+  } finally { await fixture.cleanup() }
 })
 
 test('pre-existing running/stopped containers or volumes are never reset or removed', async () => {

@@ -17,7 +17,6 @@ let lock, lockPath, networkId
 let databaseVolume
 let canClaimDatabaseVolume = false
 let claimedResources = false
-let startAttempted = false
 
 function run(command, args, { capture = false, extraEnv = {}, cwd = workspace } = {}) {
   return new Promise((resolve, reject) => {
@@ -86,8 +85,7 @@ async function requireOwnedStack() {
   }
 }
 
-async function cleanupOwnedResources() {
-  const state = await inventory()
+async function cleanupOwnedResources(state) {
   // Immutable container/network IDs prevent a replacement resource becoming a
   // deletion target. Volumes require our label or the recorded DB-volume
   // identity and are never forced; a replacement volume is not adopted.
@@ -127,15 +125,8 @@ try {
     const volumes = await resources('volume')
     if (volumes.some(volume => volume.Labels?.[ownerLabel] !== owner)) throw new Error('Support volume ownership check failed')
   }
-  startAttempted = true
   canClaimDatabaseVolume = true
   await run(cli, ['start', '--network-id', networkName], { capture: true })
-  await requireOwnedStack()
-  // The CLI reset deliberately recreates the DB volume. Open a new ownership
-  // epoch only around that authorized operation, never around status/cleanup.
-  databaseVolume = undefined
-  canClaimDatabaseVolume = true
-  await run(cli, ['db', 'reset', '--local', '--no-seed', '--network-id', networkName], { capture: true })
   await requireOwnedStack()
   const statusOutput = await run(cli, ['status', '--output', 'json'], { capture: true })
   let status
@@ -152,14 +143,11 @@ try {
   try {
     if (claimedResources) {
       const state = await inventory()
-      if (startAttempted && allOwned(state)) {
-        try { await run(cli, ['stop', '--no-backup'], { capture: true }) }
-        catch { console.error('Unable to stop local support test stack'); process.exitCode = 1 }
-      } else if (!allOwned(state)) {
-        console.error('Foreign support resources detected; refusing project-wide cleanup')
+      if (!allOwned(state)) {
+        console.error('Foreign support resources detected; cleaning exact owned resources only')
         process.exitCode = 1
       }
-      await cleanupOwnedResources()
+      await cleanupOwnedResources(state)
     }
   } catch { console.error('Unable to clean owned support test resources'); process.exitCode = 1 }
   finally {

@@ -43,6 +43,14 @@ if (docker) {
     const names = args.slice(2);
     const items = state[key].filter(item => names.includes(item.Id) || names.includes(item.Name));
     if (items.length !== names.length) process.exit(1);
+    if (kind === 'network' && process.env.WF_RUNNER_FOREIGN_BEFORE_RESET && !fs.existsSync(stateFile + '.before-reset')) {
+      fs.writeFileSync(stateFile + '.before-reset', 'injected');
+      state.networks.push({ Id: 'foreign-before-reset', Name: 'foreign-before-reset', Labels: { [projectLabel]: project } }); save();
+    }
+    if (kind === 'network' && process.env.WF_RUNNER_FOREIGN_BEFORE_STOP && fs.existsSync(stateFile + '.test-complete') && !fs.existsSync(stateFile + '.before-stop')) {
+      fs.writeFileSync(stateFile + '.before-stop', 'injected');
+      state.networks.push({ Id: 'foreign-before-stop', Name: 'foreign-before-stop', Labels: { [projectLabel]: project } }); save();
+    }
     console.log(JSON.stringify(items));
   } else if (operation === 'create') {
     const name = args.at(-1);
@@ -79,6 +87,7 @@ if (args[0] === 'start') {
 function finish() {
   if (args.join(' ').startsWith(process.env.WF_RUNNER_FAIL) && process.env.WF_RUNNER_FAIL && process.env.WF_RUNNER_FAIL !== 'test') { console.error('private-credential-sentinel'); process.exit(2); }
   if (args[0] === 'db' && args[1] === 'reset') {
+    state.networks = state.networks.filter(item => item.Id !== 'foreign-before-reset');
     const volume = state.volumes.find(item => item.Name === 'supabase_db_' + project);
     volume.CreatedAt = new Date(Date.parse(volume.CreatedAt) + 1000).toISOString(); save();
   }
@@ -101,7 +110,7 @@ function finish() {
     await writeFile(file, driver)
     await chmod(file, 0o755)
   }
-  await writeFile(join(root, 'tests/support-session-postgres.test.mjs'), `import test from 'node:test'; import assert from 'node:assert/strict'; test('receives database URL in memory', () => { assert.ok(process.env.WF_SUPPORT_TEST_DATABASE_URL.includes('private-credential-sentinel')); assert.notEqual(process.env.WF_RUNNER_FAIL, 'test'); });`)
+  await writeFile(join(root, 'tests/support-session-postgres.test.mjs'), `import test from 'node:test'; import assert from 'node:assert/strict'; import { writeFileSync } from 'node:fs'; test('receives database URL in memory', () => { assert.ok(process.env.WF_SUPPORT_TEST_DATABASE_URL.includes('private-credential-sentinel')); assert.notEqual(process.env.WF_RUNNER_FAIL, 'test'); writeFileSync(process.env.WF_RUNNER_STATE + '.test-complete', 'complete'); });`)
   const logPath = join(root, 'calls.jsonl')
   const start = (extra = {}) => {
     const env = { ...process.env, PATH: join(root, 'node_modules/.bin') + delimiter + process.env.PATH, WF_RUNNER_STATE: stateFile, WF_RUNNER_DAEMON: stateRoot, WF_RUNNER_LOG: logPath, WF_RUNNER_SOURCE_ROOT: root, ...extra }
