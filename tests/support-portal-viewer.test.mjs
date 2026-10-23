@@ -169,7 +169,10 @@ test('client mutation access preserves real clients and rejects support viewers'
   t.after(support.restore)
   await assert.rejects(
     () => support.load('src/lib/support/portal-viewer.ts').requireClientMutationAccess(),
-    /read-only/i,
+    error => error?.name === 'SupportReadOnlyError'
+      && error.code === 'support_readonly'
+      && error.status === 403
+      && error.message === 'No disponible en modo soporte.',
   )
 })
 

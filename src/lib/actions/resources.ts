@@ -2,10 +2,12 @@
 import { randomUUID } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
-import { requireAdmin, requireClientAccess } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { validateImage } from '@/lib/resources/policy.mjs'
-export type ResourceState = { error?: string; success?: string }
+import { requireClientMutationAccess } from '@/lib/support/portal-viewer'
+import { isSupportReadOnlyError, SUPPORT_READ_ONLY_ACTION_RESULT } from '@/lib/support/read-only'
+export type ResourceState = { error?: string; success?: string; ok?: false; message?: string }
 const schema = z.object({ clientId: z.string().uuid(), title: z.string().trim().min(1).max(200), body: z.string().max(10000), kind: z.enum(['report','update','photo']), reportPath: z.string() })
 async function save(form: FormData, clientId: string, userId: string, photosOnly: boolean): Promise<ResourceState> {
   const parsed = schema.safeParse({ clientId, title: form.get('title'), body: form.get('body') || '', kind: photosOnly ? 'photo' : form.get('kind'), reportPath: form.get('reportPath') || '' })
@@ -42,6 +44,12 @@ export async function publishResource(_prev: ResourceState, form: FormData): Pro
   return save(form, String(form.get('clientId') || ''), identity.userId, false)
 }
 export async function uploadClientPhoto(_prev: ResourceState, form: FormData): Promise<ResourceState> {
-  const identity = await requireClientAccess()
-  return save(form, identity.client.id, identity.userId, true)
+  let viewer
+  try {
+    viewer = await requireClientMutationAccess()
+  } catch (error) {
+    if (isSupportReadOnlyError(error)) return SUPPORT_READ_ONLY_ACTION_RESULT
+    throw error
+  }
+  return save(form, viewer.client.id, viewer.identity.userId, true)
 }

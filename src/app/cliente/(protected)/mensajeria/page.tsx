@@ -21,7 +21,7 @@ export default async function MensajeriaPage({
   ])
 
   const recibidos = messages.filter((m) => m.direction === 'inbound' && m.type === 'message')
-  const readAt = tab === 'recibidos'
+  const readAt = identity.mode === 'client' && tab === 'recibidos'
     ? await markClientInboundMessagesRead(identity.client.id, recibidos.filter((m) => !m.read_at).map((m) => m.id))
     : null
   const recibidosActualizados = readAt ? recibidos.map((m) => (m.read_at ? m : { ...m, read_at: readAt })) : recibidos
@@ -96,7 +96,7 @@ export default async function MensajeriaPage({
               {pendingItem.description ? <p className="mt-1 text-amber-700">{pendingItem.description}</p> : null}
             </div>
           )}
-          <MessageComposer replyToId={replyTo?.id} defaultSubject={defaultSubject} defaultBody={defaultBody} />
+          <MessageComposer replyToId={replyTo?.id} defaultSubject={defaultSubject} defaultBody={defaultBody} readOnly={identity.mode === 'support'} />
         </div>
       )}
 

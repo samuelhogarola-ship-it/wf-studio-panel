@@ -260,7 +260,7 @@ export default async function ClientServiciosPage({
               className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 text-lg leading-none"
             >×</Link>
           </div>
-          <RequestForm type="solicitud_servicio" />
+          <RequestForm type="solicitud_servicio" readOnly={identity.mode === 'support'} />
         </div>
       )}
 

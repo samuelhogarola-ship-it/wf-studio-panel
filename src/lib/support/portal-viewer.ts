@@ -12,7 +12,10 @@ import {
   endSupportSession,
   resolveSupportSession,
 } from '@/lib/support/support-session'
+import { SupportReadOnlyError } from '@/lib/support/read-only'
 import type { Database, SupportEndReason, Tables } from '@/lib/supabase/types'
+
+export { SupportReadOnlyError, isSupportReadOnlyError } from '@/lib/support/read-only'
 
 type Client = Pick<Tables<'clients'>, 'id' | 'email' | 'status' | 'name' | 'portal_mode'>
 type SessionDatabase = SupabaseClient<Database>
@@ -124,7 +127,7 @@ export async function getOptionalSupportViewer(): Promise<SupportViewer | null> 
 
 export async function requireClientMutationAccess(): Promise<ClientViewer> {
   const viewer = await requirePortalViewer()
-  if (viewer.mode === 'support') throw new Error('Support preview is read-only')
+  if (viewer.mode === 'support') throw new SupportReadOnlyError()
   return viewer
 }
 
