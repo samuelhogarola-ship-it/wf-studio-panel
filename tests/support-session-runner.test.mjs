@@ -4,49 +4,65 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runnerFixture, waitForFile } from './helpers/support-runner-harness.mjs'
 
-test('database runner reports the failing phase, hides credentials and cleans exact owned resources', async () => {
-  for (const fail of ['', 'start', 'status', 'test', 'malformed']) {
+test('database runner uses one tmpfs Postgres container and preserves failure privacy', async () => {
+  for (const fail of ['', 'start', 'migration', 'status', 'test', 'cleanup']) {
     const fixture = await runnerFixture()
     try {
       const result = await fixture.start({ WF_RUNNER_FAIL: fail }).done
       assert.equal(result.status, fail ? 1 : 0, `scenario ${fail || 'success'}: ${result.stderr}`)
       assert.doesNotMatch(result.stdout + result.stderr, /private-credential|leaksecret/)
-      const calls = (await fixture.calls()).filter(call => call.args)
-      await assert.rejects(readFile(join(calls[0].cwd, 'supabase/config.toml')), { code: 'ENOENT' })
+      const calls = await fixture.calls()
+      const cliCalls = calls.filter(call => call.args)
+      const dockerCalls = calls.filter(call => call.docker).map(call => call.docker)
       assert.equal(await readFile(join(fixture.root, 'supabase/migrations/202610230001_original.sql'), 'utf8'), '-- original migration bytes\n')
-      assert.equal(calls[0].args[0], 'start')
-      assert.equal(calls.some(call => call.args[0] === 'db' && call.args[1] === 'reset'), false)
-      assert.equal(calls.some(call => call.args[0] === 'stop'), false)
-      if (!fail || fail === 'test') {
-        assert.deepEqual(calls[1].args, ['status', '--output', 'json'])
+      assert.equal(dockerCalls.some(args => args[0] === 'volume'), false, `scenario ${fail || 'success'} used Docker volumes`)
+      const start = dockerCalls.find(args => args[0] === 'container' && args[1] === 'run')
+      assert.ok(start)
+      assert.ok(start.includes('--rm'))
+      assert.deepEqual(start.slice(start.indexOf('--tmpfs'), start.indexOf('--tmpfs') + 2), ['--tmpfs', '/var/lib/postgresql/data:rw,exec'])
+      assert.deepEqual(start.slice(start.indexOf('--publish'), start.indexOf('--publish') + 2), ['--publish', '127.0.0.1::5432'])
+      assert.equal(start.includes('POSTGRES_USER=postgres'), false)
+      assert.equal(start.at(-1), 'public.ecr.aws/supabase/postgres:17.6.1.155')
+      if (!['start', 'status'].includes(fail)) {
+        assert.deepEqual(cliCalls[0].args.slice(0, 3), ['migration', 'up', '--db-url'])
+        assert.match(cliCalls[0].args[3], /^postgresql:\/\/supabase_admin:[^@]+@127\.0\.0\.1:55432\/postgres\?sslmode=disable$/)
+        assert.equal(cliCalls[0].args[4], '--include-all')
+        await assert.rejects(readFile(join(cliCalls[0].cwd, 'supabase/config.toml')), { code: 'ENOENT' })
       }
-      if (['start', 'status'].includes(fail)) assert.match(result.stderr, new RegExp(`failed.*${fail}`))
-      assert.deepEqual(await fixture.state(), { containers: [], volumes: [], networks: [] })
+      const cleanup = dockerCalls.find(args => args[0] === 'container' && args[1] === 'rm')
+      if (fail === 'start') assert.equal(cleanup, undefined)
+      else assert.deepEqual(cleanup, ['container', 'rm', '--force', 'd'.repeat(64)])
+      const state = await fixture.state()
+      assert.deepEqual(state.volumes, [])
+      assert.deepEqual(state.networks, [])
+      assert.deepEqual(state.containers.map(item => item.Id), fail === 'cleanup' ? ['d'.repeat(64)] : [])
     } finally { await fixture.cleanup() }
   }
 })
 
-test('a non-cooperating resource appearing immediately before reset is never reset or deleted', async () => {
-  const fixture = await runnerFixture()
-  try {
-    const result = await fixture.start({ WF_RUNNER_FOREIGN_BEFORE_RESET: '1' }).done
-    assert.equal(result.status, 1, 'foreign project resources must fail the run closed')
-    assert.equal((await fixture.calls()).some(call => call.args?.[0] === 'db' && call.args[1] === 'reset'), false)
-    assert.deepEqual((await fixture.state()).networks.map(item => item.Id), ['foreign-before-reset'])
-  } finally { await fixture.cleanup() }
+test('test-only bootstrap supplies service-owned database prerequisites without changing migration history', async () => {
+  const sql = await readFile(new URL('./fixtures/support-postgres/000000000000_test_prerequisites.sql', import.meta.url), 'utf8')
+  assert.match(sql, /set role supabase_admin/i)
+  assert.match(sql, /create or replace function auth\.jwt\(\)/i)
+  assert.match(sql, /create table storage\.buckets/i)
+  assert.match(sql, /grant (?:usage|insert|select).*postgres/is)
+  assert.match(sql, /reset role;\s*$/i)
 })
 
-test('a non-cooperating resource appearing immediately before project-wide stop survives exact cleanup', async () => {
+test('a replacement injected at the former inspect-to-remove point survives because no volume surface exists', async () => {
   const fixture = await runnerFixture()
   try {
-    const result = await fixture.start({ WF_RUNNER_FOREIGN_BEFORE_STOP: '1' }).done
+    const result = await fixture.start({ WF_RUNNER_EXACT_VOLUME_RACE: '1' }).done
     assert.equal(result.status, 0, result.stderr)
-    assert.equal((await fixture.calls()).some(call => call.args?.[0] === 'stop'), false)
-    assert.deepEqual((await fixture.state()).networks.map(item => item.Id), ['foreign-before-stop'])
+    const state = await fixture.state()
+    assert.deepEqual(state.containers, [], 'the invocation container must not leak')
+    assert.deepEqual(state.networks, [])
+    assert.deepEqual(state.volumes.map(item => item.Name), ['foreign-current-volume'])
+    assert.deepEqual((await fixture.calls()).filter(call => call.docker?.[0] === 'volume'), [])
   } finally { await fixture.cleanup() }
 })
 
-test('pre-existing running/stopped containers or volumes are never reset or removed', async () => {
+test('pre-existing resources cannot collide with the isolated container and are preserved', async () => {
   const label = { 'com.supabase.cli.project': 'wf-studio-support-test' }
   for (const resource of [
     { containers: [{ Id: 'foreign-running', Name: '/supabase_db_wf-studio-support-test', State: 'running', Config: { Labels: label } }] },
@@ -59,9 +75,7 @@ test('pre-existing running/stopped containers or volumes are never reset or remo
     try {
       await fixture.seed(state)
       const result = await fixture.start().done
-      assert.equal(result.status, 1, 'must reject an existing stack before starting')
-      assert.match(result.stderr, /pre-existing.*support.*resources/i)
-      assert.deepEqual((await fixture.calls()).filter(call => call.args), [])
+      assert.equal(result.status, 0, result.stderr)
       assert.deepEqual(await fixture.state(), state)
     } finally { await fixture.cleanup() }
   }
@@ -89,59 +103,29 @@ test('concurrent runners from different checkouts cannot reset or stop the first
   }
 })
 
-test('cleanup removes only this invocation resources when foreign resources appear later', async () => {
+test('cleanup by immutable container ID preserves a foreign container appearing later', async () => {
   const fixture = await runnerFixture()
   try {
     const result = await fixture.start({ WF_RUNNER_FOREIGN: '1' }).done
-    assert.equal(result.status, 1)
+    assert.equal(result.status, 0, result.stderr)
     const state = await fixture.state()
     assert.deepEqual(state.containers.map(item => item.Id), ['foreign-new'])
-    assert.deepEqual(state.volumes.map(item => item.Name), ['foreign-volume'])
+    assert.deepEqual(state.volumes, [])
     assert.deepEqual(state.networks, [])
-    assert.equal((await fixture.calls()).some(call => call.args?.[0] === 'stop'), false, 'project-wide stop must not touch foreign resources')
+    assert.deepEqual((await fixture.calls()).filter(call => call.docker?.[0] === 'volume'), [])
   } finally { await fixture.cleanup() }
 })
 
-test('a database volume replaced outside the authorized reset is preserved', async () => {
+test('cleanup refusal does not mask the primary test failure', async () => {
   const fixture = await runnerFixture()
   try {
-    const result = await fixture.start({ WF_RUNNER_REPLACE_DB: '1' }).done
-    assert.equal(result.status, 1)
-    const state = await fixture.state()
-    assert.deepEqual(state.containers, [])
-    assert.deepEqual(state.volumes.map(item => item.Name), ['supabase_db_wf-studio-support-test'])
-    assert.deepEqual(state.networks, [])
-    assert.equal((await fixture.calls()).some(call => call.args?.[0] === 'stop'), false)
-  } finally { await fixture.cleanup() }
-})
-
-test('a volume replaced after container cleanup is revalidated and preserved', async () => {
-  const fixture = await runnerFixture()
-  try {
-    const result = await fixture.start({ WF_RUNNER_REPLACE_VOLUME_DURING_CLEANUP: '1' }).done
-    assert.equal(result.status, 1, 'a changed volume identity must fail cleanup closed')
-    assert.match(result.stderr, /support volume changed.*preserving/i)
-    const state = await fixture.state()
-    assert.deepEqual(state.containers, [])
-    assert.deepEqual(state.volumes.map(item => item.Name), ['supabase_db_wf-studio-support-test'])
-    assert.deepEqual(state.networks, [], 'owned network cleanup must continue')
-  } finally { await fixture.cleanup() }
-})
-
-test('volume removal refusal does not mask a primary test error or stop network cleanup', async () => {
-  const fixture = await runnerFixture()
-  try {
-    const result = await fixture.start({ WF_RUNNER_FAIL: 'test', WF_RUNNER_REFUSE_VOLUME_RM: '1' }).done
+    const result = await fixture.start({ WF_RUNNER_FAIL: 'test', WF_RUNNER_REFUSE_CLEANUP: '1' }).done
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Local database test command failed: --test tests\/support-session-postgres\.test\.mjs/)
-    assert.match(result.stderr, /Unable to remove owned support volume/)
+    assert.match(result.stderr, /Unable to remove owned support container/)
     const state = await fixture.state()
-    assert.deepEqual(state.containers, [])
-    assert.deepEqual(state.volumes.map(item => item.Name).sort(), [
-      'supabase_config_wf-studio-support-test',
-      'supabase_db_wf-studio-support-test',
-      'supabase_storage_wf-studio-support-test',
-    ])
-    assert.deepEqual(state.networks, [], 'owned network cleanup must continue after volume failures')
+    assert.deepEqual(state.containers.map(item => item.Id), ['d'.repeat(64)])
+    assert.deepEqual(state.volumes, [])
+    assert.deepEqual(state.networks, [])
   } finally { await fixture.cleanup() }
 })

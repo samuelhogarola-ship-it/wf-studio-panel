@@ -37,11 +37,31 @@ if (docker) {
   const kind = args[0], operation = args[1];
   const key = { container: 'containers', volume: 'volumes', network: 'networks' }[kind];
   if (!key) process.exit(20);
-  if (operation === 'ls') {
+  if (kind === 'container' && operation === 'run') {
+    if (process.env.WF_RUNNER_FAIL === 'start') process.exit(22);
+    const id = 'd'.repeat(64);
+    state.containers.push({ Id: id, Name: '/wf-studio-support-test-direct', State: 'running', Config: { Labels: labels() } });
+    if (process.env.WF_RUNNER_EXACT_VOLUME_RACE) state.volumes.push({ Name: 'foreign-current-volume', CreatedAt: new Date().toISOString(), Labels: { foreign: 'true' } });
+    const cidPath = args[args.indexOf('--cidfile') + 1];
+    fs.writeFileSync(cidPath, id + '\\n');
+    save();
+    if (process.env.WF_RUNNER_GATE) {
+      fs.writeFileSync(process.env.WF_RUNNER_GATE + '.ready', 'ready');
+      const wait = setInterval(() => { if (fs.existsSync(process.env.WF_RUNNER_GATE + '.release')) { clearInterval(wait); console.log(id); process.exit(0); } }, 10);
+    } else { console.log(id); process.exit(0); }
+  } else if (kind === 'container' && operation === 'exec') {
+    process.exit(0);
+  } else if (kind === 'container' && operation === 'port') {
+    if (process.env.WF_RUNNER_FAIL === 'status') process.exit(23);
+    if (process.env.WF_RUNNER_FOREIGN) {
+      state.containers.push({ Id: 'foreign-new', Name: '/foreign-new', State: 'running', Config: { Labels: { [projectLabel]: project } } }); save();
+    }
+    console.log('127.0.0.1:55432'); process.exit(0);
+  } else if (operation === 'ls') {
     for (const item of matching(state[key])) console.log(kind === 'container' ? (args.includes('--filter') ? item.Id : item.Id + ' ' + item.Name.slice(1)) : kind === 'volume' ? item.Name : item.Id + ' ' + item.Name);
   } else if (operation === 'inspect') {
     const names = args.slice(2);
-    const items = state[key].filter(item => names.includes(item.Id) || names.includes(item.Name));
+    const items = state[key].filter(item => names.includes(item.Id) || names.includes(item.Name)).map(item => JSON.parse(JSON.stringify(item)));
     if (items.length !== names.length) process.exit(1);
     if (kind === 'network' && process.env.WF_RUNNER_FOREIGN_BEFORE_RESET && !fs.existsSync(stateFile + '.before-reset')) {
       fs.writeFileSync(stateFile + '.before-reset', 'injected');
@@ -51,6 +71,15 @@ if (docker) {
       fs.writeFileSync(stateFile + '.before-stop', 'injected');
       state.networks.push({ Id: 'foreign-before-stop', Name: 'foreign-before-stop', Labels: { [projectLabel]: project } }); save();
     }
+    if (kind === 'volume' && process.env.WF_RUNNER_EXACT_VOLUME_RACE && fs.existsSync(stateFile + '.test-complete')) {
+      const countPath = stateFile + '.volume-inspects';
+      const count = fs.existsSync(countPath) ? Number(fs.readFileSync(countPath, 'utf8')) : 0;
+      fs.writeFileSync(countPath, String(count + 1));
+      if (count === 1) {
+        const volume = state.volumes.find(item => names.includes(item.Name));
+        if (volume) { volume.CreatedAt = new Date(Date.parse(volume.CreatedAt) + 1000).toISOString(); volume.Labels = { foreign: 'true' }; save(); }
+      }
+    }
     console.log(JSON.stringify(items));
   } else if (operation === 'create') {
     const name = args.at(-1);
@@ -59,6 +88,7 @@ if (docker) {
     console.log(kind === 'network' ? item.Id : item.Name);
   } else if (operation === 'rm') {
     if (kind === 'volume' && process.env.WF_RUNNER_REFUSE_VOLUME_RM) process.exit(22);
+    if (kind === 'container' && (process.env.WF_RUNNER_REFUSE_CLEANUP || process.env.WF_RUNNER_FAIL === 'cleanup')) process.exit(24);
     const names = args.slice(2).filter(arg => !arg.startsWith('-'));
     state[key] = state[key].filter(item => !names.includes(item.Id) && !names.includes(item.Name)); save();
     if (kind === 'container' && process.env.WF_RUNNER_REPLACE_VOLUME_DURING_CLEANUP && !fs.existsSync(stateFile + '.cleanup-replacement')) {
@@ -70,6 +100,7 @@ if (docker) {
   process.exit(0);
 }
 if (process.env.SUPABASE_TELEMETRY_DISABLED !== 'true' || process.env.DO_NOT_TRACK !== '1') process.exit(9);
+if (process.env.PGSSLMODE !== 'disable') process.exit(10);
 log({ args, cwd: process.cwd() });
 if (process.cwd() === process.env.WF_RUNNER_SOURCE_ROOT) process.exit(8);
 if (fs.readFileSync('supabase/migrations/202610230001_original.sql', 'utf8') !== '-- original migration bytes\\n') process.exit(7);
@@ -116,7 +147,7 @@ function finish() {
     await writeFile(file, driver)
     await chmod(file, 0o755)
   }
-  await writeFile(join(root, 'tests/support-session-postgres.test.mjs'), `import test from 'node:test'; import assert from 'node:assert/strict'; import { writeFileSync } from 'node:fs'; test('receives database URL in memory', () => { assert.ok(process.env.WF_SUPPORT_TEST_DATABASE_URL.includes('private-credential-sentinel')); assert.notEqual(process.env.WF_RUNNER_FAIL, 'test'); writeFileSync(process.env.WF_RUNNER_STATE + '.test-complete', 'complete'); });`)
+  await writeFile(join(root, 'tests/support-session-postgres.test.mjs'), `import test from 'node:test'; import assert from 'node:assert/strict'; import { writeFileSync } from 'node:fs'; test('receives database URL in memory', () => { assert.match(process.env.WF_SUPPORT_TEST_DATABASE_URL, /^postgresql:\\/\\/supabase_admin:[^@]+@127\\.0\\.0\\.1:55432\\/postgres\\?sslmode=disable$/); assert.notEqual(process.env.WF_RUNNER_FAIL, 'test'); writeFileSync(process.env.WF_RUNNER_STATE + '.test-complete', 'complete'); });`)
   const logPath = join(root, 'calls.jsonl')
   const start = (extra = {}) => {
     const env = { ...process.env, PATH: join(root, 'node_modules/.bin') + delimiter + process.env.PATH, WF_RUNNER_STATE: stateFile, WF_RUNNER_DAEMON: stateRoot, WF_RUNNER_LOG: logPath, WF_RUNNER_SOURCE_ROOT: root, ...extra }
