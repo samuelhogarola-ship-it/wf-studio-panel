@@ -36,17 +36,17 @@ const clientRouteMatrix = [
 ]
 
 const clientMutationMatrix = [
-  { name: 'clientPasswordLoginAction', route: '/cliente', kind: 'public-auth-action', owner: 'auth' },
-  { name: 'clientMagicLinkAction', route: '/cliente', kind: 'public-auth-action', owner: 'auth' },
-  { name: 'clientRegisterAction', route: '/cliente/registro', kind: 'public-auth-action', owner: 'auth' },
-  { name: 'resetPasswordAction', route: '/cliente/recuperar', kind: 'public-auth-action', owner: 'auth' },
-  { name: 'sendMessageAction', route: '/cliente/mensajeria', kind: 'server-action', owner: 'task4' },
-  { name: 'sendRequestAction', route: '/cliente/bonos + /cliente/servicios', kind: 'server-action', owner: 'task4' },
-  { name: 'markMessageReadAction', route: '/cliente/mensajeria', kind: 'server-action', owner: 'task4' },
-  { name: 'uploadClientPhoto', route: '/cliente/fotografias', kind: 'server-action', owner: 'task4' },
+  { name: 'clientPasswordLoginAction', route: '/cliente', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth' },
+  { name: 'clientMagicLinkAction', route: '/cliente', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth' },
+  { name: 'clientRegisterAction', route: '/cliente/registro', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth' },
+  { name: 'resetPasswordAction', route: '/cliente/recuperar', kind: 'public-auth-action', owner: 'auth', clientBundlePolicy: 'public-auth' },
+  { name: 'sendMessageAction', route: '/cliente/mensajeria', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked' },
+  { name: 'sendRequestAction', route: '/cliente/bonos + /cliente/servicios', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked' },
+  { name: 'markMessageReadAction', route: '/cliente/mensajeria', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked' },
+  { name: 'uploadClientPhoto', route: '/cliente/fotografias', kind: 'server-action', owner: 'task4', clientBundlePolicy: 'support-blocked' },
   { name: 'markClientInboundMessagesRead', route: '/cliente/mensajeria', kind: 'render-side-effect', owner: 'task4' },
-  { name: 'publishResource', route: 'shared ResourceForm admin branch', kind: 'admin-only-action', owner: 'admin' },
-  { name: 'endSupportPreviewAction', route: 'support banner + client shell', kind: 'support-session-action', owner: 'task3' },
+  { name: 'publishResource', route: '/paneladmin/clientes/[id]/recursos', kind: 'server-action', owner: 'task4-defense', clientBundlePolicy: 'admin-not-bundled' },
+  { name: 'endSupportPreviewAction', route: 'support banner + client shell', kind: 'support-session-action', owner: 'task3', clientBundlePolicy: 'support-lifecycle' },
   { name: 'POST /auth/sign-out', route: 'client shell', kind: 'route-handler', owner: 'task3' },
   { name: 'POST /api/tools/blogger/[siteKey]/launch', route: '/cliente/proyectos/[slug]/blogger', kind: 'route-handler', owner: 'task6' },
 ]
@@ -95,6 +95,10 @@ test('the mutation matrix names every server action imported by the client-facin
   ])
   const classified = new Set(clientMutationMatrix.map(entry => entry.name))
   assert.deepEqual([...new Set(clientSurfaceActions)].filter(name => !classified.has(name)), [])
+  const policies = new Map(clientMutationMatrix.map(entry => [entry.name, entry.clientBundlePolicy]))
+  const allowedPolicies = new Set(['public-auth', 'support-blocked', 'support-lifecycle'])
+  assert.deepEqual([...new Set(clientSurfaceActions)].filter(name => !allowedPolicies.has(policies.get(name))), [])
+  assert.equal(clientSurfaceActions.includes('publishResource'), false)
 })
 
 test('the mutation matrix names every POST route submitted by protected client UI', () => {
@@ -114,7 +118,7 @@ test('the mutation matrix names every POST route submitted by protected client U
 })
 
 function supportActionSetup() {
-  const effects = { guard: 0, parse: 0, db: 0, email: 0, upload: 0, build: 0, revalidate: 0 }
+  const effects = { guard: 0, adminAuth: 0, parse: 0, db: 0, email: 0, upload: 0, build: 0, revalidate: 0 }
   class SupportReadOnlyError extends Error {
     constructor() {
       super(readonlyResult.message)
@@ -141,10 +145,14 @@ function supportActionSetup() {
   const mocks = {
     '@/lib/support/portal-viewer': {
       requireClientMutationAccess: guard,
+      getOptionalSupportViewer: async () => {
+        effects.guard += 1
+        return { mode: 'support', supportSessionId: 'support-session', identity: { userId: 'admin-user' }, client }
+      },
       SupportReadOnlyError,
       isSupportReadOnlyError: value => value instanceof SupportReadOnlyError,
     },
-    '@/lib/auth': { requireClientAccess: guard, requireAdmin: async () => { throw new Error('admin guard must not run') } },
+    '@/lib/auth': { requireClientAccess: guard, requireAdmin: async () => { effects.adminAuth += 1; throw new Error('admin guard must not run') } },
     '@/lib/supabase/server': { createSupabaseServerClient: async () => { effects.db += 1; return db } },
     '@/lib/supabase/admin': { getSupabaseAdminClient: () => { effects.db += 1; return db } },
     '@/lib/email': { sendAdminRequestEmail: async () => { effects.email += 1 } },
@@ -158,7 +166,8 @@ for (const [modulePath, exportName, invoke] of [
   ['src/lib/actions/messages.ts', 'sendMessageAction', (action, setup) => action({}, setup.poisonForm)],
   ['src/lib/actions/messages.ts', 'sendRequestAction', (action, setup) => action({}, setup.poisonForm)],
   ['src/lib/actions/messages.ts', 'markMessageReadAction', action => action('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')],
-  ['src/lib/actions/resources.ts', 'uploadClientPhoto', (action, setup) => action({}, setup.poisonForm)],
+  ['src/lib/actions/client-resources.ts', 'uploadClientPhoto', (action, setup) => action({}, setup.poisonForm)],
+  ['src/lib/actions/resources.ts', 'publishResource', (action, setup) => action({}, setup.poisonForm)],
 ]) {
   test(`${exportName} rejects support before parsing or any side effect`, async () => {
     const setup = supportActionSetup()
@@ -167,9 +176,46 @@ for (const [modulePath, exportName, invoke] of [
     const result = await invoke(action, setup)
 
     assert.deepEqual(result, readonlyResult)
-    assert.deepEqual(setup.effects, { guard: 1, parse: 0, db: 0, email: 0, upload: 0, build: 0, revalidate: 0 })
+    assert.deepEqual(setup.effects, { guard: 1, adminAuth: 0, parse: 0, db: 0, email: 0, upload: 0, build: 0, revalidate: 0 })
   })
 }
+
+test('publishResource preserves ordinary admin publishing outside support mode', async () => {
+  const db = database({ client_resources: [] })
+  const revalidated = []
+  let supportChecks = 0
+  let adminChecks = 0
+  const { publishResource } = loadProjectModule('src/lib/actions/resources.ts', {
+    '@/lib/support/portal-viewer': {
+      getOptionalSupportViewer: async () => { supportChecks += 1; return null },
+      requireClientMutationAccess: async () => { throw new Error('client guard must not run') },
+    },
+    '@/lib/auth': {
+      requireAdmin: async () => { adminChecks += 1; return { userId: 'admin-user', email: 'admin@example.com', role: 'admin' } },
+    },
+    '@/lib/supabase/admin': { getSupabaseAdminClient: () => db },
+    'next/cache': { revalidatePath: value => { revalidated.push(value) } },
+  })
+
+  const result = await publishResource({}, form({
+    clientId,
+    title: 'Actualización de octubre',
+    body: 'Trabajo completado.',
+    kind: 'update',
+    reportPath: '',
+  }))
+
+  assert.deepEqual(result, { success: 'Guardado en el panel del cliente.' })
+  assert.equal(supportChecks, 1)
+  assert.equal(adminChecks, 1)
+  assert.equal(db.tables.client_resources.length, 1)
+  assert.deepEqual(revalidated, [
+    '/cliente/informes',
+    '/cliente/actualizaciones',
+    '/cliente/fotografias',
+    `/paneladmin/clientes/${clientId}/recursos`,
+  ])
+})
 
 test('real clients still send messages and service requests with their existing effects', async () => {
   const db = database({ messages: [] })
@@ -200,6 +246,7 @@ function renderClientComponent(modulePath, exportName, props) {
     react: { ...React, useActionState: () => [{}, () => {}, false], useState: initial => [initial, () => {}] },
     '@/lib/actions/messages': { sendMessageAction() {}, sendRequestAction() {} },
     '@/lib/actions/resources': { publishResource() {}, uploadClientPhoto() {} },
+    '@/lib/actions/client-resources': { uploadClientPhoto() {} },
   })
   return renderToStaticMarkup(React.createElement(module[exportName], props))
 }
