@@ -55,11 +55,17 @@ if (docker) {
   } else if (operation === 'create') {
     const name = args.at(-1);
     let item = state[key].find(item => item.Name === name);
-    if (!item) { item = { Name: name, Id: kind === 'network' ? 'network-' + name : name, Labels: labels() }; state[key].push(item); save(); }
+    if (!item) { item = { Name: name, Id: kind === 'network' ? 'network-' + name : name, Labels: labels(), ...(kind === 'volume' ? { CreatedAt: new Date().toISOString() } : {}) }; state[key].push(item); save(); }
     console.log(kind === 'network' ? item.Id : item.Name);
   } else if (operation === 'rm') {
+    if (kind === 'volume' && process.env.WF_RUNNER_REFUSE_VOLUME_RM) process.exit(22);
     const names = args.slice(2).filter(arg => !arg.startsWith('-'));
     state[key] = state[key].filter(item => !names.includes(item.Id) && !names.includes(item.Name)); save();
+    if (kind === 'container' && process.env.WF_RUNNER_REPLACE_VOLUME_DURING_CLEANUP && !fs.existsSync(stateFile + '.cleanup-replacement')) {
+      fs.writeFileSync(stateFile + '.cleanup-replacement', 'replaced');
+      const volume = state.volumes.find(item => item.Name === 'supabase_db_' + project);
+      volume.CreatedAt = new Date(Date.parse(volume.CreatedAt) + 1000).toISOString(); save();
+    }
   } else process.exit(21);
   process.exit(0);
 }

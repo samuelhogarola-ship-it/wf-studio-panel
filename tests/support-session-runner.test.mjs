@@ -114,3 +114,34 @@ test('a database volume replaced outside the authorized reset is preserved', asy
     assert.equal((await fixture.calls()).some(call => call.args?.[0] === 'stop'), false)
   } finally { await fixture.cleanup() }
 })
+
+test('a volume replaced after container cleanup is revalidated and preserved', async () => {
+  const fixture = await runnerFixture()
+  try {
+    const result = await fixture.start({ WF_RUNNER_REPLACE_VOLUME_DURING_CLEANUP: '1' }).done
+    assert.equal(result.status, 1, 'a changed volume identity must fail cleanup closed')
+    assert.match(result.stderr, /support volume changed.*preserving/i)
+    const state = await fixture.state()
+    assert.deepEqual(state.containers, [])
+    assert.deepEqual(state.volumes.map(item => item.Name), ['supabase_db_wf-studio-support-test'])
+    assert.deepEqual(state.networks, [], 'owned network cleanup must continue')
+  } finally { await fixture.cleanup() }
+})
+
+test('volume removal refusal does not mask a primary test error or stop network cleanup', async () => {
+  const fixture = await runnerFixture()
+  try {
+    const result = await fixture.start({ WF_RUNNER_FAIL: 'test', WF_RUNNER_REFUSE_VOLUME_RM: '1' }).done
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /Local database test command failed: --test tests\/support-session-postgres\.test\.mjs/)
+    assert.match(result.stderr, /Unable to remove owned support volume/)
+    const state = await fixture.state()
+    assert.deepEqual(state.containers, [])
+    assert.deepEqual(state.volumes.map(item => item.Name).sort(), [
+      'supabase_config_wf-studio-support-test',
+      'supabase_db_wf-studio-support-test',
+      'supabase_storage_wf-studio-support-test',
+    ])
+    assert.deepEqual(state.networks, [], 'owned network cleanup must continue after volume failures')
+  } finally { await fixture.cleanup() }
+})

@@ -73,6 +73,11 @@ function ownsVolume(volume) {
     (databaseVolume && volume.Name === databaseVolume.name && volume.CreatedAt === databaseVolume.createdAt && volume.Labels?.[projectLabel] === project)
 }
 
+function sameVolumeIdentity(expected, current) {
+  return expected.Name === current.Name && typeof expected.CreatedAt === 'string' &&
+    expected.CreatedAt === current.CreatedAt && ownsVolume(current)
+}
+
 function allOwned(state) {
   return state.containers.every(ownsContainer) &&
     state.volumes.every(ownsVolume) && state.networks.every(resource => resource.Labels?.[ownerLabel] === owner)
@@ -89,9 +94,27 @@ async function cleanupOwnedResources(state) {
   // Immutable container/network IDs prevent a replacement resource becoming a
   // deletion target. Volumes require our label or the recorded DB-volume
   // identity and are never forced; a replacement volume is not adopted.
-  for (const container of state.containers.filter(ownsContainer)) await docker(['container', 'rm', '--force', container.Id])
-  for (const volume of state.volumes.filter(ownsVolume)) await docker(['volume', 'rm', volume.Name])
-  for (const network of state.networks.filter(resource => resource.Labels?.[ownerLabel] === owner)) await docker(['network', 'rm', network.Id])
+  let succeeded = true
+  for (const container of state.containers.filter(ownsContainer)) {
+    try { await docker(['container', 'rm', '--force', container.Id]) }
+    catch { console.error('Unable to remove owned support container'); succeeded = false }
+  }
+  for (const volume of state.volumes.filter(ownsVolume)) {
+    try {
+      const current = JSON.parse(await docker(['volume', 'inspect', volume.Name]))?.[0]
+      if (!current || !sameVolumeIdentity(volume, current)) {
+        console.error('Support volume changed during cleanup; preserving current volume')
+        succeeded = false
+        continue
+      }
+      await docker(['volume', 'rm', volume.Name])
+    } catch { console.error('Unable to remove owned support volume'); succeeded = false }
+  }
+  for (const network of state.networks.filter(resource => resource.Labels?.[ownerLabel] === owner)) {
+    try { await docker(['network', 'rm', network.Id]) }
+    catch { console.error('Unable to remove owned support network'); succeeded = false }
+  }
+  return succeeded
 }
 
 try {
@@ -147,7 +170,7 @@ try {
         console.error('Foreign support resources detected; cleaning exact owned resources only')
         process.exitCode = 1
       }
-      await cleanupOwnedResources(state)
+      if (!await cleanupOwnedResources(state)) process.exitCode = 1
     }
   } catch { console.error('Unable to clean owned support test resources'); process.exitCode = 1 }
   finally {
