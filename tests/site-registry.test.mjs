@@ -27,6 +27,7 @@ test("canonical website registry covers every current site and configures Samuel
   assert.equal(getBloggerHandoff(samuel), null);
 
   const agama = getSiteByKey("agama");
+  assert.equal(agama.name, "Agama");
   assert.equal(agama.domain, "agama.com.mx");
   assert.equal(agama.blogger.enabled, true);
   assert.equal(agama.blogger.runtime, "central-multisite");
