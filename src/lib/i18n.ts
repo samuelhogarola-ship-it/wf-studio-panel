@@ -27,6 +27,41 @@ export const clientPortalTranslations = {
   },
 } as const
 
+export const supportPreviewTranslations = {
+  es: {
+    viewAs: 'Ver como',
+    mode: 'Modo soporte',
+    viewingAs: 'Viendo como',
+    readOnly: 'Solo lectura',
+    noChanges: 'No se guardará ningún cambio.',
+    remaining: 'Tiempo restante:',
+    returnToAdmin: 'Volver al panel administrador',
+    exit: 'Salir del modo soporte',
+    featureDisabled: 'La vista de soporte está desactivada.',
+    clientInactive: 'El cliente debe estar activo para iniciar la vista de soporte.',
+    projectUnassigned: 'Asigna un cliente al proyecto para iniciar la vista de soporte.',
+    projectInactive: 'Activa el proyecto para iniciar la vista de soporte.',
+    projectInaccessible: 'Habilita el acceso del cliente para iniciar la vista de soporte.',
+    assignedClientInactive: 'El cliente asignado debe estar activo para iniciar la vista de soporte.',
+  },
+  en: {
+    viewAs: 'View as',
+    mode: 'Support mode',
+    viewingAs: 'Viewing as',
+    readOnly: 'Read only',
+    noChanges: 'No changes will be saved.',
+    remaining: 'Time remaining:',
+    returnToAdmin: 'Return to administrator panel',
+    exit: 'Exit support mode',
+    featureDisabled: 'Support preview is disabled.',
+    clientInactive: 'The client must be active to start support preview.',
+    projectUnassigned: 'Assign a client to the project to start support preview.',
+    projectInactive: 'Activate the project to start support preview.',
+    projectInaccessible: 'Enable client access to start support preview.',
+    assignedClientInactive: 'The assigned client must be active to start support preview.',
+  },
+} as const
+
 export const projectTranslations = {
   es: {
     title: 'Proyectos', description: 'Inventario y acceso de clientes a sus proyectos.', register: 'Registrar proyecto', edit: 'Configuración del proyecto',

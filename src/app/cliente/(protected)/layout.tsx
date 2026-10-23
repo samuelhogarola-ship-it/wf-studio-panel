@@ -9,7 +9,15 @@ export default async function ClientProtectedLayout({ children }: { children: Re
   const [context, locale] = await Promise.all([getClientPortalContext(), getLocale()])
   const navigation = buildPortalNavigation({ mode: context.mode, projects: context.projects, locale })
   return (
-    <ClientShell clientName={context.client.name} clientEmail={context.client.email} locale={locale} navigation={navigation}>
+    <ClientShell
+      clientName={context.client.name}
+      clientEmail={context.client.email}
+      locale={locale}
+      navigation={navigation}
+      supportPreview={context.viewerMode === 'support' && context.supportExpiresAt && context.returnPath
+        ? { expiresAt: context.supportExpiresAt, returnPath: context.returnPath }
+        : undefined}
+    >
       {children}
     </ClientShell>
   )

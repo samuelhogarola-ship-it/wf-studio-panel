@@ -258,6 +258,32 @@ test('access preview includes only assigned visible projects and universal accou
   assert.match(html, /Invitar cliente/);
 });
 
+test('project support preview is available only for an active accessible project assigned to an active client', async () => {
+  const previous = process.env.WF_SUPPORT_PREVIEW_ENABLED;
+  process.env.WF_SUPPORT_PREVIEW_ENABLED = 'true';
+  try {
+    const cases = [
+      { name: 'ready', project, clients: [client], expected: /Ver como Ana/ },
+      { name: 'unassigned', project: { ...project, client_id: null }, clients: [client], expected: /Asigna un cliente al proyecto para iniciar la vista de soporte\./ },
+      { name: 'inactive project', project: { ...project, status: 'draft' }, clients: [client], expected: /Activa el proyecto para iniciar la vista de soporte\./ },
+      { name: 'inaccessible project', project: { ...project, client_access_enabled: false }, clients: [client], expected: /Habilita el acceso del cliente para iniciar la vista de soporte\./ },
+      { name: 'inactive client', project, clients: [{ ...client, status: 'inactive' }], expected: /El cliente asignado debe estar activo para iniciar la vista de soporte\./ },
+    ];
+    for (const entry of cases) {
+      const load = setup({ clients: entry.clients, client_projects: [entry.project] }, {
+        'next/headers': { cookies: async () => ({ get() {}, set() {} }) },
+      });
+      const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;
+      const html = render(await Page({ params: Promise.resolve({ id: projectId }) }));
+      assert.match(html, entry.expected, entry.name);
+      if (entry.name !== 'ready') assert.match(html, /<button[^>]*disabled/);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.WF_SUPPORT_PREVIEW_ENABLED;
+    else process.env.WF_SUPPORT_PREVIEW_ENABLED = previous;
+  }
+});
+
 test('forms expose explicit capability state, provisioning and separate assignment/access/mode actions', () => {
   const load = setup();
   const { ProjectCapabilitiesForm } = load('src/components/admin/project-capabilities-form.tsx');
