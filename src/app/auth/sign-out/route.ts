@@ -12,12 +12,17 @@ function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
     forwardedProto: request.headers.get('x-forwarded-proto'),
     requestOrigin: requestUrl.origin,
     fallbackOrigin: process.env.APP_URL,
+    allowedHosts: ['admin.webfuengirola.com', 'portal.webfuengirola.com'],
   })
 }
 
 export async function POST(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const appUrl = getAppBaseUrl(request, requestUrl)
+  const requestOrigin = request.headers.get('origin')
+  if (requestOrigin && requestOrigin !== new URL(appUrl).origin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
   const supportViewer = await getOptionalSupportViewer()
   if (supportViewer) {
     const token = (await cookies()).get(SUPPORT_COOKIE_NAME)?.value

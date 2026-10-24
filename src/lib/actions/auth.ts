@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation'
 
 import { registerPendingClient } from '@/lib/auth/register.mjs'
-import { buildCanonicalClientCallbackUrl, buildCanonicalClientDestinationUrl, sanitizeClientDestination } from '@/lib/security/redirects.mjs'
+import { buildCanonicalClientCallbackUrl, buildCanonicalClientDestinationUrl, buildCanonicalResetCallbackUrl, sanitizeClientDestination } from '@/lib/security/redirects.mjs'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -53,11 +53,11 @@ export async function clientPasswordLoginAction(_prevState: AuthFormState, formD
     .maybeSingle()
 
   if (!client) {
-    return { error: 'No tienes cuenta con nosotros. Contacta con el estudio para registrarte.' }
+    return { error: 'Email o contraseña incorrectos.' }
   }
 
   if (client.status !== 'active') {
-    return { error: 'Tu cuenta no está activa. Contacta con el estudio.' }
+    return { error: 'Email o contraseña incorrectos.' }
   }
 
   const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -88,11 +88,11 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
     .maybeSingle()
 
   if (!client) {
-    return { error: 'No tienes cuenta con nosotros. Contacta con el estudio para registrarte.' }
+    return { success: 'Si la cuenta está activa, recibirás un enlace de acceso en tu email.' }
   }
 
   if (client.status !== 'active') {
-    return { error: 'Tu cuenta no está activa. Contacta con el estudio.' }
+    return { success: 'Si la cuenta está activa, recibirás un enlace de acceso en tu email.' }
   }
 
   const emailRedirectTo = buildCanonicalClientCallbackUrl(destination).toString()
@@ -189,19 +189,14 @@ export async function resetPasswordAction(_prevState: AuthFormState, formData: F
     .maybeSingle()
 
   if (!client) {
-    return { error: 'No tienes cuenta con nosotros. Contacta con el estudio para registrarte.' }
+    return { success: 'Si la cuenta está activa, recibirás un enlace para restablecer tu contraseña.' }
   }
 
   if (client.status !== 'active') {
-    return { error: 'Tu cuenta no está activa. Contacta con el estudio.' }
+    return { success: 'Si la cuenta está activa, recibirás un enlace para restablecer tu contraseña.' }
   }
 
-  const origin = String(formData.get('origin') ?? '').trim()
-  if (!origin) {
-    return { error: 'No se pudo determinar la URL de la app.' }
-  }
-
-  const redirectTo = new URL('/auth/callback/reset', origin).toString()
+  const redirectTo = buildCanonicalResetCallbackUrl().toString()
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
 
@@ -209,7 +204,6 @@ export async function resetPasswordAction(_prevState: AuthFormState, formData: F
     console.warn('[auth/client/reset] resetPasswordForEmail failed', {
       email,
       project: CLIENT_PROJECT,
-      origin,
       message: error.message,
     })
     return { error: 'No se pudo enviar el email. Inténtalo de nuevo.' }

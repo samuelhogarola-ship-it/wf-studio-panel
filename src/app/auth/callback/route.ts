@@ -15,6 +15,7 @@ function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
     forwardedProto: request.headers.get('x-forwarded-proto'),
     requestOrigin: requestUrl.origin,
     fallbackOrigin: process.env.APP_URL,
+    allowedHosts: ['admin.webfuengirola.com', 'portal.webfuengirola.com'],
   })
 }
 
