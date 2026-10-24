@@ -136,7 +136,6 @@ test('Postgres enforces support ownership, lifetime, atomic replacement and appe
     await a.query('delete from public.admin_support_sessions where admin_user_id = any($1::uuid[])', [userIds])
     await a.query('delete from public.client_projects where id = $1', [projectId])
     await a.query('delete from public.clients where id = any($1::uuid[])', [[clientId, inactiveId, foreignId]])
-    await a.query('delete from auth.users where id = any($1::uuid[])', [userIds])
     await Promise.all([a.end(), b.end()])
   }
 })

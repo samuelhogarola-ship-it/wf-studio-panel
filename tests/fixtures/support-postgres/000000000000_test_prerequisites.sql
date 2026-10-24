@@ -76,6 +76,7 @@ $$;
 alter table storage.objects enable row level security;
 
 grant usage on schema storage to postgres;
+grant usage on schema storage to authenticated;
 grant select, insert on storage.buckets to postgres;
 grant select on storage.objects to authenticated;
 grant select, insert, delete on storage.objects to postgres;
