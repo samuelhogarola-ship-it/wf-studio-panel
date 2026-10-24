@@ -8,6 +8,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { sanitizeHtml } from "./sanitize.mjs";
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -146,7 +147,9 @@ export function normalizePostInput(input, defaults = {}) {
       status: String(input.status || "draft").trim(),
       content_format: input.content_format === "html" ? "html" : "markdown",
     },
-    body: String(input.body || "").trim(),
+    body: input.content_format === "html"
+      ? sanitizeHtml(String(input.body || "").trim())
+      : String(input.body || "").trim(),
   };
 }
 
