@@ -170,7 +170,7 @@ export function AdminShell({
         <div className="shrink-0 px-5 py-6 border-b border-line">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">{t(locale, 'shell.brand')}</p>
         </div>
-        <nav className="min-h-0 flex-1 px-3 py-4 flex flex-col gap-0 overflow-y-auto">
+        <nav aria-label={t(locale, 'shell.navigation')} className="min-h-0 flex-1 px-3 py-4 flex flex-col gap-0 overflow-y-auto">
           {navGroups.map((group) => (
             <div key={group.label} className="mb-3">
               <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">{group.label}</p>
@@ -178,8 +178,9 @@ export function AdminShell({
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={isNavigationItemActive(currentPath, item.href, item.activePrefix) ? 'page' : undefined}
                   className={cn(
-                    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition',
+                    'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                     isNavigationItemActive(currentPath, item.href, item.activePrefix)
                       ? 'bg-brand text-white'
                       : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700',
@@ -217,8 +218,11 @@ export function AdminShell({
             </form>
           </div>
         </header>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:shadow">
+          {t(locale, 'accessibility.skipToContent')}
+        </a>
         {/* Mobile nav */}
-        <div className="shrink-0 lg:hidden space-y-3 border-b border-line bg-white px-4 py-3">
+        <nav aria-label={t(locale, 'shell.navigation')} className="shrink-0 lg:hidden space-y-3 border-b border-line bg-white px-4 py-3">
           {navGroups.map((group) => (
             <div key={group.label}>
               <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">{group.label}</p>
@@ -227,8 +231,9 @@ export function AdminShell({
                   <Link
                     key={item.href}
                     href={item.href}
+                    aria-current={isNavigationItemActive(currentPath, item.href, item.activePrefix) ? 'page' : undefined}
                     className={cn(
-                      'whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition',
+                      'whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                       isNavigationItemActive(currentPath, item.href, item.activePrefix)
                         ? 'bg-brand text-white'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200',
@@ -240,7 +245,7 @@ export function AdminShell({
               </div>
             </div>
           ))}
-        </div>
+        </nav>
 
         {/* Page header */}
         <div className="shrink-0 border-b border-line bg-white px-6 py-5">
@@ -248,7 +253,7 @@ export function AdminShell({
           <p className="mt-1 text-sm text-muted">{description}</p>
         </div>
 
-        <main className="flex-1 overflow-y-auto px-6 py-8">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto px-6 py-8">{children}</main>
       </div>
     </div>
   )

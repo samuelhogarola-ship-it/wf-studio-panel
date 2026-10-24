@@ -21,8 +21,9 @@ export function RequestForm({ type, readOnly = false }: { type: 'solicitud_servi
 
       {type === 'solicitud_servicio' && (
         <div className="grid gap-1.5">
-          <label className="text-sm font-semibold text-foreground">Tipo de servicio</label>
+          <label htmlFor="request-service-type" className="text-sm font-semibold text-foreground">Tipo de servicio</label>
           <select
+            id="request-service-type"
             name="subject"
             required
             className="rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:bg-white"
@@ -37,8 +38,9 @@ export function RequestForm({ type, readOnly = false }: { type: 'solicitud_servi
 
       {type === 'solicitud_bono' && (
         <div className="grid gap-1.5">
-          <label className="text-sm font-semibold text-foreground">Horas aproximadas</label>
+          <label htmlFor="request-bonus-type" className="text-sm font-semibold text-foreground">Horas aproximadas</label>
           <select
+            id="request-bonus-type"
             name="subject"
             required
             className="rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:bg-white"
@@ -52,8 +54,9 @@ export function RequestForm({ type, readOnly = false }: { type: 'solicitud_servi
       )}
 
       <div className="grid gap-1.5">
-        <label className="text-sm font-semibold text-foreground">Descripción / detalles</label>
+        <label htmlFor="request-body" className="text-sm font-semibold text-foreground">Descripción / detalles</label>
         <textarea
+          id="request-body"
           name="body"
           required
           rows={4}

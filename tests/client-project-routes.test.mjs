@@ -224,7 +224,7 @@ test('shell consumes supplied navigation without generating extra actions or dup
   const s = setup({ pathname: '/cliente/proyectos/example' });
   const Shell = s.load('src/components/layout/client-shell.tsx').ClientShell;
   const html = render(React.createElement(Shell, { clientName: 'Ana', clientEmail: client.email, navigation: [{ id: 'one', href: '/cliente/proyectos/example#domains', label: 'Domains · Example' }], children: 'Content' }));
-  assert.equal((html.match(/href="/g) ?? []).length, 2);
+  assert.equal((html.match(/href="\/cliente\//g) ?? []).length, 2);
   assert.equal((html.match(/Domains · Example/g) ?? []).length, 2);
   assert.doesNotMatch(html, /aria-current="page"/);
 });

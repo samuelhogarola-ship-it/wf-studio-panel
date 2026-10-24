@@ -95,6 +95,9 @@ export function ClientShell({
             )}
           </div>
         </header>
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-2 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:shadow">
+          {t(locale, 'accessibility.skipToContent')}
+        </a>
 
         {supportPreview ? <SupportPreviewBanner clientName={clientName} expiresAt={supportPreview.expiresAt} locale={locale} /> : null}
 
@@ -114,7 +117,7 @@ export function ClientShell({
           ))}
         </nav>
 
-        <main className="flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 px-4 py-6 lg:px-8 lg:py-8">{children}</main>
       </div>
     </div>
   )

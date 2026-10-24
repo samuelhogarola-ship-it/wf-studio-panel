@@ -107,6 +107,11 @@ export const translations = {
     'nav.brand': 'WF-Studio',
     'nav.admin': 'Admin',
     'nav.client': 'Cliente',
+    'accessibility.skipToContent': 'Saltar al contenido principal',
+    'boundary.loading': 'Cargando…',
+    'boundary.retry': 'Reintentar',
+    'boundary.notFound': 'No encontramos esta página.',
+    'shell.navigation': 'Navegación del panel',
 
     // Home page
     'home.eyebrow': 'Studio Panel',
@@ -471,6 +476,11 @@ export const translations = {
     'nav.brand': 'WF-Studio',
     'nav.admin': 'Admin',
     'nav.client': 'Client',
+    'accessibility.skipToContent': 'Skip to main content',
+    'boundary.loading': 'Loading…',
+    'boundary.retry': 'Try again',
+    'boundary.notFound': 'We could not find this page.',
+    'shell.navigation': 'Panel navigation',
 
     // Home page
     'home.eyebrow': 'Studio Panel',

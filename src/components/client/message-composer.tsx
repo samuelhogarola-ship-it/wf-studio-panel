@@ -24,8 +24,9 @@ export function MessageComposer({
     <form action={action} className="grid gap-4">
       {replyToId && <input type="hidden" name="reply_to_id" value={replyToId} />}
       <div className="grid gap-1.5">
-        <label className="text-sm font-semibold text-foreground">Asunto</label>
+        <label htmlFor="message-subject" className="text-sm font-semibold text-foreground">Asunto</label>
         <input
+          id="message-subject"
           name="subject"
           defaultValue={defaultSubject}
           required
@@ -34,8 +35,9 @@ export function MessageComposer({
         />
       </div>
       <div className="grid gap-1.5">
-        <label className="text-sm font-semibold text-foreground">Mensaje</label>
+        <label htmlFor="message-body" className="text-sm font-semibold text-foreground">Mensaje</label>
         <textarea
+          id="message-body"
           name="body"
           required
           rows={5}
