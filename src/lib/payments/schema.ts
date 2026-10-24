@@ -36,4 +36,3 @@ export const invoiceDraftSchema = z.object({
 export function parseStripePaymentLink(value: unknown) {
   return stripePaymentLinkSchema.safeParse(value)
 }
-
