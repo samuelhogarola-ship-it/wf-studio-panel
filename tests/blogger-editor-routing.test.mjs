@@ -15,6 +15,17 @@ test('routes each Blogger runtime to its configured editor without mixing storag
   })
 })
 
+test('Sport Massage central access always resolves to the legacy Studio editor', () => {
+  assert.deepEqual(getBloggerEditorTarget({
+    key: 'sportmassagefuengirola',
+    blogger: {
+      enabled: true,
+      runtime: 'central-legacy',
+      url: 'https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
+    },
+  }), { kind: 'iframe', href: '/blogger/index.html' })
+})
+
 test('fails closed for missing or unknown Blogger runtimes', () => {
   assert.equal(getBloggerEditorTarget({ key: 'site', blogger: { url: 'https://example.com' } }), null)
   assert.equal(getBloggerEditorTarget({ key: 'site', blogger: { runtime: 'unknown', url: 'https://example.com' } }), null)

@@ -47,21 +47,14 @@ test("canonical website registry covers every current site and configures Samuel
   assert.equal(sportMassage.blogger.enabled, true);
   assert.equal(
     sportMassage.blogger.url,
-    "https://sportmassagefuengirola.com/admin/blogger/",
+    "https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola",
   );
+  assert.equal(sportMassage.blogger.runtime, "central-legacy");
   assert.equal(sportMassage.blogger.publicPostBase, "/blog/");
-  assert.deepEqual(getBloggerHandoff(sportMassage), {
-    enabled: true,
-    runtime: "central-legacy",
-    url: "https://sportmassagefuengirola.com/admin/blogger/",
-    apiBase: "/api/posts",
-    buildEndpoint: "/api/build",
-    publicPostBase: "/blog/",
-    launchUrl: "https://sportmassagefuengirola.com/admin/blogger/launch",
-    healthUrl: "https://sportmassagefuengirola.com/api/blogger/health",
-    adapter: "snapshot-build",
-    capabilities: ["posts", "media", "publish", "unpublish"],
-  });
+  assert.equal(getBloggerHandoff(sportMassage), null);
+  for (const obsolete of ["launchUrl", "healthUrl", "adapter", "capabilities"]) {
+    assert.equal(obsolete in sportMassage.blogger, false, `Sport central registry must omit ${obsolete}`);
+  }
 });
 
 test("Sport handoff documents an empty server-only exchange secret without public credentials", async () => {
