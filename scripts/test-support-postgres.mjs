@@ -81,6 +81,7 @@ try {
       ...labels,
       '--tmpfs', '/var/lib/postgresql/data:rw,exec',
       '--publish', '127.0.0.1::5432',
+      '--env', 'POSTGRES_USER=supabase_admin',
       '--env', `POSTGRES_PASSWORD=${databasePassword}`,
       '--env', 'POSTGRES_DB=postgres',
       postgresImage,
