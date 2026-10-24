@@ -1,13 +1,12 @@
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { mkdtemp, cp, mkdir, rm, open, readFile, unlink } from 'node:fs/promises'
+import { mkdtemp, cp, mkdir, rm, open, readFile, readdir, unlink } from 'node:fs/promises'
 import { createHash, randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { setTimeout as delay } from 'node:timers/promises'
 
 const root = fileURLToPath(new URL('../', import.meta.url))
-const cli = fileURLToPath(new URL('../node_modules/.bin/supabase', import.meta.url))
 const env = { ...process.env, SUPABASE_TELEMETRY_DISABLED: 'true', DO_NOT_TRACK: '1' }
 const project = 'wf-studio-support-test'
 const projectLabel = 'com.supabase.cli.project'
@@ -17,11 +16,12 @@ const owner = randomUUID()
 const databasePassword = randomUUID()
 let workspace, containerId, lock, lockPath
 
-function run(command, args, { capture = false, extraEnv = {}, cwd = workspace, safeArgs = args } = {}) {
+function run(command, args, { capture = false, extraEnv = {}, cwd = workspace, safeArgs = args, input } = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, { cwd, env: { ...env, ...extraEnv }, stdio: capture ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'inherit', 'inherit'] })
+    const child = spawn(command, args, { cwd, env: { ...env, ...extraEnv }, stdio: capture ? [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'] : ['ignore', 'inherit', 'inherit'] })
     let output = ''
     let errorOutput = ''
+    if (input !== undefined) child.stdin.end(input)
     if (capture) child.stdout.on('data', chunk => { output += chunk })
     if (capture) child.stderr.on('data', chunk => { errorOutput += chunk })
     child.on('error', () => reject(new Error('Unable to run local database test command')))
@@ -106,10 +106,17 @@ try {
   if (!port) throw new Error('Local database port unavailable')
   const databaseUrl = `postgresql://supabase_admin:${encodeURIComponent(databasePassword)}@127.0.0.1:${port}/postgres?sslmode=disable`
 
-  await run(cli, ['migration', 'up', '--db-url', databaseUrl, '--include-all'], {
+  const migrationFiles = (await readdir(join(workspace, 'supabase/migrations')))
+    .filter(file => file.endsWith('.sql'))
+    .sort()
+  const migrationSql = (await Promise.all(migrationFiles.map(file => readFile(join(workspace, 'supabase/migrations', file), 'utf8')))).join('\n\n')
+  await run('docker', [
+    'container', 'exec', '--interactive', '--env', `PGPASSWORD=${databasePassword}`, containerId,
+    'psql', '-U', 'supabase_admin', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1',
+  ], {
     capture: true,
-    extraEnv: { PGSSLMODE: 'disable' },
-    safeArgs: ['migration', 'up'],
+    input: migrationSql,
+    safeArgs: ['container', 'migrate'],
   })
   await run(process.execPath, ['--test', 'tests/support-session-postgres.test.mjs'], { cwd: root, extraEnv: { WF_SUPPORT_TEST_DATABASE_URL: databaseUrl } })
 } catch (error) {

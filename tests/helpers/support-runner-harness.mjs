@@ -50,6 +50,7 @@ if (docker) {
       const wait = setInterval(() => { if (fs.existsSync(process.env.WF_RUNNER_GATE + '.release')) { clearInterval(wait); console.log(id); process.exit(0); } }, 10);
     } else { console.log(id); process.exit(0); }
   } else if (kind === 'container' && operation === 'exec') {
+    if (args.includes('--interactive') && process.env.WF_RUNNER_FAIL === 'migration') process.exit(22);
     process.exit(0);
   } else if (kind === 'container' && operation === 'port') {
     if (process.env.WF_RUNNER_FAIL === 'status') process.exit(23);

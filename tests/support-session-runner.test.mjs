@@ -12,7 +12,6 @@ test('database runner uses one tmpfs Postgres container and preserves failure pr
       assert.equal(result.status, fail ? 1 : 0, `scenario ${fail || 'success'}: ${result.stderr}`)
       assert.doesNotMatch(result.stdout + result.stderr, /private-credential|leaksecret/)
       const calls = await fixture.calls()
-      const cliCalls = calls.filter(call => call.args)
       const dockerCalls = calls.filter(call => call.docker).map(call => call.docker)
       assert.equal(await readFile(join(fixture.root, 'supabase/migrations/202610230001_original.sql'), 'utf8'), '-- original migration bytes\n')
       assert.equal(dockerCalls.some(args => args[0] === 'volume'), false, `scenario ${fail || 'success'} used Docker volumes`)
@@ -24,10 +23,9 @@ test('database runner uses one tmpfs Postgres container and preserves failure pr
       assert.equal(start.includes('POSTGRES_USER=postgres'), false)
       assert.equal(start.at(-1), 'postgres:17.6-alpine')
       if (!['start', 'status'].includes(fail)) {
-        assert.deepEqual(cliCalls[0].args.slice(0, 3), ['migration', 'up', '--db-url'])
-        assert.match(cliCalls[0].args[3], /^postgresql:\/\/supabase_admin:[^@]+@127\.0\.0\.1:55432\/postgres\?sslmode=disable$/)
-        assert.equal(cliCalls[0].args[4], '--include-all')
-        await assert.rejects(readFile(join(cliCalls[0].cwd, 'supabase/config.toml')), { code: 'ENOENT' })
+        const migrate = dockerCalls.find(args => args[0] === 'container' && args[1] === 'exec' && args.includes('--interactive'))
+        assert.ok(migrate)
+        assert.equal(migrate.at(-1), 'ON_ERROR_STOP=1')
       }
       const cleanup = dockerCalls.find(args => args[0] === 'container' && args[1] === 'rm')
       if (fail === 'start') assert.equal(cleanup, undefined)
