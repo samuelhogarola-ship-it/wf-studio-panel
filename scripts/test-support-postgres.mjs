@@ -76,6 +76,7 @@ try {
   const cidPath = join(workspace, 'postgres.cid')
   const labels = ['--label', `${projectLabel}=${project}`, '--label', `${ownerLabel}=${owner}`]
   try {
+    console.error('[support-db] starting PostgreSQL container')
     await docker([
       'container', 'run', '--detach', '--rm', '--cidfile', cidPath,
       ...labels,
@@ -96,11 +97,13 @@ try {
   if (!containerId) throw new Error('Local database container identity unavailable')
 
   await waitForDatabase()
+  console.error('[support-db] PostgreSQL is ready')
   await docker([
     'container', 'exec', '--env', `PGPASSWORD=${databasePassword}`, containerId,
     'psql', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1',
     '-c', `create role supabase_admin with login superuser password '${databasePassword}'`,
   ], ['container', 'bootstrap'])
+  console.error('[support-db] administrative role is ready')
   const portOutput = await docker(['container', 'port', containerId, '5432/tcp'], ['container', 'status'])
   const port = portOutput.trim().match(/127\.0\.0\.1:(\d+)$/)?.[1]
   if (!port) throw new Error('Local database port unavailable')
@@ -113,6 +116,7 @@ try {
   const migrationPath = join(workspace, 'support-test-migrations.sql')
   await writeFile(migrationPath, migrationSql)
   await docker(['cp', migrationPath, `${containerId}:/tmp/support-test-migrations.sql`], ['copy', 'migrations'])
+  console.error(`[support-db] applying ${migrationFiles.length} migration files`)
   await run('docker', [
     'container', 'exec', '--env', `PGPASSWORD=${databasePassword}`, containerId,
     'psql', '-U', 'supabase_admin', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1',
@@ -122,7 +126,9 @@ try {
     capture: true,
     safeArgs: ['container', 'migrate'],
   })
+  console.error('[support-db] migrations applied')
   await run(process.execPath, ['--test', 'tests/support-session-postgres.test.mjs'], { cwd: root, extraEnv: { WF_SUPPORT_TEST_DATABASE_URL: databaseUrl } })
+  console.error('[support-db] integration tests passed')
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Local database tests failed')
   process.exitCode = 1
