@@ -199,19 +199,13 @@ export const getClientMessages = async (clientId: string) => {
   return data ?? []
 }
 
-export const markClientInboundMessagesRead = async (clientId: string, messageIds: string[]) => {
+export const markClientInboundMessagesRead = async (_clientId: string, messageIds: string[]) => {
   if (messageIds.length === 0) return null
 
   const supabase = await createSupabaseServerClient()
   const readAt = new Date().toISOString()
 
-  await supabase
-    .from('messages')
-    .update({ read_at: readAt })
-    .eq('client_id', clientId)
-    .eq('direction', 'inbound')
-    .in('id', messageIds)
-    .is('read_at', null)
+  await Promise.all(messageIds.map((messageId) => supabase.rpc('mark_message_read', { p_message_id: messageId })))
 
   return readAt
 }

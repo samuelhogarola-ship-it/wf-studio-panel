@@ -105,6 +105,6 @@ export async function markMessageReadAction(messageId: string): Promise<void | S
     throw error
   }
   const supabase = await createSupabaseServerClient()
-  await supabase.from('messages').update({ read_at: new Date().toISOString() }).eq('id', messageId).is('read_at', null)
+  await supabase.rpc('mark_message_read', { p_message_id: messageId })
   revalidatePath('/cliente/mensajeria')
 }

@@ -147,6 +147,7 @@ export type Database = {
       }
     }
     Functions: {
+      mark_message_read: { Args: { p_message_id: string }; Returns: undefined }
       start_admin_support_session: { Args: { p_client_id: string; p_token_hash: string; p_return_path: string }; Returns: SupportSessionRow[] }
       end_admin_support_session: { Args: { p_token_hash: string; p_reason: SupportEndReason }; Returns: boolean }
       claim_monthly_stat_report_delivery: { Args: { p_claim_token: string; p_email_to: string; p_month_key: string }; Returns: boolean }
