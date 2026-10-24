@@ -397,16 +397,25 @@ test('project detail supplies default-row validation to all seven controls when 
   assert.match(analytics, /data-capability-validation="invalid"/);
 });
 
-test('project detail does not show Blogger ready when saved provisioning confirmation is absent', async () => {
+test('project detail does not show external Blogger ready when saved provisioning confirmation is absent', async () => {
   const load = setup({
     project_capabilities: [{
       ...capability,
       state: 'active',
-      launch_url: 'https://admin.webfuengirola.com/paneladmin/blogger/example',
+      launch_url: 'https://example.com/admin/blogger/',
       validated_at: project.created_at,
       metadata: {},
     }],
-  }, configuredBlogger);
+  }, {
+    ...configuredBlogger,
+    '@/lib/sites/registry.mjs': {
+      getSites: () => [{ key: 'example', name: 'Example', domain: 'example.com' }],
+      getSiteByKey: () => ({ key: 'example', name: 'Example', domain: 'example.com', blogger: { enabled: true, runtime: 'external', url: 'https://example.com/admin/blogger/' } }),
+    },
+    '@/lib/blogger/editor.mjs': {
+      getBloggerEditorTarget: () => ({ kind: 'external', href: 'https://example.com/admin/blogger/' }),
+    },
+  });
   const Page = load('src/app/paneladmin/(protected)/proyectos/[id]/page.tsx').default;
   const html = render(await Page({ params: Promise.resolve({ id: projectId }) }));
   const blogger = html.slice(html.indexOf('data-capability="blogger"'), html.indexOf('data-capability="analytics"'));

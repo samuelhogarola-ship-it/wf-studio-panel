@@ -38,12 +38,18 @@ export function getBloggerCapabilityIssue(
   capability: BloggerCapability,
   site: BloggerSite | null,
 ): 'destination' | 'blogger' | null {
+  if (!hasProjectBloggerRuntime(project, site)) {
+    return 'blogger'
+  }
+  if (site?.blogger?.runtime === 'central-legacy' || site?.blogger?.runtime === 'central-multisite') {
+    return null
+  }
   if (capability.launch_url && !validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)) {
     return 'destination'
   }
   const metadata = capability.metadata
   const provisioningConfirmed = metadata && typeof metadata === 'object' && !Array.isArray(metadata) && metadata.provisioning_confirmed === true
-  if (!capability.launch_url || !capability.validated_at || !provisioningConfirmed || !hasProjectBloggerRuntime(project, site)) {
+  if (!capability.launch_url || !capability.validated_at || !provisioningConfirmed) {
     return 'blogger'
   }
   return null

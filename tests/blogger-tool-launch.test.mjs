@@ -49,14 +49,23 @@ test('public Blogger entry generation does not replace administrator or client i
   assert.equal(clientTools.find(tool => tool.id === 'blogger')?.href, '/cliente/proyectos/first-site/blogger')
 })
 
-test('Sport browser delivery serializes the exact v1 contract into a fragment-only redirect', () => {
-  const site = getSiteByKey('sportmassagefuengirola')
+test('external Blogger delivery serializes the exact v1 contract into a fragment-only redirect', () => {
+  const base = structuredClone(getSiteByKey('samuelcoachdealeman'))
+  const site = {
+    ...base,
+    blogger: {
+      ...base.blogger,
+      url: 'https://www.samuelcoachdealeman.com/admin/blogger/',
+      launchUrl: 'https://www.samuelcoachdealeman.com/admin/blogger/launch',
+      healthUrl: 'https://www.samuelcoachdealeman.com/api/blogger/health',
+    },
+  }
   const handoff = getBloggerHandoff(site)
   assert.ok(handoff)
   assert.equal(typeof launchTickets.buildLaunchRedirectLocation, 'function')
 
-  const secretName = 'WF_BLOGGER_HANDOFF_SECRET_SPORTMASSAGEFUENGIROLA'
-  const secretValue = 'sport-handoff-test-secret'
+  const secretName = 'WF_BLOGGER_HANDOFF_SECRET_SAMUELCOACHDEALEMAN'
+  const secretValue = 'external-handoff-test-secret'
   assert.equal(getBloggerExchangeSecret(site.key, { [secretName]: secretValue }), secretValue)
 
   const location = launchTickets.buildLaunchRedirectLocation({
@@ -64,10 +73,10 @@ test('Sport browser delivery serializes the exact v1 contract into a fragment-on
     code: 'S'.repeat(43),
     siteKey: site.key,
   })
-  assert.equal(location, `https://sportmassagefuengirola.com/admin/blogger/#protocol=wf-blogger-handoff%2Fv1&code=${'S'.repeat(43)}&siteKey=sportmassagefuengirola`)
+  assert.equal(location, `https://www.samuelcoachdealeman.com/admin/blogger/#protocol=wf-blogger-handoff%2Fv1&code=${'S'.repeat(43)}&siteKey=samuelcoachdealeman`)
   const requestTarget = new URL(location)
   requestTarget.hash = ''
-  assert.equal(requestTarget.toString(), 'https://sportmassagefuengirola.com/admin/blogger/')
+  assert.equal(requestTarget.toString(), 'https://www.samuelcoachdealeman.com/admin/blogger/')
   assert.doesNotMatch(requestTarget.toString(), /code|wf-blogger-handoff|sport-handoff-test-secret/i)
   assert.doesNotMatch(location, new RegExp(`${secretName}|${secretValue}|password|hash|filesystem|api\\/posts|api\\/build`, 'i'))
 })
@@ -443,9 +452,9 @@ test('exchange POST authenticates the target server and returns only audience-bo
   assert.match(response.headers.get('content-security-policy') ?? '', /form-action 'none'/)
 })
 
-test('Sport exchange response and logs omit secrets and server-only runtime configuration', async t => {
-  const secretName = 'WF_BLOGGER_HANDOFF_SECRET_SPORTMASSAGEFUENGIROLA'
-  const secretValue = 'sport-route-test-secret'
+test('external exchange response and logs omit secrets and server-only runtime configuration', async t => {
+  const secretName = 'WF_BLOGGER_HANDOFF_SECRET_SAMUELCOACHDEALEMAN'
+  const secretValue = 'external-route-test-secret'
   const previousSecret = process.env[secretName]
   process.env[secretName] = secretValue
 
@@ -466,16 +475,26 @@ test('Sport exchange response and logs omit secrets and server-only runtime conf
   })
 
   const ticketModule = await import('../src/lib/tools/launch-tickets.mjs')
+  const base = structuredClone(getSiteByKey('samuelcoachdealeman'))
+  const externalSite = {
+    ...base,
+    blogger: {
+      ...base.blogger,
+      url: 'https://www.samuelcoachdealeman.com/admin/blogger/',
+      launchUrl: 'https://www.samuelcoachdealeman.com/admin/blogger/launch',
+      healthUrl: 'https://www.samuelcoachdealeman.com/api/blogger/health',
+    },
+  }
   const route = loadProjectModule(exchangeRoutePath, {
-    '@/lib/sites/registry.mjs': { getSiteByKey, getBloggerHandoff },
+    '@/lib/sites/registry.mjs': { getSiteByKey: () => externalSite, getBloggerHandoff },
     '@/lib/supabase/admin': { getSupabaseAdminClient: () => ({ serviceRole: true }) },
     '@/lib/tools/launch-tickets.mjs': {
       ...ticketModule,
       async consumeLaunchTicket() {
         return {
           protocol,
-          siteKey: 'sportmassagefuengirola',
-          audience: 'https://sportmassagefuengirola.com',
+          siteKey: 'samuelcoachdealeman',
+          audience: 'https://www.samuelcoachdealeman.com',
           projectId: project.id,
           clientId: client.id,
           userId: claims().userId,
@@ -488,12 +507,12 @@ test('Sport exchange response and logs omit secrets and server-only runtime conf
   const response = await route.POST(new Request('https://studio.example/api/tool-launch/exchange', {
     method: 'POST',
     headers: { authorization: `Bearer ${secretValue}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ protocol, code: 'S'.repeat(43), siteKey: 'sportmassagefuengirola' }),
+    body: JSON.stringify({ protocol, code: 'S'.repeat(43), siteKey: 'samuelcoachdealeman' }),
   }))
   const payload = await response.json()
 
   assert.equal(response.status, 200)
-  assert.equal(payload.siteKey, 'sportmassagefuengirola')
+  assert.equal(payload.siteKey, 'samuelcoachdealeman')
   const publicOutput = JSON.stringify(payload)
   const loggedOutput = JSON.stringify(logs)
   const forbidden = new RegExp(`${secretName}|${secretValue}|password|hash|filesystem|api\\/posts|api\\/build`, 'i')
