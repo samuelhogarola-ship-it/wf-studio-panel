@@ -12,7 +12,7 @@ const env = { ...process.env, SUPABASE_TELEMETRY_DISABLED: 'true', DO_NOT_TRACK:
 const project = 'wf-studio-support-test'
 const projectLabel = 'com.supabase.cli.project'
 const ownerLabel = 'wf.studio.support-test.owner'
-const postgresImage = 'public.ecr.aws/supabase/postgres:17.6.1.155'
+const postgresImage = 'supabase/postgres:17.6.1.155'
 const owner = randomUUID()
 const databasePassword = randomUUID()
 let workspace, containerId, lock, lockPath
