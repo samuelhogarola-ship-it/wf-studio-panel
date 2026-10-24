@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import ts from 'typescript';
@@ -32,7 +32,7 @@ export function loadProjectModule(relative, overrides = {}) {
       if (specifier in mocks) return mocks[specifier];
       if (specifier.startsWith('@/') || specifier.startsWith('.')) {
         const base = specifier.startsWith('@/') ? path.join(root, 'src', specifier.slice(2)) : path.resolve(path.dirname(filename), specifier);
-        const target = [base, `${base}.ts`, `${base}.tsx`].find(existsSync);
+        const target = [base, `${base}.ts`, `${base}.tsx`].find(candidate => existsSync(candidate) && statSync(candidate).isFile());
         if (target?.endsWith('.ts') || target?.endsWith('.tsx')) return load(target);
         return require(target ?? base);
       }
