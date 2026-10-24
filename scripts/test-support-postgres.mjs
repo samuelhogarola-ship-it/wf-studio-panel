@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { mkdtemp, cp, mkdir, rm, open, readFile, readdir, unlink } from 'node:fs/promises'
+import { mkdtemp, cp, mkdir, rm, open, readFile, readdir, unlink, writeFile } from 'node:fs/promises'
 import { createHash, randomUUID } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -110,14 +110,16 @@ try {
     .filter(file => file.endsWith('.sql'))
     .sort()
   const migrationSql = (await Promise.all(migrationFiles.map(file => readFile(join(workspace, 'supabase/migrations', file), 'utf8')))).join('\n\n')
+  const migrationPath = join(workspace, 'support-test-migrations.sql')
+  await writeFile(migrationPath, migrationSql)
+  await docker(['cp', migrationPath, `${containerId}:/tmp/support-test-migrations.sql`], ['copy', 'migrations'])
   await run('docker', [
-    'container', 'exec', '--interactive', '--env', `PGPASSWORD=${databasePassword}`, containerId,
+    'container', 'exec', '--env', `PGPASSWORD=${databasePassword}`, containerId,
     'psql', '-U', 'supabase_admin', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1',
     '-c', "set statement_timeout = '30s'; set lock_timeout = '5s'",
-    '-f', '-',
+    '-f', '/tmp/support-test-migrations.sql',
   ], {
     capture: true,
-    input: migrationSql,
     safeArgs: ['container', 'migrate'],
   })
   await run(process.execPath, ['--test', 'tests/support-session-postgres.test.mjs'], { cwd: root, extraEnv: { WF_SUPPORT_TEST_DATABASE_URL: databaseUrl } })
