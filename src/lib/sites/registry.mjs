@@ -1,27 +1,8 @@
-import registry from "../../config/sites.json" with { type: "json" };
+import { getManifestSites } from "./manifest.ts";
 
 const LOCAL_SUFFIXES = new Set(["localhost", "local", "internal", "lan", "home", "test", "invalid", "example"]);
 const STUDIO_ORIGIN = "https://admin.webfuengirola.com";
-const SITE_DOMAINS = new Map([
-  ["webfuengirola", "webfuengirola.com"],
-  ["vivirenfuengirola", "vivirenfuengirola.com"],
-  ["conocef", "conocefuengirola.com"],
-  ["topfuengirola", "topfuengirola.com"],
-  ["samuelcoachdealeman", "samuelcoachdealeman.com"],
-  ["agama", "agama.com.mx"],
-  ["vikingfitness", "vikingfitness.es"],
-  ["personaltrainerfuengirola", "personaltrainerfuengirola.com"],
-  ["gimnasionuevoestilo", "gimnasionuevoestilo.com"],
-  ["bionatura", "bionatura.es"],
-  ["sportmassagefuengirola", "sportmassagefuengirola.com"],
-  ["deutschkompakt", "deutschkompakt.com"],
-  ["vokabellab", "vokabellab.com"],
-  ["imkontext", "imkontext.vokabellab.com"],
-  ["derdiedas", "derdiedas.vokabellab.com"],
-  ["superentrenador", "superentrenador.com"],
-  ["coachstudio", "coach.superentrenador.com"],
-  ["todoplastico", "todo-plastico.com"],
-]);
+const SITE_DOMAINS = new Map(getManifestSites().map((site) => [site.key, site.domain]));
 const SITE_PRODUCTION_HOST_OVERRIDES = new Map([
   ["samuelcoachdealeman", "www.samuelcoachdealeman.com"],
   ["agama", "www.agama.com.mx"],
@@ -155,7 +136,7 @@ export function validateSite(site) {
   return site;
 }
 
-export const SITE_REGISTRY = Object.freeze(registry.map(validateSite));
+export const SITE_REGISTRY = Object.freeze(getManifestSites().map(validateSite));
 
 export function getSites() {
   return SITE_REGISTRY;
