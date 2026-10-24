@@ -81,7 +81,6 @@ try {
       ...labels,
       '--tmpfs', '/var/lib/postgresql/data:rw,exec',
       '--publish', '127.0.0.1::5432',
-      '--env', 'POSTGRES_USER=supabase_admin',
       '--env', `POSTGRES_PASSWORD=${databasePassword}`,
       '--env', 'POSTGRES_DB=postgres',
       postgresImage,
@@ -97,6 +96,11 @@ try {
   if (!containerId) throw new Error('Local database container identity unavailable')
 
   await waitForDatabase()
+  await docker([
+    'container', 'exec', '--env', `PGPASSWORD=${databasePassword}`, containerId,
+    'psql', '-U', 'postgres', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1',
+    '-c', `create role supabase_admin with login superuser password '${databasePassword}'`,
+  ], ['container', 'bootstrap'])
   const portOutput = await docker(['container', 'port', containerId, '5432/tcp'], ['container', 'status'])
   const port = portOutput.trim().match(/127\.0\.0\.1:(\d+)$/)?.[1]
   if (!port) throw new Error('Local database port unavailable')
