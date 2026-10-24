@@ -1,7 +1,35 @@
--- The Postgres image includes auth.users/auth.uid(), while Auth and Storage
--- services normally install these remaining objects in a full local stack.
 -- Keep this test-only compatibility layer before copied production history.
+-- The production migrations expect the roles and Auth/Storage objects that
+-- Supabase normally installs; this fixture provides only the bounded surface
+-- required by the support-session integration test.
 set role supabase_admin;
+
+do $$
+declare
+  role_name text;
+begin
+  foreach role_name in array array['anon', 'authenticated', 'service_role'] loop
+    if not exists (select 1 from pg_roles where rolname = role_name) then
+      execute format('create role %I noinherit', role_name);
+    end if;
+  end loop;
+end;
+$$;
+
+create schema if not exists auth;
+
+create table auth.users (
+  id uuid primary key,
+  email text
+);
+
+create or replace function auth.uid()
+returns uuid
+language sql
+stable
+as $$
+  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
+$$;
 
 create or replace function auth.jwt()
 returns jsonb
@@ -10,6 +38,11 @@ stable
 as $$
   select coalesce(nullif(current_setting('request.jwt.claims', true), ''), '{}')::jsonb;
 $$;
+
+grant usage on schema auth to authenticated;
+grant select on auth.users to authenticated;
+grant execute on function auth.uid() to public;
+grant execute on function auth.jwt() to public;
 
 create schema if not exists storage;
 

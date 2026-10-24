@@ -22,7 +22,7 @@ test('database runner uses one tmpfs Postgres container and preserves failure pr
       assert.deepEqual(start.slice(start.indexOf('--tmpfs'), start.indexOf('--tmpfs') + 2), ['--tmpfs', '/var/lib/postgresql/data:rw,exec'])
       assert.deepEqual(start.slice(start.indexOf('--publish'), start.indexOf('--publish') + 2), ['--publish', '127.0.0.1::5432'])
       assert.equal(start.includes('POSTGRES_USER=postgres'), false)
-      assert.equal(start.at(-1), 'supabase/postgres:17.6.1.155')
+      assert.equal(start.at(-1), 'postgres:17.6-alpine')
       if (!['start', 'status'].includes(fail)) {
         assert.deepEqual(cliCalls[0].args.slice(0, 3), ['migration', 'up', '--db-url'])
         assert.match(cliCalls[0].args[3], /^postgresql:\/\/supabase_admin:[^@]+@127\.0\.0\.1:55432\/postgres\?sslmode=disable$/)
