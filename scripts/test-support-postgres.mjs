@@ -21,11 +21,21 @@ function run(command, args, { capture = false, extraEnv = {}, cwd = workspace, s
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd, env: { ...env, ...extraEnv }, stdio: capture ? ['ignore', 'pipe', 'pipe'] : ['ignore', 'inherit', 'inherit'] })
     let output = ''
+    let errorOutput = ''
     if (capture) child.stdout.on('data', chunk => { output += chunk })
-    // Captured Docker/CLI output can contain credentials; never relay it.
-    if (capture) child.stderr.resume()
+    if (capture) child.stderr.on('data', chunk => { errorOutput += chunk })
     child.on('error', () => reject(new Error('Unable to run local database test command')))
-    child.on('close', code => code === 0 ? resolve(output) : reject(new Error(`Local database test command failed: ${safeArgs.join(' ')} (exit ${code})`)))
+    child.on('close', code => {
+      if (code === 0) return resolve(output)
+      const diagnostic = errorOutput
+        .replaceAll(databasePassword, '[redacted]')
+        .replace(/POSTGRES_PASSWORD=\S+/g, 'POSTGRES_PASSWORD=[redacted]')
+        .replace(/postgres(?:ql)?:\/\/\S+/gi, 'postgresql://[redacted]')
+        .replace(/private-credential(?:-sentinel)?|leaksecret/gi, '[redacted]')
+        .trim()
+      const suffix = diagnostic ? `: ${diagnostic.slice(0, 500)}` : ''
+      reject(new Error(`Local database test command failed: ${safeArgs.join(' ')} (exit ${code})${suffix}`))
+    })
   })
 }
 
