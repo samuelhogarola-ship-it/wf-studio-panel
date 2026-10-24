@@ -3,6 +3,7 @@
 import { useActionState } from 'react'
 import { sendRequestAction, type MessageFormState } from '@/lib/actions/messages'
 import { FormMessage } from '@/components/ui/form-message'
+import { SUPPORT_READ_ONLY_MESSAGE } from '@/lib/support/read-only'
 
 const initial: MessageFormState = {}
 
@@ -11,7 +12,7 @@ const SERVICE_TYPES = [
   'Mantenimiento', 'Consultoría', 'Otro',
 ]
 
-export function RequestForm({ type }: { type: 'solicitud_servicio' | 'solicitud_bono' }) {
+export function RequestForm({ type, readOnly = false }: { type: 'solicitud_servicio' | 'solicitud_bono'; readOnly?: boolean }) {
   const [state, action, pending] = useActionState(sendRequestAction, initial)
 
   return (
@@ -20,8 +21,9 @@ export function RequestForm({ type }: { type: 'solicitud_servicio' | 'solicitud_
 
       {type === 'solicitud_servicio' && (
         <div className="grid gap-1.5">
-          <label className="text-sm font-semibold text-foreground">Tipo de servicio</label>
+          <label htmlFor="request-service-type" className="text-sm font-semibold text-foreground">Tipo de servicio</label>
           <select
+            id="request-service-type"
             name="subject"
             required
             className="rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:bg-white"
@@ -36,8 +38,9 @@ export function RequestForm({ type }: { type: 'solicitud_servicio' | 'solicitud_
 
       {type === 'solicitud_bono' && (
         <div className="grid gap-1.5">
-          <label className="text-sm font-semibold text-foreground">Horas aproximadas</label>
+          <label htmlFor="request-bonus-type" className="text-sm font-semibold text-foreground">Horas aproximadas</label>
           <select
+            id="request-bonus-type"
             name="subject"
             required
             className="rounded-lg border border-line bg-slate-50 px-3 py-2 text-sm text-foreground outline-none focus:border-brand focus:bg-white"
@@ -51,8 +54,9 @@ export function RequestForm({ type }: { type: 'solicitud_servicio' | 'solicitud_
       )}
 
       <div className="grid gap-1.5">
-        <label className="text-sm font-semibold text-foreground">Descripción / detalles</label>
+        <label htmlFor="request-body" className="text-sm font-semibold text-foreground">Descripción / detalles</label>
         <textarea
+          id="request-body"
           name="body"
           required
           rows={4}
@@ -62,11 +66,12 @@ export function RequestForm({ type }: { type: 'solicitud_servicio' | 'solicitud_
       </div>
 
       {(state.error || state.success) && <FormMessage error={state.error} success={state.success} />}
+      {readOnly && <p className="text-sm font-semibold text-amber-700">{SUPPORT_READ_ONLY_MESSAGE}</p>}
 
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || readOnly}
           className="rounded-full bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition disabled:opacity-50"
         >
           {pending ? 'Enviando…' : 'Enviar solicitud'}

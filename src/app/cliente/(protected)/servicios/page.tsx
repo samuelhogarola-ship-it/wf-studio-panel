@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { requireClientAccess } from '@/lib/auth'
+import { requirePortalViewer } from '@/lib/support/portal-viewer'
 import { getClientServicesData } from '@/lib/data/client'
 import { RequestForm } from '@/components/client/request-form'
 import { formatDate, formatDuration } from '@/lib/utils'
@@ -224,7 +224,7 @@ export default async function ClientServiciosPage({
 }: {
   searchParams: Promise<{ new?: string; open?: string }>
 }) {
-  const identity = await requireClientAccess()
+  const identity = await requirePortalViewer()
   const [params, data] = await Promise.all([searchParams, getClientServicesData(identity.client.id)])
   const showForm = params.new === '1'
   const openId = params.open ?? null
@@ -260,7 +260,7 @@ export default async function ClientServiciosPage({
               className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 text-lg leading-none"
             >×</Link>
           </div>
-          <RequestForm type="solicitud_servicio" />
+          <RequestForm type="solicitud_servicio" readOnly={identity.mode === 'support'} />
         </div>
       )}
 

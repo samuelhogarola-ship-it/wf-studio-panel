@@ -1,4 +1,5 @@
 const API_BASE = "https://api.github.com";
+import { sanitizeHtml } from "./sanitize.mjs";
 const SITE_REPOSITORY = "samuelhogarola-ship-it/sportmassage";
 const SUPPORTED_LANGUAGES = new Set(["en", "es", "fi"]);
 const DEEPL_LANGUAGES = { en: "EN-GB", es: "ES", fi: "FI" };
@@ -67,7 +68,7 @@ export function buildPostHtml(meta, body) {
   const description = escapeHtml(meta.description || "");
   const lang = escapeHtml(normalizeBlogLanguage(meta.lang || "en"));
   const author = escapeHtml(meta.author || "Sport Massage Fuengirola");
-  const articleBody = meta.content_format === "html" ? String(body || "") : `<p>${escapeHtml(body || "")}</p>`;
+  const articleBody = meta.content_format === "html" ? sanitizeHtml(body) : `<p>${escapeHtml(body || "")}</p>`;
   const canonical = `https://sportmassagefuengirola.com/blog/${encodeURIComponent(meta.slug)}/`;
   const tagMarkup = tags(meta.tags).map((tag) => `<span>${escapeHtml(tag)}</span>`).join(" ");
 
@@ -199,7 +200,8 @@ export async function publishBloggerPost(meta, body) {
   const sourcePath = `blog-posts/${meta.slug}.md`;
   const htmlPath = `blog/${meta.slug}/index.html`;
   const indexPath = "blog/index.html";
-  const markdown = `---\ntitle: ${meta.title}\nslug: ${meta.slug}\ndescription: ${meta.description}\ndate: ${meta.date}\nauthor: ${meta.author}\nlang: ${meta.lang}\ntags: ${tags(meta.tags).join(", ")}\nstatus: published\ncontent_format: ${meta.content_format || "html"}\n---\n\n${body}\n`;
+  const safeBody = meta.content_format === "html" ? sanitizeHtml(body) : String(body || "");
+  const markdown = `---\ntitle: ${meta.title}\nslug: ${meta.slug}\ndescription: ${meta.description}\ndate: ${meta.date}\nauthor: ${meta.author}\nlang: ${meta.lang}\ntags: ${tags(meta.tags).join(", ")}\nstatus: published\ncontent_format: ${meta.content_format || "html"}\n---\n\n${safeBody}\n`;
   const [source, html, index] = await Promise.all([
     readFile(repository, branch, sourcePath),
     readFile(repository, branch, htmlPath),
@@ -207,9 +209,9 @@ export async function publishBloggerPost(meta, body) {
   ]);
   const sourceLanguage = normalizeBlogLanguage(meta.lang || "en");
   const publishLanguages = normalizePublicationLanguages(meta.publish_languages);
-  const variants = await Promise.all(publishLanguages.map(async (language) => ({ language, body: language === sourceLanguage ? body : await translateHtml(body, sourceLanguage, language) })));
+  const variants = await Promise.all(publishLanguages.map(async (language) => ({ language, body: language === sourceLanguage ? safeBody : await translateHtml(safeBody, sourceLanguage, language) })));
   await writeFile(repository, branch, sourcePath, markdown, `blog: save ${meta.slug}`, source?.sha);
-  await writeFile(repository, branch, htmlPath, buildPostHtml({ ...meta, lang: sourceLanguage }, body), `blog: publish ${meta.slug}`, html?.sha);
+  await writeFile(repository, branch, htmlPath, buildPostHtml({ ...meta, lang: sourceLanguage }, safeBody), `blog: publish ${meta.slug}`, html?.sha);
   for (const variant of variants) {
     if (variant.language === sourceLanguage) continue;
     const variantPath = `blog/${meta.slug}/${variant.language}/index.html`;

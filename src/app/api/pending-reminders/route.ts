@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { sendPendingItemReminderEmail } from '@/lib/email'
+import { isAuthorizedCronRequest as isAuthorizedCronRequestValue } from '@/lib/cron/pending-reminders.mjs'
 import { getRequiredServerEnv } from '@/lib/env'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 
@@ -12,15 +13,19 @@ function getCronSecret() {
 
 function isAuthorizedCronRequest(request: Request) {
   const configuredSecret = getCronSecret()
-  if (!configuredSecret) return true
-
-  const authHeader = request.headers.get('authorization')
-  const providedSecret = request.headers.get('x-cron-secret') || new URL(request.url).searchParams.get('secret')
-
-  return authHeader === `Bearer ${configuredSecret}` || providedSecret === configuredSecret
+  return isAuthorizedCronRequestValue({
+    configuredSecret,
+    authorization: request.headers.get('authorization'),
+  })
 }
 
 async function runPendingReminders(request: Request) {
+  if (request.method !== 'POST') {
+    return NextResponse.json({ error: 'Method not allowed' }, { status: 405, headers: { Allow: 'POST' } })
+  }
+  if (!getCronSecret()) {
+    return NextResponse.json({ error: 'Cron is not configured' }, { status: 503 })
+  }
   if (!isAuthorizedCronRequest(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -37,7 +42,7 @@ async function runPendingReminders(request: Request) {
     .lte('next_reminder_at', today)
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'Unable to load pending reminders' }, { status: 500 })
   }
 
   let sent = 0
@@ -72,10 +77,6 @@ async function runPendingReminders(request: Request) {
   }
 
   return NextResponse.json({ ok: true, processed: dueItems?.length ?? 0, sent, appUrl: getRequiredServerEnv('NEXT_PUBLIC_APP_URL') })
-}
-
-export async function GET(request: Request) {
-  return runPendingReminders(request)
 }
 
 export async function POST(request: Request) {

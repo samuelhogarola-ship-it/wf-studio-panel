@@ -4,14 +4,14 @@ const labels = {
   es: {
     dashboard: 'Inicio', projects: 'Webs', informes: 'Informes', actualizaciones: 'Actualizaciones',
     fotografias: 'Fotografías', servicios: 'Servicios', pendientes: 'Pendientes',
-    facturas: 'Facturas', historial: 'Historial', mensajeria: 'Mensajería',
+    facturas: 'Facturas', pagos: 'Pagos', historial: 'Historial', mensajeria: 'Mensajería',
     bonos: 'Bonos', packs: 'Packs', products: 'Productos', domains: 'Dominios',
     hosting: 'Hosting', blogger: 'Blogger', analytics: 'Estadísticas',
   },
   en: {
     dashboard: 'Home', projects: 'Websites', informes: 'Reports', actualizaciones: 'Updates',
     fotografias: 'Photos', servicios: 'Services', pendientes: 'Pending',
-    facturas: 'Invoices', historial: 'History', mensajeria: 'Messages',
+    facturas: 'Invoices', pagos: 'Payments', historial: 'History', mensajeria: 'Messages',
     bonos: 'Hours', packs: 'Packs', products: 'Products', domains: 'Domains',
     hosting: 'Hosting', blogger: 'Blogger', analytics: 'Statistics',
   },
@@ -31,7 +31,7 @@ export function buildPortalNavigation({ mode, projects = [], locale = 'es' }) {
   }));
   const keys = ['dashboard', 'projects', 'informes', 'actualizaciones', 'fotografias', 'servicios'];
   if (projectTools.some(tools => tools.some(tool => tool.id === 'reports'))) keys.push('bonos', 'packs');
-  keys.push('pendientes', 'facturas', 'historial', 'mensajeria');
+  keys.push('pendientes', 'facturas', 'pagos', 'historial', 'mensajeria');
   const items = keys.map(accountItem);
   return freeze(items);
 }

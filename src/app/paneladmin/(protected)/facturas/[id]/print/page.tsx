@@ -98,16 +98,16 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         {/* Client info */}
         <div style={{ marginBottom: '32px' }}>
           <p style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '10px' }}>{t(locale, 'print.billTo')}</p>
-          <p style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>{invoice.clients?.company?.split('\n')[0] ?? invoice.clients?.name ?? '—'}</p>
-          {invoice.clients?.company ? (
+          <p style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>{invoice.recipient_company?.split('\n')[0] ?? invoice.recipient_name ?? invoice.clients?.company?.split('\n')[0] ?? invoice.clients?.name ?? '—'}</p>
+          {invoice.recipient_company ? (
             <div style={{ marginTop: '4px' }}>
-              {invoice.clients.company.split('\n').slice(1).map((line) => (
+              {invoice.recipient_company.split('\n').slice(1).map((line) => (
                 <p key={line} style={{ fontSize: '14px', color: '#767676', margin: '3px 0 0', lineHeight: '1.5' }}>{line}</p>
               ))}
             </div>
           ) : null}
-          {!invoice.clients?.company && invoice.clients?.email ? (
-            <p style={{ fontSize: '14px', color: '#767676', marginTop: '4px' }}>{invoice.clients.email}</p>
+          {!invoice.recipient_company && (invoice.recipient_email || invoice.clients?.email) ? (
+            <p style={{ fontSize: '14px', color: '#767676', marginTop: '4px' }}>{invoice.recipient_email ?? invoice.clients?.email}</p>
           ) : null}
         </div>
 

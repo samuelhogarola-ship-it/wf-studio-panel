@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { requireAdmin } from '@/lib/auth'
+import { invoiceDraftSchema, parseStripePaymentLink } from '@/lib/payments/schema'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type InvoiceFormState = {
@@ -14,48 +15,46 @@ export async function createInvoiceAction(prevState: InvoiceFormState, formData:
   await requireAdmin()
   const supabase = await createSupabaseServerClient()
 
-  const client_id = String(formData.get('client_id') ?? '')
-  const concept = String(formData.get('concept') ?? '').trim()
-  const amountRaw = formData.get('amount')
-  const payment_method = String(formData.get('payment_method') ?? '')
-  const notes = String(formData.get('notes') ?? '').trim() || null
-  const issued_at = String(formData.get('issued_at') ?? '') || new Date().toISOString().slice(0, 10)
-
-  if (!client_id || !concept || !amountRaw || !payment_method) {
-    return { error: 'Rellena todos los campos obligatorios.' }
+  const clientId = String(formData.get('client_id') ?? '').trim() || null
+  let recipient = { clientId, name: String(formData.get('recipient_name') ?? '').trim(), email: String(formData.get('recipient_email') ?? '').trim(), company: String(formData.get('recipient_company') ?? '').trim() || null }
+  if (clientId) {
+    const { data: client, error } = await supabase.from('clients').select('id, name, email, company, project, status').eq('id', clientId).maybeSingle()
+    if (error || !client || client.project !== 'wf-studio' || client.status !== 'active') return { error: 'Cliente no disponible.' }
+    recipient = { clientId: client.id, name: client.name, email: client.email, company: client.company }
   }
-
-  const amount = Number(amountRaw)
-  if (Number.isNaN(amount) || amount <= 0) {
-    return { error: 'El importe debe ser mayor que 0.' }
-  }
-
-  if (!['cash', 'card', 'transfer'].includes(payment_method)) {
-    return { error: 'Método de pago no válido.' }
-  }
-
-  // Get auto-generated invoice number
-  const { data: numberData, error: rpcError } = await supabase.rpc('next_invoice_number')
-  if (rpcError || !numberData) {
-    return { error: 'No se pudo generar el número de factura.' }
-  }
-
-  const { error } = await supabase.from('invoices').insert({
-    client_id,
-    number: numberData as string,
-    concept,
-    amount,
-    payment_method: payment_method as 'cash' | 'card' | 'transfer',
-    notes,
-    issued_at,
+  const parsed = invoiceDraftSchema.safeParse({
+    recipient,
+    concept: formData.get('concept'),
+    amount: Number(formData.get('amount')),
+    paymentMethod: formData.get('payment_method'),
+    notes: String(formData.get('notes') ?? '').trim() || null,
+    issuedAt: String(formData.get('issued_at') ?? '').trim() || undefined,
   })
+  if (!parsed.success) return { error: 'Revisa destinatario, concepto e importe.' }
 
-  if (error) {
-    return { error: 'No se pudo crear la factura.' }
-  }
+  const { data, error } = await supabase.rpc('create_invoice_draft', {
+    p_client_id: parsed.data.recipient.clientId,
+    p_recipient_kind: parsed.data.recipient.clientId ? 'registered' : 'external',
+    p_recipient_name: parsed.data.recipient.name,
+    p_recipient_email: parsed.data.recipient.email,
+    p_recipient_company: parsed.data.recipient.company ?? null,
+    p_concept: parsed.data.concept,
+    p_amount: parsed.data.amount,
+    p_payment_method: parsed.data.paymentMethod,
+    p_notes: parsed.data.notes ?? null,
+    p_issued_at: parsed.data.issuedAt ?? new Date().toISOString().slice(0, 10),
+  })
+  const draft = Array.isArray(data) ? data[0] : data
+  if (error || !draft?.id || !draft.number) return { error: 'No se pudo crear la factura.' }
+  const paymentUrl = formData.get('payment_url')
+  const link = paymentUrl ? parseStripePaymentLink(paymentUrl) : { success: true as const, data: null }
+  if (!link.success) return { error: 'El enlace de pago debe ser un enlace Stripe HTTPS válido.' }
+  const { error: issueError } = await supabase.rpc('issue_invoice_with_payment_link', { p_invoice_id: draft.id, p_payment_url: link.data })
+  if (issueError) return { error: 'No se pudo emitir la factura.' }
 
   revalidatePath('/paneladmin/facturas')
-  return { success: `Factura ${numberData} creada correctamente.` }
+  revalidatePath('/cliente/facturas')
+  return { success: `Factura ${draft.number} creada correctamente.` }
 }
 
 export async function markInvoicePaidAction(formData: FormData) {
@@ -65,22 +64,13 @@ export async function markInvoicePaidAction(formData: FormData) {
   const id = String(formData.get('id') ?? '')
   if (!id) return
 
-  await supabase
-    .from('invoices')
-    .update({ status: 'paid', paid_at: new Date().toISOString().slice(0, 10) })
-    .eq('id', id)
+  const { data, error } = await supabase.rpc('mark_invoice_paid', { p_invoice_id: id })
+  if (error || !data) return
 
   revalidatePath('/paneladmin/facturas')
+  revalidatePath('/cliente/facturas')
 }
 
-export async function deleteInvoiceAction(formData: FormData) {
+export async function deleteInvoiceAction() {
   await requireAdmin()
-  const supabase = await createSupabaseServerClient()
-
-  const id = String(formData.get('id') ?? '')
-  if (!id) return
-
-  await supabase.from('invoices').delete().eq('id', id)
-
-  revalidatePath('/paneladmin/facturas')
 }

@@ -168,3 +168,45 @@ test('dashboard reports the exact unread total beyond its five-message preview',
   assert.equal(messageCalls.length, 2)
   assert.ok(messageCalls.some((call) => call.columns === 'id'))
 })
+
+test('rendering received messages preserves unread state in support but marks it read for a real client', async () => {
+  const unread = {
+    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    subject: 'Pendiente de leer',
+    body: 'Contenido',
+    direction: 'inbound',
+    type: 'message',
+    read_at: null,
+    reply_to_id: null,
+    created_at: '2026-10-23T10:00:00.000Z',
+  }
+  for (const mode of ['support', 'client']) {
+    const calls = []
+    const composerProps = []
+    const Page = loadProjectModule('src/app/cliente/(protected)/mensajeria/page.tsx', {
+      '@/lib/support/portal-viewer': {
+        requirePortalViewer: async () => ({
+          mode,
+          identity: { userId: mode === 'client' ? 'client-user' : 'admin-user', email: client.email, role: mode === 'client' ? 'client' : 'admin', client },
+          client,
+        }),
+      },
+      '@/lib/data/client': {
+        getClientMessages: async () => [structuredClone(unread)],
+        getClientPendingItems: async () => [],
+        markClientInboundMessagesRead: async (resolvedClientId, ids) => {
+          calls.push({ resolvedClientId, ids })
+          return '2026-10-23T10:01:00.000Z'
+        },
+      },
+      '@/components/client/message-composer': { MessageComposer: props => { composerProps.push(props); return React.createElement('form') } },
+    }).default
+
+    const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ tab: 'recibidos', new: '1' }) }))
+
+    assert.match(html, /Pendiente de leer/)
+    assert.deepEqual(calls, mode === 'client' ? [{ resolvedClientId: clientId, ids: [unread.id] }] : [])
+    assert.equal(html.includes('bg-brand/5'), mode === 'support')
+    assert.equal(composerProps[0].readOnly, mode === 'support')
+  }
+})

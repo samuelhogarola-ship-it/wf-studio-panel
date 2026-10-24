@@ -348,7 +348,7 @@ test('analytics project registry covers every WF Panel project and explains miss
   const agama = getAnalyticsProject('agama', {})
   assert.equal(agama.websiteId, undefined)
   assert.equal(agama.websiteIdEnv, 'UMAMI_WEBSITE_ID_AGAMA')
-  assert.equal(agama.label, 'aGama')
+  assert.equal(agama.label, 'Agama')
   assert.equal(agama.domain, 'agama.com.mx')
 
   const todoPlastico = getAnalyticsProject('todoplastico', {})

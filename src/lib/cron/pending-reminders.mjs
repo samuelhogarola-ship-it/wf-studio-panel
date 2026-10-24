@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 function errorMessage(error) {
   return error instanceof Error ? error.message : String(error);
 }
@@ -5,13 +7,14 @@ function errorMessage(error) {
 export function isAuthorizedCronRequest({
   configuredSecret,
   authorization,
-  headerSecret,
 }) {
   if (!configuredSecret) return false;
-  return (
-    authorization === `Bearer ${configuredSecret}` ||
-    headerSecret === configuredSecret
-  );
+  const provided = typeof authorization === "string" && authorization.startsWith("Bearer ")
+    ? authorization.slice("Bearer ".length)
+    : "";
+  const expected = Buffer.from(String(configuredSecret));
+  const actual = Buffer.from(provided);
+  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
 }
 
 export async function processPendingReminders({

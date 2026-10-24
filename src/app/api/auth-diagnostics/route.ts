@@ -1,8 +1,18 @@
 import { NextResponse } from 'next/server'
+import { getOptionalIdentity } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
+  if (process.env.AUTH_DIAGNOSTICS_ENABLED !== 'true') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  const identity = await getOptionalIdentity()
+  if (identity?.role !== 'admin') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? null
   const publicKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim() ?? null
 

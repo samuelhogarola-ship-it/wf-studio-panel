@@ -180,7 +180,7 @@ with seed(slug, name, domain) as (values
   ('conocef', 'Conoce Fuengirola', 'conocefuengirola.com'),
   ('topfuengirola', 'Top Fuengirola', 'topfuengirola.com'),
   ('samuelcoachdealeman', 'Samuel Coach de Alemán', 'samuelcoachdealeman.com'),
-  ('agama', 'aGama', 'agama.com.mx'),
+  ('agama', 'Agama', 'agama.com.mx'),
   ('vikingfitness', 'Viking Fitness', 'vikingfitness.es'),
   ('personaltrainerfuengirola', 'Personal Trainer Fuengirola', 'personaltrainerfuengirola.com'),
   ('gimnasionuevoestilo', 'Gimnasio Nuevo Estilo', 'gimnasionuevoestilo.com'),

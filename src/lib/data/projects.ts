@@ -2,8 +2,9 @@ import 'server-only'
 
 import { z } from 'zod'
 import { cache } from 'react'
-import { requireAdmin, requireClientAccess } from '@/lib/auth'
+import { requireAdmin } from '@/lib/auth'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { requirePortalViewer } from '@/lib/support/portal-viewer'
 import type { CapabilityKey, Tables } from '@/lib/supabase/types'
 import { validateProjectDestination } from '@/lib/projects/model.mjs'
 import { buildPortalNavigation } from '@/lib/projects/portal-navigation.mjs'
@@ -77,7 +78,7 @@ export function getProjectWarnings(project: ProjectWithCapabilities): ProjectWar
 }
 
 async function loadProjects(db: SessionDatabase, clientId?: string, clientOnly = false): Promise<ProjectWithCapabilities[]> {
-  let query = db.from('client_projects').select('*').order('name')
+  let query = db.from('client_projects').select('*').order('name').limit(100)
   if (clientId) query = query.eq('client_id', clientId)
   if (clientOnly) query = query.eq('status', 'active').eq('client_access_enabled', true)
   const { data: projects, error } = await query
@@ -92,7 +93,7 @@ async function loadProjects(db: SessionDatabase, clientId?: string, clientOnly =
 }
 
 async function loadClients(db: SessionDatabase): Promise<ProjectClient[]> {
-  const { data, error } = await db.from('clients').select('id, name, email, status, project, portal_mode').eq('project', 'wf-studio').order('name')
+  const { data, error } = await db.from('clients').select('id, name, email, status, project, portal_mode').eq('project', 'wf-studio').order('name').limit(500)
   if (error) throw new Error('No se pudieron cargar los clientes.')
   return data ?? []
 }
@@ -186,17 +187,26 @@ export async function getAdminProject(id: string, locale: Locale = 'es') {
 
 /** Request-scoped only: layout, guards and project resolution share authorized reads. */
 const loadClientPortalData = cache(async () => {
-  const identity = await requireClientAccess()
+  const viewer = await requirePortalViewer()
   const db = await createSupabaseServerClient()
-  const projects = await loadProjects(db, identity.client.id, true)
-  const mode = identity.client.portal_mode
-  return { ...identity, mode, projects }
+  const projects = await loadProjects(db, viewer.client.id, true)
+  return { viewer, projects }
 })
 
 /** No service role and no caller-supplied client ID: session RLS is authoritative. */
 export async function getClientPortalContext(locale: Locale = 'es') {
-  const { mode, projects, ...identity } = await loadClientPortalData()
-  return { ...identity, mode, projects, navigation: buildPortalNavigation({ mode, projects, locale }) }
+  const { viewer, projects } = await loadClientPortalData()
+  const mode = viewer.client.portal_mode
+  return {
+    client: viewer.client,
+    mode,
+    projects,
+    navigation: buildPortalNavigation({ mode, projects, locale }),
+    viewerMode: viewer.mode,
+    supportSessionId: viewer.mode === 'support' ? viewer.supportSessionId : null,
+    supportExpiresAt: viewer.mode === 'support' ? viewer.expiresAt : null,
+    returnPath: viewer.mode === 'support' ? viewer.returnPath : null,
+  }
 }
 
 export async function getAccessibleClientProject(slug: string) {

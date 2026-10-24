@@ -51,7 +51,7 @@ export default async function ClientBonosPage({
               ×
             </Link>
           </div>
-          <RequestForm type="solicitud_bono" />
+          <RequestForm type="solicitud_bono" readOnly={identity.mode === 'support'} />
         </div>
       )}
 

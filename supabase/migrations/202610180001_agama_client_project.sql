@@ -2,7 +2,7 @@ begin;
 
 with inserted_project as (
   insert into public.client_projects (slug, name, domain, analytics_registry_key)
-  select 'agama', 'aGama', 'agama.com.mx', 'agama'
+  select 'agama', 'Agama', 'agama.com.mx', 'agama'
   where not exists (
     select 1
     from public.client_projects p

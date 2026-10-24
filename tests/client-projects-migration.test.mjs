@@ -7,6 +7,7 @@ const migrationUrl = new URL('supabase/migrations/202610170002_client_portal_pla
 const agamaForwardMigrationUrl = new URL('supabase/migrations/202610180001_agama_client_project.sql', root)
 const productTierMigrationUrl = new URL('supabase/migrations/202610220001_client_project_product_tier.sql', root)
 const angelAssignmentMigrationUrl = new URL('supabase/migrations/202610220002_angel_agama_todoplastico_projects.sql', root)
+const agamaNameMigrationUrl = new URL('supabase/migrations/202610230004_agama_project_name.sql', root)
 const sql = () => readFile(migrationUrl, 'utf8').catch(error => {
   assert.fail(`Client portal migration must exist (${error.code})`)
 })
@@ -105,12 +106,12 @@ test('registry seed is idempotent for either identity and never activates Blogge
   assert.doesNotMatch(source, /update public\.clients/i)
 })
 
-test('aGama forward migration inserts only an absent unassigned project and preserves existing ownership', async () => {
+test('Agama forward migration inserts only an absent unassigned project and preserves existing ownership', async () => {
   const source = await readFile(agamaForwardMigrationUrl, 'utf8')
   const inserted = source.match(/with inserted_project as \(([\s\S]*?)\),\s*capability_keys/i)?.[1]
   assert.ok(inserted, 'forward migration must retain the newly inserted project id')
   assert.match(inserted, /insert into public\.client_projects \(slug, name, domain, analytics_registry_key\)/i)
-  assert.match(inserted, /select 'agama', 'aGama', 'agama\.com\.mx', 'agama'/)
+  assert.match(inserted, /select 'agama', 'Agama', 'agama\.com\.mx', 'agama'/)
   assert.match(inserted, /where not exists \([\s\S]*?lower\(btrim\(p\.slug\)\) = 'agama'[\s\S]*?lower\(btrim\(p\.domain\)\) = 'agama\.com\.mx'/i)
   assert.match(inserted, /on conflict do nothing/i)
   assert.match(inserted, /returning id/)
@@ -129,6 +130,19 @@ test('aGama forward migration never downgrades or overwrites configured capabili
   assert.match(capabilityInsert, /public\.project_capabilities\.validated_at is null/i)
   assert.doesNotMatch(capabilityInsert, /set\s+(?:launch_url|metadata|validated_at)\s*=/i)
   assert.doesNotMatch(capabilityInsert, /set state = '(?:unavailable|active)'/i)
+})
+
+test('Agama name repair updates only the exact existing project identity', async () => {
+  const source = await readFile(agamaNameMigrationUrl, 'utf8').catch(error => {
+    assert.fail(`Agama name repair migration must exist (${error.code})`)
+  })
+
+  assert.match(source, /^begin;[\s\S]*commit;\s*$/i)
+  assert.match(source, /update public\.client_projects\s+set name = 'Agama'/i)
+  assert.match(source, /lower\(btrim\(slug\)\) = 'agama'/i)
+  assert.match(source, /lower\(btrim\(domain\)\) = 'agama\.com\.mx'/i)
+  assert.match(source, /name is distinct from 'Agama'/i)
+  assert.doesNotMatch(source, /(?:insert into|update|delete from) public\.(?:clients|invoices|packs|services|project_capabilities)\b/i)
 })
 
 test('Supabase types expose project and capability rows, relationships, exact unions and immutable audit writes', async () => {

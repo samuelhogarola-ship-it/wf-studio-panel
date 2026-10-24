@@ -878,8 +878,8 @@ function renderPreview() {
       : markdownPreview(fields.body.value);
   if (!visualEditor.innerHTML || editorViews.visual.hidden)
     visualEditor.innerHTML = html;
-  preview.innerHTML = html;
-  mainPreview.innerHTML = html;
+  preview.srcdoc = html;
+  mainPreview.srcdoc = html;
   htmlView.textContent = html;
 }
 

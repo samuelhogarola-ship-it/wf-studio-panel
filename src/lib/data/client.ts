@@ -10,15 +10,17 @@ export const getClientServicesData = cache(async (clientId: string) => {
       .from('packs')
       .select('id, name, pack_type, status, purchase_date, price, notes, minutes_total, renewal_date, paid, billing_cycle')
       .eq('client_id', clientId)
-      .order('purchase_date', { ascending: false }),
+      .order('purchase_date', { ascending: false })
+      .limit(100),
     supabase
       .from('activities')
       .select('id, title, activity_type, minutes_used, work_date, pack_id')
       .eq('client_id', clientId)
-      .order('work_date', { ascending: false }),
+      .order('work_date', { ascending: false })
+      .limit(200),
     supabase
       .from('pack_summary')
-      .select('pack_id, used_minutes, remaining_minutes, minutes_total'),
+      .select('pack_id, used_minutes, remaining_minutes, minutes_total').limit(200),
   ])
 
   const actsByPack = new Map<string, typeof activities>()
@@ -46,8 +48,8 @@ export const getClientBonosData = cache(async (clientId: string) => {
       .select('id, name, minutes_total, status, purchase_date, renewal_date')
       .eq('client_id', clientId)
       .eq('pack_type', 'hours')
-      .order('purchase_date', { ascending: false }),
-    supabase.from('pack_summary').select('pack_id, used_minutes, remaining_minutes'),
+      .order('purchase_date', { ascending: false }).limit(100),
+    supabase.from('pack_summary').select('pack_id, used_minutes, remaining_minutes').limit(200),
   ])
   const summaryMap = new Map((summaries ?? []).map((s) => [s.pack_id, s]))
   return { packs: packs ?? [], summaryMap }
@@ -73,17 +75,17 @@ export const getClientDashboardData = cache(async (clientId: string) => {
       .eq('client_id', clientId)
       .eq('pack_type', 'hours')
       .eq('status', 'active')
-      .order('purchase_date', { ascending: false }),
+      .order('purchase_date', { ascending: false }).limit(100),
     supabase
       .from('packs')
       .select('id, name, pack_type, renewal_date, notes, status')
       .eq('client_id', clientId)
       .neq('pack_type', 'hours')
       .eq('status', 'active')
-      .order('purchase_date', { ascending: false }),
+      .order('purchase_date', { ascending: false }).limit(100),
     supabase
       .from('pack_summary')
-      .select('pack_id, minutes_total, used_minutes, remaining_minutes'),
+      .select('pack_id, minutes_total, used_minutes, remaining_minutes').limit(200),
     supabase
       .from('activities')
       .select('id, title, description, minutes_used, work_date, activity_type, packs(name)')
@@ -101,7 +103,7 @@ export const getClientDashboardData = cache(async (clientId: string) => {
       .select('id, title, status')
       .eq('client_id', clientId)
       .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true }),
+      .order('created_at', { ascending: true }).limit(100),
     supabase
       .from('messages')
       .select('id, subject, direction, type, read_at, created_at')
@@ -149,6 +151,7 @@ export const getClientPendingItems = cache(async (clientId: string) => {
     .eq('client_id', clientId)
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true })
+    .limit(100)
 
   return data ?? []
 })
@@ -160,6 +163,7 @@ export const getClientFacturasData = cache(async (clientId: string) => {
     .select('id, number, concept, amount, payment_method, status, notes, issued_at, paid_at, created_at')
     .eq('client_id', clientId)
     .order('issued_at', { ascending: false })
+    .limit(100)
   return data ?? []
 })
 
@@ -196,22 +200,17 @@ export const getClientMessages = async (clientId: string) => {
     .select('id, subject, body, direction, type, read_at, reply_to_id, created_at')
     .eq('client_id', clientId)
     .order('created_at', { ascending: false })
+    .limit(100)
   return data ?? []
 }
 
-export const markClientInboundMessagesRead = async (clientId: string, messageIds: string[]) => {
+export const markClientInboundMessagesRead = async (_clientId: string, messageIds: string[]) => {
   if (messageIds.length === 0) return null
 
   const supabase = await createSupabaseServerClient()
   const readAt = new Date().toISOString()
 
-  await supabase
-    .from('messages')
-    .update({ read_at: readAt })
-    .eq('client_id', clientId)
-    .eq('direction', 'inbound')
-    .in('id', messageIds)
-    .is('read_at', null)
+  await Promise.all(messageIds.map((messageId) => supabase.rpc('mark_message_read', { p_message_id: messageId })))
 
   return readAt
 }

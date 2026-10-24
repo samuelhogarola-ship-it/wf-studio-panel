@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { AdminShell } from '@/components/layout/app-shell'
 
 const supabase = createClient(
   'https://hocdlmxzghwymamientc.supabase.co',
@@ -89,12 +90,13 @@ export default function PremiumCodesPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <AdminShell title="Gestión de Códigos Premium" description="Genera, cancela y monitorea códigos de acceso premium para alumnos" currentPath="/paneladmin/samuel-coach/premium" userEmail="admin" locale="es">
+    <div className="max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold mb-2">Gestión de Códigos Premium</h1>
       <p className="text-gray-600 mb-6">Genera, cancela y monitorea códigos de acceso premium para alumnos</p>
 
       {message && (
-        <div className={`mb-4 p-4 rounded border ${
+        <div role={message.startsWith('✅') ? 'status' : 'alert'} aria-live={message.startsWith('✅') ? 'polite' : 'assertive'} className={`mb-4 p-4 rounded border ${
           message.startsWith('✅')
             ? 'bg-green-50 border-green-300 text-green-800'
             : 'bg-red-50 border-red-300 text-red-800'
@@ -107,8 +109,9 @@ export default function PremiumCodesPage() {
         <h2 className="text-lg font-semibold mb-4">Generar Nuevo Código</h2>
         <form onSubmit={generateCode} className="flex gap-3 flex-wrap items-end">
           <div>
-            <label className="block text-sm font-medium mb-1">Email del alumno</label>
+            <label htmlFor="premium-email" className="block text-sm font-medium mb-1">Email del alumno</label>
             <input
+              id="premium-email"
               type="email"
               placeholder="alumno@example.com"
               value={form.email}
@@ -118,8 +121,9 @@ export default function PremiumCodesPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Duración</label>
+            <label htmlFor="premium-duration" className="block text-sm font-medium mb-1">Duración</label>
             <select
+              id="premium-duration"
               value={form.duration}
               onChange={(e) => setForm({...form, duration: e.target.value})}
               className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -216,5 +220,6 @@ export default function PremiumCodesPage() {
         )}
       </div>
     </div>
+    </AdminShell>
   )
 }

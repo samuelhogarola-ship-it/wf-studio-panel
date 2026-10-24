@@ -99,6 +99,10 @@ export function buildCanonicalClientCallbackUrl(value) {
   return callbackUrl;
 }
 
+export function buildCanonicalResetCallbackUrl() {
+  return new URL("/auth/callback/reset", PORTAL_ORIGIN);
+}
+
 export function buildCanonicalAppUrl(appUrl, path = "/") {
   if (typeof appUrl !== "string" || appUrl.trim().length === 0) {
     throw new Error("Missing canonical app URL");
@@ -118,6 +122,7 @@ export function resolveRequestOrigin({
   forwardedProto,
   requestOrigin,
   fallbackOrigin,
+  allowedHosts = ["admin.webfuengirola.com", "portal.webfuengirola.com"],
 }) {
   const normalizedHost =
     typeof forwardedHost === "string"
@@ -128,7 +133,7 @@ export function resolveRequestOrigin({
       ? forwardedProto.split(",")[0]?.trim()
       : "";
 
-  if (normalizedHost) {
+  if (normalizedHost && allowedHosts.includes(normalizedHost)) {
     return `${normalizedProto || "https"}://${normalizedHost}`;
   }
 

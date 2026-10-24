@@ -5,6 +5,7 @@ import { getClientPendingItems, getClientFacturasData, getClientServicesData } f
 import { clientPortalTranslations, projectTranslations } from '@/lib/i18n'
 import { getLocale } from '@/lib/locale'
 import { buildProjectTools } from '@/lib/projects/tools.mjs'
+import { ProjectIdentity } from '@/components/projects/project-detail'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,12 +60,10 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-8">
-      <header>
-        {context.projects.length > 1 ? <Link href="/cliente/proyectos" className="text-sm font-semibold text-brand underline">{text.back}</Link> : null}
-        <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-muted">{text.overview}</p>
-        <h1 className="mt-1 text-2xl font-black">{project.name}</h1>
-        <p className="mt-1 break-all text-muted">{project.domain} · {text.active}</p>
-      </header>
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-muted">{text.overview}</p>
+        <ProjectIdentity name={project.name} domain={project.domain} status={text.active} backHref={context.projects.length > 1 ? '/cliente/proyectos' : undefined} backLabel={context.projects.length > 1 ? text.back : undefined} />
+      </div>
 
       <section aria-labelledby="account-heading" className="rounded-2xl border border-line bg-white p-6">
         <h2 id="account-heading" className="font-bold">{text.account}</h2>

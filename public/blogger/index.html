@@ -74,7 +74,7 @@
             </div>
             <div id="visualEditor" class="visual-editor" contenteditable="true" role="textbox" aria-label="Editor visual" spellcheck="true"></div>
             <textarea id="body" class="body-editor" spellcheck="true" hidden></textarea>
-            <article id="mainPreview" class="main-preview" hidden></article>
+            <iframe id="mainPreview" class="main-preview" title="Vista previa principal" sandbox hidden></iframe>
             <pre id="htmlView" class="html-view" hidden></pre>
             <input id="inlineImageUpload" class="visually-hidden" type="file" accept="image/*" />
             <div id="selectionToolbar" class="floating-toolbar selection-toolbar" role="toolbar" aria-label="Formato de la selección" hidden>
@@ -115,7 +115,7 @@
             <div class="preview-header">
               <strong>Vista rapida</strong>
             </div>
-            <article id="preview" class="preview"></article>
+            <iframe id="preview" class="preview" title="Vista previa" sandbox></iframe>
           </aside>
         </section>
       </section>

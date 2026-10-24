@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import ts from 'typescript';
@@ -32,7 +32,7 @@ export function loadProjectModule(relative, overrides = {}) {
       if (specifier in mocks) return mocks[specifier];
       if (specifier.startsWith('@/') || specifier.startsWith('.')) {
         const base = specifier.startsWith('@/') ? path.join(root, 'src', specifier.slice(2)) : path.resolve(path.dirname(filename), specifier);
-        const target = [base, `${base}.ts`, `${base}.tsx`].find(existsSync);
+        const target = [base, `${base}.ts`, `${base}.tsx`].find(candidate => existsSync(candidate) && statSync(candidate).isFile());
         if (target?.endsWith('.ts') || target?.endsWith('.tsx')) return load(target);
         return require(target ?? base);
       }
@@ -57,10 +57,17 @@ export function form(values) {
   return data;
 }
 
-export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
+export function database(seed = {}, failures = {}, { beforeExecute, rpcs = {} } = {}) {
   const tables = structuredClone({ admin_project_favorites: [], clients: [client], client_projects: [project], project_capabilities: [capability], project_capability_audit: [], ...seed });
   const calls = [];
-  return { tables, calls, from(table) {
+  return { tables, calls, async rpc(name, args) {
+    const call = { table: `rpc:${name}`, operation: 'rpc', args };
+    calls.push(call);
+    await beforeExecute?.(call);
+    if (failures[name]) return { data: null, error: { message: failures[name] } };
+    if (!rpcs[name]) return { data: null, error: { message: `Unknown RPC: ${name}` } };
+    return rpcs[name]({ args, tables, calls });
+  }, from(table) {
     const call = { table, operation: 'select', filters: [], payload: null };
     calls.push(call);
     let single = false;
@@ -139,8 +146,17 @@ export function database(seed = {}, failures = {}, { beforeExecute } = {}) {
 export function boundary(db, extra = {}) {
   const events = [];
   const identity = { userId: 'admin-id', email: 'admin@example.com' };
+  const clientIdentity = { ...identity, role: 'client', client };
   return { events, mocks: {
-    '@/lib/auth': { requireAdmin: async () => { events.push('admin'); return identity; }, requireClientAccess: async () => ({ ...identity, client }) },
+    '@/lib/auth': {
+      requireAdmin: async () => { events.push('admin'); return identity; },
+      requireClientAccess: async () => clientIdentity,
+      getOptionalIdentity: async () => clientIdentity,
+    },
+    '@/lib/support/portal-viewer': {
+      requirePortalViewer: async () => ({ mode: 'client', identity: clientIdentity, client }),
+      getOptionalSupportViewer: async () => null,
+    },
     '@/lib/supabase/server': { createSupabaseServerClient: async () => { events.push('session-db'); return db; } },
     '@/lib/supabase/admin': { getSupabaseAdminClient() { throw new Error('Service-role access forbidden'); } },
     ...extra,

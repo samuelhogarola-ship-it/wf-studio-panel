@@ -32,5 +32,11 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Production dependency audit
+        run: npm audit --omit=dev
+
+      - name: PostgreSQL support-session security tests
+        run: npm run test:db
+
       - name: Build
         run: npm run build

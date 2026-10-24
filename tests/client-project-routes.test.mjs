@@ -15,13 +15,26 @@ const render = element => renderToStaticMarkup(element);
 
 // Exercise real routes, repositories, navigation and components. Only the session,
 // remote database and Next request/navigation boundaries are replaced.
-function setup({ mode = 'dynamic', projects = [project], capabilities = [], locale = 'es', seed = {}, denied = false, pathname = '/cliente/dashboard', identityRole = 'client', configuredAnalytics = false, configuredBlogger = false, localeRead } = {}) {
+function setup({ mode = 'dynamic', projects = [project], capabilities = [], locale = 'es', seed = {}, denied = false, pathname = '/cliente/dashboard', identityRole = 'client', viewerMode = 'client', configuredAnalytics = false, configuredBlogger = false, localeRead } = {}) {
   const db = database({ client_projects: projects, project_capabilities: capabilities, ...seed });
   const identity = { userId: 'session-client', email: client.email, role: identityRole, client: { ...client, portal_mode: mode } };
+  const supportIdentity = { userId: 'support-admin', email: 'support@example.com', role: 'admin' };
+  const viewer = viewerMode === 'support'
+    ? { mode: 'support', identity: supportIdentity, client: { ...client, portal_mode: mode }, supportSessionId: 'support-session', expiresAt: '2099-10-23T10:15:00.000Z', returnPath: `/paneladmin/clientes/${client.id}` }
+    : { mode: 'client', identity, client: identity.client };
   const mocks = {
     '@/lib/auth': {
-      requireClientAccess: async () => { if (denied) throw new Error('redirect:/cliente'); return identity; },
+      requireClientAccess: async () => {
+        if (denied) throw new Error('redirect:/cliente');
+        if (viewerMode === 'support') throw new Error('ordinary client guard must not authorize support');
+        return identity;
+      },
       getOptionalIdentity: async () => identity,
+    },
+    '@/lib/support/portal-viewer': {
+      requirePortalViewer: async () => { if (denied) throw new Error('redirect:/cliente'); return viewer; },
+      requireClientMutationAccess: async () => { if (viewerMode === 'support') throw new Error('support_readonly'); return viewer; },
+      getOptionalSupportViewer: async () => viewerMode === 'support' ? viewer : null,
     },
     '@/lib/supabase/server': { createSupabaseServerClient: async () => db },
     '@/lib/supabase/admin': { getSupabaseAdminClient: () => db },
@@ -53,6 +66,78 @@ function setup({ mode = 'dynamic', projects = [project], capabilities = [], loca
   const page = (route, props = {}) => load(`${protectedRoot}/${route}/page.tsx`).default({ searchParams: Promise.resolve({}), ...props });
   return { db, load, page, identity };
 }
+
+test('the shared portal loader returns support metadata without the opaque cookie', async () => {
+  const s = setup({ viewerMode: 'support' });
+  const context = await s.load('src/lib/data/projects.ts').getClientPortalContext();
+
+  assert.equal(context.viewerMode, 'support');
+  assert.equal(context.supportSessionId, 'support-session');
+  assert.equal(context.supportExpiresAt, '2099-10-23T10:15:00.000Z');
+  assert.equal(context.returnPath, `/paneladmin/clientes/${client.id}`);
+  assert.equal(context.client.id, client.id);
+  assert.equal(JSON.stringify(context).includes('__Host-wf_support_preview'), false);
+})
+
+test('support layout displays the selected client email without exposing the administrator email', async () => {
+  const s = setup({ viewerMode: 'support' });
+  const context = await s.load('src/lib/data/projects.ts').getClientPortalContext();
+  const Layout = s.load(`${protectedRoot}/layout.tsx`).default;
+  const element = await Layout({ children: 'Support preview' });
+  const html = render(element);
+
+  assert.equal(context.client.email, client.email);
+  assert.equal(context.email, undefined);
+  assert.equal(element.props.clientEmail, client.email);
+  assert.match(html, new RegExp(client.email));
+  assert.doesNotMatch(html, /support@example\.com/);
+})
+
+test('every protected client page resolves through PortalViewer for both clients and support administrators', async () => {
+  const capabilities = [
+    cap('analytics'),
+    cap('blogger', { launch_url: 'https://example.com/admin/blogger/', validated_at: project.created_at, metadata: { provisioning_confirmed: true } }),
+  ];
+  const routes = [
+    'actualizaciones', 'bonos', 'dashboard', 'facturas', 'fotografias', 'historial', 'informes', 'pagos',
+    'mensajeria', 'packs', 'pendientes', 'proyectos', 'servicios',
+  ];
+  for (const viewerMode of ['client', 'support']) {
+    const s = setup({ viewerMode, projects: [{ ...project, analytics_registry_key: 'example' }], capabilities, configuredAnalytics: true, configuredBlogger: true });
+    for (const route of routes) assert.ok(render(await s.page(route)).length > 0, `${viewerMode}: ${route}`);
+    for (const route of ['proyectos/[slug]', 'proyectos/[slug]/estadisticas', 'proyectos/[slug]/blogger']) {
+      assert.ok(render(await s.page(route, { params: Promise.resolve({ slug: project.slug }) })).length > 0, `${viewerMode}: ${route}`);
+    }
+  }
+})
+
+test('support project resolution drops reassigned, inactive, archived and client-hidden projects on the next request', async () => {
+  const visible = { ...project, id: 'visible', slug: 'visible' };
+  const candidates = [
+    visible,
+    { ...project, id: 'reassigned', slug: 'reassigned', client_id: otherClientId },
+    { ...project, id: 'inactive', slug: 'inactive', status: 'inactive' },
+    { ...project, id: 'archived', slug: 'archived', status: 'archived' },
+    { ...project, id: 'hidden', slug: 'hidden', client_access_enabled: false },
+  ];
+  const s = setup({ viewerMode: 'support', projects: candidates });
+
+  const context = await s.load('src/lib/data/projects.ts').getClientPortalContext();
+
+  assert.deepEqual(context.projects.map(candidate => candidate.slug), ['visible']);
+  for (const slug of ['reassigned', 'inactive', 'archived', 'hidden']) {
+    assert.equal(await s.load('src/lib/data/projects.ts').getAccessibleClientProject(slug), null);
+  }
+})
+
+test('an administrator without support is rejected by every protected client page before data reads', async () => {
+  const routes = ['actualizaciones', 'bonos', 'dashboard', 'facturas', 'fotografias', 'historial', 'informes', 'mensajeria', 'pagos', 'packs', 'pendientes', 'proyectos', 'servicios'];
+  for (const route of routes) {
+    const s = setup({ viewerMode: 'support', denied: true });
+    await assert.rejects(() => s.page(route), { message: 'redirect:/cliente' });
+    assert.deepEqual(s.db.calls, []);
+  }
+})
 
 test('entry sends every active client to Inicio and preserves the administrator destination', async () => {
   for (const [options, destination] of [[{ mode: 'legacy' }, '/cliente/dashboard'], [{ mode: 'dynamic' }, '/cliente/dashboard'], [{ identityRole: 'admin' }, '/paneladmin/inicio']]) {
@@ -129,7 +214,7 @@ test('server layout provides identical desktop/mobile actions, labels and access
   const navs = [...html.matchAll(/<nav\b[^>]*>([\s\S]*?)<\/nav>/g)].map(match => match[1]);
   assert.equal(navs.length, 2);
   const actions = nav => [...nav.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/g)].map(match => [match[1], match[2].replace(/<[^>]*>/g, '')]);
-  const expected = [['/cliente/dashboard', 'Inicio'], ['/cliente/proyectos', 'Webs'], ['/cliente/informes', 'Informes'], ['/cliente/actualizaciones', 'Actualizaciones'], ['/cliente/fotografias', 'Fotografías'], ['/cliente/servicios', 'Servicios'], ['/cliente/pendientes', 'Pendientes'], ['/cliente/facturas', 'Facturas'], ['/cliente/historial', 'Historial'], ['/cliente/mensajeria', 'Mensajería']];
+  const expected = [['/cliente/dashboard', 'Inicio'], ['/cliente/proyectos', 'Webs'], ['/cliente/informes', 'Informes'], ['/cliente/actualizaciones', 'Actualizaciones'], ['/cliente/fotografias', 'Fotografías'], ['/cliente/servicios', 'Servicios'], ['/cliente/pendientes', 'Pendientes'], ['/cliente/facturas', 'Facturas'], ['/cliente/pagos', 'Pagos'], ['/cliente/historial', 'Historial'], ['/cliente/mensajeria', 'Mensajería']];
   assert.deepEqual(actions(navs[0]), expected);
   assert.deepEqual(actions(navs[1]), expected);
   assert.equal((html.match(/aria-current="page"/g) ?? []).length, 2);
@@ -139,7 +224,7 @@ test('shell consumes supplied navigation without generating extra actions or dup
   const s = setup({ pathname: '/cliente/proyectos/example' });
   const Shell = s.load('src/components/layout/client-shell.tsx').ClientShell;
   const html = render(React.createElement(Shell, { clientName: 'Ana', clientEmail: client.email, navigation: [{ id: 'one', href: '/cliente/proyectos/example#domains', label: 'Domains · Example' }], children: 'Content' }));
-  assert.equal((html.match(/href="/g) ?? []).length, 2);
+  assert.equal((html.match(/href="\/cliente\//g) ?? []).length, 2);
   assert.equal((html.match(/Domains · Example/g) ?? []).length, 2);
   assert.doesNotMatch(html, /aria-current="page"/);
 });
@@ -148,7 +233,7 @@ test('both historical modes retain the exact universal account navigation on bot
   for (const mode of ['legacy', 'dynamic']) {
     const s = setup({ mode, projects: [] });
     const html = render(await s.load(`${protectedRoot}/layout.tsx`).default({ children: 'Universal' }));
-    for (const href of ['dashboard', 'proyectos', 'informes', 'actualizaciones', 'fotografias', 'servicios', 'pendientes', 'facturas', 'historial', 'mensajeria']) {
+    for (const href of ['dashboard', 'proyectos', 'informes', 'actualizaciones', 'fotografias', 'servicios', 'pendientes', 'facturas', 'pagos', 'historial', 'mensajeria']) {
       assert.equal((html.match(new RegExp(`href="/cliente/${href}"`, 'g')) ?? []).length, 2, `${mode}: ${href}`);
     }
   }

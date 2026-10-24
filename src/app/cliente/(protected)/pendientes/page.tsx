@@ -1,7 +1,8 @@
-import { requireClientAccess } from '@/lib/auth'
+import { requirePortalViewer } from '@/lib/support/portal-viewer'
 import { getClientPendingItems } from '@/lib/data/client'
 import { formatDate } from '@/lib/utils'
 import Link from 'next/link'
+import { SUPPORT_READ_ONLY_MESSAGE } from '@/lib/support/read-only'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,7 +23,7 @@ function getPendingStatusMeta(status: string) {
 }
 
 export default async function ClientPendingItemsPage() {
-  const identity = await requireClientAccess()
+  const identity = await requirePortalViewer()
   const items = await getClientPendingItems(identity.client.id)
   const pendingCount = items.filter((item) => item.status === 'pending').length
 
@@ -69,12 +70,21 @@ export default async function ClientPendingItemsPage() {
                   {item.description ? <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.description}</p> : null}
                   {item.status === 'pending' ? (
                     <div className="mt-5">
-                      <Link
-                        href={`/cliente/mensajeria?new=1&pending=${item.id}`}
-                        className="inline-flex rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition"
-                      >
-                        Enviar este dato
-                      </Link>
+                      {identity.mode === 'support' ? (
+                        <div className="space-y-2">
+                          <span aria-disabled="true" className="inline-flex cursor-not-allowed rounded-full bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-500">
+                            Enviar este dato
+                          </span>
+                          <p className="text-sm font-semibold text-amber-700">{SUPPORT_READ_ONLY_MESSAGE}</p>
+                        </div>
+                      ) : (
+                        <Link
+                          href={`/cliente/mensajeria?new=1&pending=${item.id}`}
+                          className="inline-flex rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition"
+                        >
+                          Enviar este dato
+                        </Link>
+                      )}
                     </div>
                   ) : null}
                 </div>

@@ -14,6 +14,7 @@ declare module '@/lib/security/redirects.mjs' {
   export function buildCanonicalClientDestinationUrl(value: unknown): URL
   export function buildCanonicalClientLoginUrl(value: unknown, error?: unknown): URL
   export function buildCanonicalClientCallbackUrl(value: unknown): URL
+  export function buildCanonicalResetCallbackUrl(): URL
 
   export function buildCanonicalAppUrl(appUrl: string, path?: string): URL
 
@@ -22,6 +23,7 @@ declare module '@/lib/security/redirects.mjs' {
     forwardedProto?: string | null
     requestOrigin: string
     fallbackOrigin?: string | null
+    allowedHosts?: string[]
   }): string
 
   export function getProtectedArea(pathname: string): ProtectedArea
