@@ -4,21 +4,25 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { type ReactNode } from 'react'
 
-import { type Locale, t } from '@/lib/i18n'
+import { supportPreviewTranslations, type Locale, t } from '@/lib/i18n'
 import type { PortalNavigationItem } from '@/lib/projects/portal-navigation.mjs'
 import { LocaleToggle } from '@/components/layout/locale-toggle'
+import { SupportPreviewBanner } from '@/components/client/support-preview-banner'
+import { endSupportPreviewAction } from '@/lib/actions/support-preview'
 import { cn } from '@/lib/utils'
 
 export function ClientShell({
-  clientName, clientEmail, navigation, locale = 'es', children,
+  clientName, clientEmail, navigation, supportPreview, locale = 'es', children,
 }: {
   clientName: string
   clientEmail: string
   navigation: readonly PortalNavigationItem[]
+  supportPreview?: { expiresAt: string; returnPath: string }
   locale?: Locale
   children: ReactNode
 }) {
   const pathname = usePathname()
+  const supportCopy = supportPreviewTranslations[locale]
   // Fragment destinations represent sections, not the current page.
   const isCurrent = (href: string) => href.startsWith('/') && !href.includes('#') &&
     (pathname === href || pathname.startsWith(href + '/'))
@@ -50,12 +54,20 @@ export function ClientShell({
             <p className="text-xs text-muted truncate">{clientEmail}</p>
             <LocaleToggle locale={locale} />
           </div>
-          <form action="/auth/sign-out" method="post">
-            <input type="hidden" name="redirect" value="client" />
-            <button className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 text-left transition hover:bg-slate-100 hover:text-slate-900">
-              {t(locale, 'clientNav.signOut')}
-            </button>
-          </form>
+          {supportPreview ? (
+            <form action={endSupportPreviewAction}>
+              <button className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-amber-800 transition hover:bg-amber-50">
+                {supportCopy.exit}
+              </button>
+            </form>
+          ) : (
+            <form action="/auth/sign-out" method="post">
+              <input type="hidden" name="redirect" value="client" />
+              <button className="w-full rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 text-left transition hover:bg-slate-100 hover:text-slate-900">
+                {t(locale, 'clientNav.signOut')}
+              </button>
+            </form>
+          )}
         </div>
       </aside>
 
@@ -67,14 +79,24 @@ export function ClientShell({
           </div>
           <div className="flex items-center gap-2">
             <LocaleToggle locale={locale} />
-            <form action="/auth/sign-out" method="post">
-              <input type="hidden" name="redirect" value="client" />
-              <button className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
-                {t(locale, 'clientNav.signOutShort')}
-              </button>
-            </form>
+            {supportPreview ? (
+              <form action={endSupportPreviewAction}>
+                <button className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:bg-amber-100">
+                  {supportCopy.exit}
+                </button>
+              </form>
+            ) : (
+              <form action="/auth/sign-out" method="post">
+                <input type="hidden" name="redirect" value="client" />
+                <button className="rounded-full border border-line px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                  {t(locale, 'clientNav.signOutShort')}
+                </button>
+              </form>
+            )}
           </div>
         </header>
+
+        {supportPreview ? <SupportPreviewBanner clientName={clientName} expiresAt={supportPreview.expiresAt} locale={locale} /> : null}
 
         <nav aria-label={t(locale, 'clientNav.navigation')} className="lg:hidden flex gap-1.5 overflow-x-auto px-4 py-3 border-b border-line bg-white">
           {navigation.map(item => (

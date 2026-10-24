@@ -6,12 +6,13 @@ import { ProjectForm } from '@/components/admin/project-form'
 import { ProjectCapabilitiesForm } from '@/components/admin/project-capabilities-form'
 import { ProjectClientAccessForm } from '@/components/admin/project-client-access-form'
 import { ProjectFavoriteForm } from '@/components/admin/project-favorite-form'
+import { SupportPreviewForm } from '@/components/admin/support-preview-form'
 import { ProjectToolGrid, projectWorkspaceLabels } from '@/components/admin/project-tool-grid'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
 import { capabilityKeys, getAdminProject, getCapabilityActivationIssue, isAdminProjectFavorite } from '@/lib/data/projects'
 import { getLocale } from '@/lib/locale'
-import { projectTranslations } from '@/lib/i18n'
+import { projectTranslations, supportPreviewTranslations } from '@/lib/i18n'
 import type { Json } from '@/lib/supabase/types'
 
 function auditValue(record: Json | null, key: string): string {
@@ -23,6 +24,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const locale = await getLocale()
   const copy = projectTranslations[locale]
   const workspaceCopy = projectWorkspaceLabels[locale]
+  const supportCopy = supportPreviewTranslations[locale]
   const { id } = await params
   const detail = await getAdminProject(id, locale)
   if (!detail) notFound()
@@ -34,6 +36,13 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     return [capabilityKey, getCapabilityActivationIssue(project, capability)]
   }))
   const isFavorite = await isAdminProjectFavorite(identity.userId, project.id)
+  const supportDisabledReason = process.env.WF_SUPPORT_PREVIEW_ENABLED !== 'true'
+    ? supportCopy.featureDisabled
+    : !project.client_id ? supportCopy.projectUnassigned
+      : project.status !== 'active' ? supportCopy.projectInactive
+        : !project.client_access_enabled ? supportCopy.projectInaccessible
+          : client?.status !== 'active' ? supportCopy.assignedClientInactive
+            : undefined
   return <AdminShell title={project.name} description={project.domain} currentPath="/paneladmin/proyectos" userEmail={identity.email} locale={locale}>
     <div className="grid gap-6">
       <Link href="/paneladmin/proyectos" className="text-brand underline">← {copy.back}</Link>
@@ -45,6 +54,16 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           </div>
           <p className="break-all text-muted">{project.domain}</p>
           <p className="mt-2 text-sm">{copy.client}: {client?.name ?? copy.unassigned} · {project.client_access_enabled ? copy.enabled : copy.disabled}</p>
+          <div className="mt-4">
+            <SupportPreviewForm
+              clientId={client?.id}
+              clientName={client?.name ?? copy.unassigned}
+              projectId={project.id}
+              returnPath={`/paneladmin/proyectos/${project.id}`}
+              disabledReason={supportDisabledReason}
+              locale={locale}
+            />
+          </div>
         </div>
         <ProjectFavoriteForm projectId={project.id} isFavorite={isFavorite} />
       </Card>

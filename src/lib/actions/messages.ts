@@ -3,11 +3,16 @@
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
-import { requireClientAccess } from '@/lib/auth'
 import { sendAdminRequestEmail } from '@/lib/email'
+import { requireClientMutationAccess } from '@/lib/support/portal-viewer'
+import {
+  isSupportReadOnlyError,
+  SUPPORT_READ_ONLY_ACTION_RESULT,
+  type SupportReadOnlyActionResult,
+} from '@/lib/support/read-only'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-export type MessageFormState = { error?: string; success?: string }
+export type MessageFormState = { error?: string; success?: string; ok?: false; message?: string }
 
 const sendSchema = z.object({
   subject: z.string().min(1).max(200),
@@ -22,7 +27,13 @@ const requestSchema = z.object({
 })
 
 export async function sendMessageAction(_prev: MessageFormState, formData: FormData): Promise<MessageFormState> {
-  const identity = await requireClientAccess()
+  let viewer
+  try {
+    viewer = await requireClientMutationAccess()
+  } catch (error) {
+    if (isSupportReadOnlyError(error)) return SUPPORT_READ_ONLY_ACTION_RESULT
+    throw error
+  }
   const parsed = sendSchema.safeParse({
     subject: formData.get('subject'),
     body: formData.get('body'),
@@ -33,7 +44,7 @@ export async function sendMessageAction(_prev: MessageFormState, formData: FormD
 
   const supabase = await createSupabaseServerClient()
   const { error } = await supabase.from('messages').insert({
-    client_id: identity.client.id,
+    client_id: viewer.client.id,
     direction: 'outbound',
     type: 'message',
     subject: parsed.data.subject,
@@ -48,7 +59,13 @@ export async function sendMessageAction(_prev: MessageFormState, formData: FormD
 }
 
 export async function sendRequestAction(_prev: MessageFormState, formData: FormData): Promise<MessageFormState> {
-  const identity = await requireClientAccess()
+  let viewer
+  try {
+    viewer = await requireClientMutationAccess()
+  } catch (error) {
+    if (isSupportReadOnlyError(error)) return SUPPORT_READ_ONLY_ACTION_RESULT
+    throw error
+  }
   const parsed = requestSchema.safeParse({
     subject: formData.get('subject'),
     body: formData.get('body'),
@@ -59,7 +76,7 @@ export async function sendRequestAction(_prev: MessageFormState, formData: FormD
 
   const supabase = await createSupabaseServerClient()
   const { error } = await supabase.from('messages').insert({
-    client_id: identity.client.id,
+    client_id: viewer.client.id,
     direction: 'outbound',
     type: parsed.data.type,
     subject: parsed.data.subject,
@@ -69,8 +86,8 @@ export async function sendRequestAction(_prev: MessageFormState, formData: FormD
   if (error) return { error: 'No se pudo enviar la solicitud.' }
 
   await sendAdminRequestEmail({
-    clientName: identity.client.name,
-    clientEmail: identity.email,
+    clientName: viewer.client.name,
+    clientEmail: viewer.identity.email,
     subject: parsed.data.subject,
     body: parsed.data.body,
   }).catch(() => null)
@@ -80,7 +97,13 @@ export async function sendRequestAction(_prev: MessageFormState, formData: FormD
   return { success: '¡Solicitud enviada! Te contactaremos pronto.' }
 }
 
-export async function markMessageReadAction(messageId: string): Promise<void> {
+export async function markMessageReadAction(messageId: string): Promise<void | SupportReadOnlyActionResult> {
+  try {
+    await requireClientMutationAccess()
+  } catch (error) {
+    if (isSupportReadOnlyError(error)) return SUPPORT_READ_ONLY_ACTION_RESULT
+    throw error
+  }
   const supabase = await createSupabaseServerClient()
   await supabase.from('messages').update({ read_at: new Date().toISOString() }).eq('id', messageId).is('read_at', null)
   revalidatePath('/cliente/mensajeria')

@@ -5,11 +5,25 @@ export type ProjectStatus = 'draft' | 'active' | 'archived'
 export type ProductTier = 'lite' | 'express' | 'pro'
 export type CapabilityKey = 'products' | 'domains' | 'hosting' | 'invoices' | 'bonuses_reports' | 'blogger' | 'analytics'
 export type CapabilityState = 'unavailable' | 'available' | 'active'
+export type SupportEndReason = 'manual' | 'expired' | 'replaced' | 'client_inactive' | 'access_revoked'
+export type SupportSessionRow = { id: string; admin_user_id: string; client_id: string; token_hash: string; return_path: string; started_at: string; expires_at: string; ended_at: string | null; end_reason: SupportEndReason | null }
 
 export type Database = {
   __InternalSupabase: { PostgrestVersion: "14.5" }
   public: {
     Tables: {
+      admin_support_sessions: {
+        Row: SupportSessionRow
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      admin_support_events: {
+        Row: { id: string; support_session_id: string; admin_user_id: string; client_id: string; project_id: string; capability_key: CapabilityKey; scope: 'support_readonly'; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: [{ foreignKeyName: "admin_support_events_session_owner_client_fkey"; columns: ["support_session_id", "admin_user_id", "client_id"]; isOneToOne: false; referencedRelation: "admin_support_sessions"; referencedColumns: ["id", "admin_user_id", "client_id"] }]
+      }
       admin_project_favorites: {
         Row: { admin_user_id: string; project_id: string; position: number | null; created_at: string }
         Insert: { admin_user_id: string; project_id: string; position?: number | null; created_at?: string }
@@ -133,6 +147,8 @@ export type Database = {
       }
     }
     Functions: {
+      start_admin_support_session: { Args: { p_client_id: string; p_token_hash: string; p_return_path: string }; Returns: SupportSessionRow[] }
+      end_admin_support_session: { Args: { p_token_hash: string; p_reason: SupportEndReason }; Returns: boolean }
       claim_monthly_stat_report_delivery: { Args: { p_claim_token: string; p_email_to: string; p_month_key: string }; Returns: boolean }
       complete_monthly_stat_report_delivery: { Args: { p_claim_token: string; p_message_id: string | null; p_month_key: string; p_sent_at: string }; Returns: boolean }
       next_invoice_number: { Args: never; Returns: string }

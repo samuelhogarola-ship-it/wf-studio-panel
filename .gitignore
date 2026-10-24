@@ -19,3 +19,6 @@ tsconfig.tsbuildinfo
 # OS
 .DS_Store
 .worktrees/
+
+# Supabase local CLI cache
+supabase/.temp/

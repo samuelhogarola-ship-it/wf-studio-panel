@@ -42,6 +42,12 @@ function setup({
     project_capabilities: capabilityRows ?? [capabilityRow],
   })
   const accessEvents = []
+  const clientIdentity = {
+    userId: 'session-user',
+    email: client.email,
+    role: 'client',
+    client: { ...client, portal_mode: 'dynamic' },
+  }
   const analytics = loadProjectModule(resolverPath, {
     '@/lib/auth': {
       requireAdmin: async () => {
@@ -50,13 +56,15 @@ function setup({
       },
       requireClientAccess: async () => {
         accessEvents.push('client')
-        return {
-          userId: 'session-user',
-          email: client.email,
-          role: 'client',
-          client: { ...client, portal_mode: 'dynamic' },
-        }
+        return clientIdentity
       },
+    },
+    '@/lib/support/portal-viewer': {
+      requirePortalViewer: async () => {
+        accessEvents.push('client')
+        return { mode: 'client', identity: clientIdentity, client: clientIdentity.client }
+      },
+      getOptionalSupportViewer: async () => null,
     },
     '@/lib/supabase/server': {
       createSupabaseServerClient: async () => db,

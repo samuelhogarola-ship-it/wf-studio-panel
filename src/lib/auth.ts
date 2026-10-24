@@ -2,10 +2,21 @@ import { redirect } from 'next/navigation'
 
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-type AuthIdentity = {
+export type AuthIdentity = {
   userId: string
   email: string
   role: string
+}
+
+export type ClientIdentity = AuthIdentity & {
+  role: 'client'
+  client: {
+    id: string
+    email: string
+    status: string
+    name: string
+    portal_mode: 'legacy' | 'dynamic'
+  }
 }
 
 const CLIENT_PROJECT = 'wf-studio'

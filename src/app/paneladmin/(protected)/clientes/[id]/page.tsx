@@ -7,9 +7,10 @@ import { PendingItemForm } from '@/components/admin/pending-item-form'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
+import { SupportPreviewForm } from '@/components/admin/support-preview-form'
 import { requireAdmin } from '@/lib/auth'
 import { getAdminClientDetailPageData } from '@/lib/data/admin'
-import { t } from '@/lib/i18n'
+import { supportPreviewTranslations, t } from '@/lib/i18n'
 import { getLocale } from '@/lib/locale'
 import { formatDate, formatDuration } from '@/lib/utils'
 
@@ -54,6 +55,10 @@ export default async function AdminClientDetailPage({ params }: { params: Promis
   }
 
   const client = data.client
+  const supportCopy = supportPreviewTranslations[locale]
+  const supportDisabledReason = process.env.WF_SUPPORT_PREVIEW_ENABLED !== 'true'
+    ? supportCopy.featureDisabled
+    : client.status !== 'active' ? supportCopy.clientInactive : undefined
   const activePacks = data.activePacks
   const hourPacks = activePacks.filter((pack) => pack.pack_type === 'hours')
   const domainPacks = activePacks.filter((pack) => pack.pack_type === 'domain')
@@ -139,6 +144,13 @@ export default async function AdminClientDetailPage({ params }: { params: Promis
         <Badge className={client.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
           {client.status}
         </Badge>
+        <SupportPreviewForm
+          clientId={client.id}
+          clientName={client.name}
+          returnPath={`/paneladmin/clientes/${client.id}`}
+          disabledReason={supportDisabledReason}
+          locale={locale}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
