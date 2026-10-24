@@ -8,6 +8,7 @@ import { ProjectClientAccessForm } from '@/components/admin/project-client-acces
 import { ProjectFavoriteForm } from '@/components/admin/project-favorite-form'
 import { SupportPreviewForm } from '@/components/admin/support-preview-form'
 import { ProjectToolGrid, projectWorkspaceLabels } from '@/components/admin/project-tool-grid'
+import { ProjectIdentity } from '@/components/projects/project-detail'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
 import { capabilityKeys, getAdminProject, getCapabilityActivationIssue, isAdminProjectFavorite } from '@/lib/data/projects'
@@ -49,10 +50,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       <Card className="flex flex-wrap items-start justify-between gap-5 p-6" data-workspace-section="identity">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-bold">{project.name}</h2>
+            <ProjectIdentity name={project.name} domain={project.domain} heading="h2" />
             <Badge>{copy.statusLabels[project.status]}</Badge>
           </div>
-          <p className="break-all text-muted">{project.domain}</p>
           <p className="mt-2 text-sm">{copy.client}: {client?.name ?? copy.unassigned} · {project.client_access_enabled ? copy.enabled : copy.disabled}</p>
           <div className="mt-4">
             <SupportPreviewForm

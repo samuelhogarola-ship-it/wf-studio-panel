@@ -78,7 +78,7 @@ export function getProjectWarnings(project: ProjectWithCapabilities): ProjectWar
 }
 
 async function loadProjects(db: SessionDatabase, clientId?: string, clientOnly = false): Promise<ProjectWithCapabilities[]> {
-  let query = db.from('client_projects').select('*').order('name')
+  let query = db.from('client_projects').select('*').order('name').limit(100)
   if (clientId) query = query.eq('client_id', clientId)
   if (clientOnly) query = query.eq('status', 'active').eq('client_access_enabled', true)
   const { data: projects, error } = await query
@@ -93,7 +93,7 @@ async function loadProjects(db: SessionDatabase, clientId?: string, clientOnly =
 }
 
 async function loadClients(db: SessionDatabase): Promise<ProjectClient[]> {
-  const { data, error } = await db.from('clients').select('id, name, email, status, project, portal_mode').eq('project', 'wf-studio').order('name')
+  const { data, error } = await db.from('clients').select('id, name, email, status, project, portal_mode').eq('project', 'wf-studio').order('name').limit(500)
   if (error) throw new Error('No se pudieron cargar los clientes.')
   return data ?? []
 }
