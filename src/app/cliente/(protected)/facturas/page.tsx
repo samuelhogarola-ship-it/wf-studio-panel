@@ -15,7 +15,7 @@ export default async function ClientFacturasPage() {
   const invoices = await getClientFacturasData(identity.client.id)
 
   const pendingTotal = invoices
-    .filter((i) => i.status === 'pending')
+    .filter((i) => i.status === 'issued' || i.status === 'pending')
     .reduce((sum, i) => sum + Number(i.amount ?? 0), 0)
 
   return (
@@ -78,6 +78,8 @@ export default async function ClientFacturasPage() {
                         <span className="rounded-full bg-emerald-50 px-3 py-0.5 text-xs font-semibold text-emerald-700">
                           Pagado {inv.paid_at ? formatDate(inv.paid_at) : ''}
                         </span>
+                      ) : inv.status === 'void' ? (
+                        <span className="rounded-full bg-slate-100 px-3 py-0.5 text-xs font-semibold text-slate-600">Anulada</span>
                       ) : (
                         <span className="rounded-full bg-amber-50 px-3 py-0.5 text-xs font-semibold text-amber-700">Pendiente</span>
                       )}
@@ -104,6 +106,8 @@ export default async function ClientFacturasPage() {
                 <div className="flex items-center gap-2">
                   {inv.status === 'paid' ? (
                     <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Pagado</span>
+                  ) : inv.status === 'void' ? (
+                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">Anulada</span>
                   ) : (
                     <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Pendiente</span>
                   )}

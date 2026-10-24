@@ -48,7 +48,7 @@ test('detail includes capability audit and universal navigation across all assig
   assert.equal(detail.audit[0].actor_id, 'actor');
   assert.deepEqual(detail.preview.navigation.map(item => item.href), [
     '/cliente/dashboard', '/cliente/proyectos', '/cliente/informes', '/cliente/actualizaciones',
-    '/cliente/fotografias', '/cliente/servicios', '/cliente/pendientes', '/cliente/facturas',
+    '/cliente/fotografias', '/cliente/servicios', '/cliente/pendientes', '/cliente/facturas', '/cliente/pagos',
     '/cliente/historial', '/cliente/mensajeria',
   ]);
   assert.equal(await s.data().getAdminProject('missing'), null);

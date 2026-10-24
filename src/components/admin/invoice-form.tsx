@@ -34,14 +34,26 @@ export function InvoiceForm({ clients, locale }: { clients: ClientOption[]; loca
       <form action={action} className="grid gap-4 md:grid-cols-2">
         <div>
           <Label htmlFor="client_id">{t(locale, 'invoiceForm.client')}</Label>
-          <Select id="client_id" name="client_id" required defaultValue="">
-            <option value="">{t(locale, 'invoiceForm.client.placeholder')}</option>
+          <Select id="client_id" name="client_id" defaultValue="">
+            <option value="">Destinatario externo</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
                 {client.company ? `${client.company.split('\n')[0]} · ` : ''}{client.name} · {client.email}
               </option>
             ))}
           </Select>
+        </div>
+        <div>
+          <Label htmlFor="recipient_name">Nombre del destinatario externo</Label>
+          <Input id="recipient_name" name="recipient_name" placeholder="Nombre o empresa" />
+        </div>
+        <div>
+          <Label htmlFor="recipient_email">Email del destinatario externo</Label>
+          <Input id="recipient_email" name="recipient_email" type="email" placeholder="facturacion@ejemplo.com" />
+        </div>
+        <div>
+          <Label htmlFor="recipient_company">Empresa</Label>
+          <Input id="recipient_company" name="recipient_company" placeholder="Opcional" />
         </div>
         <div>
           <Label htmlFor="amount">{t(locale, 'invoiceForm.amount')}</Label>
@@ -66,6 +78,10 @@ export function InvoiceForm({ clients, locale }: { clients: ClientOption[]; loca
         <div className="md:col-span-2">
           <Label htmlFor="notes">{t(locale, 'invoiceForm.notes')}</Label>
           <Textarea id="notes" name="notes" placeholder={t(locale, 'invoiceForm.notes.placeholder')} />
+        </div>
+        <div className="md:col-span-2">
+          <Label htmlFor="payment_url">Enlace de pago Stripe (opcional)</Label>
+          <Input id="payment_url" name="payment_url" type="url" placeholder="https://buy.stripe.com/..." />
         </div>
         <div className="md:col-span-2">
           <FormMessage error={state.error} success={state.success} />

@@ -5,7 +5,7 @@ import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
-import { deleteInvoiceAction, markInvoicePaidAction } from '@/lib/actions/invoices'
+import { markInvoicePaidAction } from '@/lib/actions/invoices'
 import { getInvoicesPageData } from '@/lib/data/invoices'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
@@ -64,8 +64,8 @@ export default async function AdminFacturasPage() {
                   <tr key={invoice.id}>
                     <td className="px-6 py-4 font-mono text-sm font-semibold text-foreground">{invoice.number}</td>
                     <td className="px-6 py-4">
-                      <p className="font-semibold text-foreground">{invoice.clients?.company?.split('\n')[0] ?? invoice.clients?.name ?? '—'}</p>
-                      <p className="text-slate-500">{getBillingEmail(invoice.clients?.company, invoice.clients?.email)}</p>
+                      <p className="font-semibold text-foreground">{invoice.recipient_company?.split('\n')[0] ?? invoice.recipient_name ?? invoice.clients?.company?.split('\n')[0] ?? invoice.clients?.name ?? '—'}</p>
+                      <p className="text-slate-500">{invoice.recipient_email ?? getBillingEmail(invoice.clients?.company, invoice.clients?.email)}</p>
                     </td>
                     <td className="max-w-[200px] px-6 py-4 text-slate-600">
                       <p className="line-clamp-2">{invoice.concept}</p>
@@ -75,8 +75,8 @@ export default async function AdminFacturasPage() {
                     </td>
                     <td className="px-6 py-4 text-slate-500">{PAYMENT_METHOD_LABELS[invoice.payment_method] ?? invoice.payment_method}</td>
                     <td className="px-6 py-4">
-                      <Badge className={invoice.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}>
-                        {invoice.status === 'paid' ? t(locale, 'invoices.list.paid') : t(locale, 'invoices.list.pending')}
+                      <Badge className={invoice.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : invoice.status === 'void' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}>
+                        {invoice.status === 'paid' ? t(locale, 'invoices.list.paid') : invoice.status === 'void' ? 'Anulada' : t(locale, 'invoices.list.pending')}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-slate-500">{formatDate(invoice.issued_at)}</td>
@@ -89,16 +89,12 @@ export default async function AdminFacturasPage() {
                         >
                           {t(locale, 'invoices.list.print')}
                         </Link>
-                        {invoice.status === 'pending' ? (
+                        {invoice.status === 'issued' ? (
                           <form action={markInvoicePaidAction}>
                             <input type="hidden" name="id" value={invoice.id} />
                             <button className="rounded-full bg-emerald-50 px-3 py-2 font-semibold text-emerald-700">{t(locale, 'invoices.list.markPaid')}</button>
                           </form>
                         ) : null}
-                        <form action={deleteInvoiceAction}>
-                          <input type="hidden" name="id" value={invoice.id} />
-                          <button className="rounded-full bg-rose-50 px-3 py-2 font-semibold text-rose-700">{t(locale, 'invoices.list.delete')}</button>
-                        </form>
                       </div>
                     </td>
                   </tr>

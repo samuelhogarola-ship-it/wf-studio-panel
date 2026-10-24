@@ -204,6 +204,7 @@ export const translations = {
     'shell.nav.packs': 'Bonos',
     'shell.nav.activities': 'Historial',
     'shell.nav.invoices': 'Facturas',
+    'shell.nav.payments': 'Pagos',
 
     // Admin dashboard page
     'dashboard.title': 'Dashboard',
@@ -567,6 +568,7 @@ export const translations = {
     'shell.nav.packs': 'Packs',
     'shell.nav.activities': 'History',
     'shell.nav.invoices': 'Invoices',
+    'shell.nav.payments': 'Payments',
 
     // Admin dashboard page
     'dashboard.title': 'Dashboard',

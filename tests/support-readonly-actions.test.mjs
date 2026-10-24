@@ -28,6 +28,7 @@ const clientRouteMatrix = [
   [`${protectedRoot}/informes/page.tsx`, 'read-only'],
   [`${protectedRoot}/mensajeria/page.tsx`, 'task4:sendMessageAction+markMessageReadAction+render-read_at'],
   [`${protectedRoot}/packs/page.tsx`, 'read-only'],
+  [`${protectedRoot}/pagos/page.tsx`, 'read-only'],
   [`${protectedRoot}/pendientes/page.tsx`, 'task4:sendMessageAction'],
   [`${protectedRoot}/proyectos/page.tsx`, 'read-only'],
   [`${protectedRoot}/proyectos/[slug]/page.tsx`, 'read-only'],

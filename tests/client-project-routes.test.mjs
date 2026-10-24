@@ -99,7 +99,7 @@ test('every protected client page resolves through PortalViewer for both clients
     cap('blogger', { launch_url: 'https://example.com/admin/blogger/', validated_at: project.created_at, metadata: { provisioning_confirmed: true } }),
   ];
   const routes = [
-    'actualizaciones', 'bonos', 'dashboard', 'facturas', 'fotografias', 'historial', 'informes',
+    'actualizaciones', 'bonos', 'dashboard', 'facturas', 'fotografias', 'historial', 'informes', 'pagos',
     'mensajeria', 'packs', 'pendientes', 'proyectos', 'servicios',
   ];
   for (const viewerMode of ['client', 'support']) {
@@ -131,7 +131,7 @@ test('support project resolution drops reassigned, inactive, archived and client
 })
 
 test('an administrator without support is rejected by every protected client page before data reads', async () => {
-  const routes = ['actualizaciones', 'bonos', 'dashboard', 'facturas', 'fotografias', 'historial', 'informes', 'mensajeria', 'packs', 'pendientes', 'proyectos', 'servicios'];
+  const routes = ['actualizaciones', 'bonos', 'dashboard', 'facturas', 'fotografias', 'historial', 'informes', 'mensajeria', 'pagos', 'packs', 'pendientes', 'proyectos', 'servicios'];
   for (const route of routes) {
     const s = setup({ viewerMode: 'support', denied: true });
     await assert.rejects(() => s.page(route), { message: 'redirect:/cliente' });
@@ -214,7 +214,7 @@ test('server layout provides identical desktop/mobile actions, labels and access
   const navs = [...html.matchAll(/<nav\b[^>]*>([\s\S]*?)<\/nav>/g)].map(match => match[1]);
   assert.equal(navs.length, 2);
   const actions = nav => [...nav.matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/g)].map(match => [match[1], match[2].replace(/<[^>]*>/g, '')]);
-  const expected = [['/cliente/dashboard', 'Inicio'], ['/cliente/proyectos', 'Webs'], ['/cliente/informes', 'Informes'], ['/cliente/actualizaciones', 'Actualizaciones'], ['/cliente/fotografias', 'Fotografías'], ['/cliente/servicios', 'Servicios'], ['/cliente/pendientes', 'Pendientes'], ['/cliente/facturas', 'Facturas'], ['/cliente/historial', 'Historial'], ['/cliente/mensajeria', 'Mensajería']];
+  const expected = [['/cliente/dashboard', 'Inicio'], ['/cliente/proyectos', 'Webs'], ['/cliente/informes', 'Informes'], ['/cliente/actualizaciones', 'Actualizaciones'], ['/cliente/fotografias', 'Fotografías'], ['/cliente/servicios', 'Servicios'], ['/cliente/pendientes', 'Pendientes'], ['/cliente/facturas', 'Facturas'], ['/cliente/pagos', 'Pagos'], ['/cliente/historial', 'Historial'], ['/cliente/mensajeria', 'Mensajería']];
   assert.deepEqual(actions(navs[0]), expected);
   assert.deepEqual(actions(navs[1]), expected);
   assert.equal((html.match(/aria-current="page"/g) ?? []).length, 2);
@@ -233,7 +233,7 @@ test('both historical modes retain the exact universal account navigation on bot
   for (const mode of ['legacy', 'dynamic']) {
     const s = setup({ mode, projects: [] });
     const html = render(await s.load(`${protectedRoot}/layout.tsx`).default({ children: 'Universal' }));
-    for (const href of ['dashboard', 'proyectos', 'informes', 'actualizaciones', 'fotografias', 'servicios', 'pendientes', 'facturas', 'historial', 'mensajeria']) {
+    for (const href of ['dashboard', 'proyectos', 'informes', 'actualizaciones', 'fotografias', 'servicios', 'pendientes', 'facturas', 'pagos', 'historial', 'mensajeria']) {
       assert.equal((html.match(new RegExp(`href="/cliente/${href}"`, 'g')) ?? []).length, 2, `${mode}: ${href}`);
     }
   }

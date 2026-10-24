@@ -12,10 +12,10 @@ const navigation = (mode, projects, locale = 'es') => buildPortalNavigation({ mo
 test('historical modes expose the same universal account navigation with Inicio and Webs first', () => {
   const hrefs = ['/cliente/dashboard', '/cliente/proyectos', '/cliente/informes',
     '/cliente/actualizaciones', '/cliente/fotografias', '/cliente/servicios',
-    '/cliente/pendientes', '/cliente/facturas', '/cliente/historial', '/cliente/mensajeria'];
+    '/cliente/pendientes', '/cliente/facturas', '/cliente/pagos', '/cliente/historial', '/cliente/mensajeria'];
   for (const [locale, labels] of [
-    ['es', ['Inicio', 'Webs', 'Informes', 'Actualizaciones', 'Fotografías', 'Servicios', 'Pendientes', 'Facturas', 'Historial', 'Mensajería']],
-    ['en', ['Home', 'Websites', 'Reports', 'Updates', 'Photos', 'Services', 'Pending', 'Invoices', 'History', 'Messages']],
+    ['es', ['Inicio', 'Webs', 'Informes', 'Actualizaciones', 'Fotografías', 'Servicios', 'Pendientes', 'Facturas', 'Pagos', 'Historial', 'Mensajería']],
+    ['en', ['Home', 'Websites', 'Reports', 'Updates', 'Photos', 'Services', 'Pending', 'Invoices', 'Payments', 'History', 'Messages']],
   ]) {
     const legacy = navigation('legacy', [project()], locale);
     const dynamic = navigation('dynamic', [project()], locale);
