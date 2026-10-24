@@ -8,6 +8,7 @@ import {
   getBloggerExchangeSecret,
   HANDOFF_PROTOCOL,
   isBloggerExchangeAuthorized,
+  serializeExchangeResponse,
 } from '@/lib/tools/launch-tickets.mjs'
 
 export const dynamic = 'force-dynamic'
@@ -126,16 +127,7 @@ export async function POST(request: Request) {
       audience: new URL(handoff.launchUrl!).origin,
     })
     if (!consumed) return json({ error: 'invalid_or_expired_ticket' }, 401)
-    return json({
-      protocol: HANDOFF_PROTOCOL,
-      siteKey: consumed.siteKey,
-      subject: {
-        role: consumed.actorRole,
-        userId: consumed.userId,
-        clientId: consumed.clientId,
-        projectId: consumed.projectId,
-      },
-    }, 200)
+    return json(serializeExchangeResponse(consumed), 200)
   } catch {
     return json({ error: 'exchange_unavailable' }, 503)
   }

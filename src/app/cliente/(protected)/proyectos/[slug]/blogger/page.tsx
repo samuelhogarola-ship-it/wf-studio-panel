@@ -20,6 +20,7 @@ export default async function ClientBloggerPage({ params }: { params: Promise<{ 
   if (!site.blogger.enabled || site.domain.replace(/^www\./, '') !== project.domain.replace(/^www\./, '')) notFound()
   const target = getBloggerEditorTarget(site)
   if (!target) notFound()
+  const handoff = typeof site.blogger.launchUrl === 'string'
 
   return <div className="space-y-5">
     <header>
@@ -27,7 +28,9 @@ export default async function ClientBloggerPage({ params }: { params: Promise<{ 
       <h1 className="mt-3 text-2xl font-black">Blogger · {project.name}</h1>
       <p className="mt-1 text-sm text-muted">Editor protegido para {project.domain}</p>
     </header>
-    {target.kind === 'iframe'
+    {handoff
+      ? <form action={`/api/tools/blogger/${encodeURIComponent(site.key)}/launch`} method="post"><button type="submit" className="inline-flex rounded-lg bg-brand px-4 py-3 font-bold text-white">Abrir Blogger · {site.name} ↗</button></form>
+      : target.kind === 'iframe'
       ? <iframe title={`Blogger · ${site.name}`} src={target.href} className="h-[calc(100vh-12rem)] min-h-[760px] w-full rounded-xl border border-line bg-white" />
       : <a href={target.href} rel="noopener noreferrer" className="inline-flex rounded-lg bg-brand px-4 py-3 font-bold text-white">Abrir Blogger · {site.name} ↗</a>}
   </div>

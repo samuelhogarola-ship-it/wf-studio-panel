@@ -86,36 +86,36 @@ export function isBloggerExchangeAuthorized(authorization, expectedSecret) {
   return supplied.length === expected.length && timingSafeEqual(supplied, expected)
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
+export function buildLaunchRedirectLocation({ destination, code, siteKey }) {
+  const destinationUrl = new URL(destination)
+  if (
+    destinationUrl.protocol !== 'https:' || destinationUrl.username || destinationUrl.password ||
+    destinationUrl.search || destinationUrl.hash || !CODE_PATTERN.test(code) || !SITE_KEY_PATTERN.test(siteKey)
+  ) throw new Error('Invalid Blogger launch destination')
+  destinationUrl.hash = new URLSearchParams({ protocol: HANDOFF_PROTOCOL, code, siteKey }).toString()
+  return destinationUrl.toString()
 }
 
-export function renderLaunchForm({ action, code, siteKey }) {
-  const actionUrl = new URL(action)
-  if (actionUrl.protocol !== 'https:' || actionUrl.username || actionUrl.password) {
-    throw new Error('Invalid Blogger launch URL')
+export function serializeExchangeResponse(consumed) {
+  validateBinding(consumed)
+  if (
+    consumed.protocol !== HANDOFF_PROTOCOL ||
+    !['admin', 'client'].includes(consumed.actorRole) ||
+    typeof consumed.userId !== 'string' || !consumed.userId ||
+    (consumed.clientId !== null && (typeof consumed.clientId !== 'string' || !consumed.clientId)) ||
+    typeof consumed.projectId !== 'string' || !consumed.projectId
+  ) throw new Error('Invalid Blogger exchange result')
+  return {
+    protocol: HANDOFF_PROTOCOL,
+    siteKey: consumed.siteKey,
+    audience: consumed.audience,
+    subject: {
+      role: consumed.actorRole,
+      userId: consumed.userId,
+      clientId: consumed.clientId,
+      projectId: consumed.projectId,
+    },
   }
-  return `<!doctype html>
-<html lang="es">
-  <head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>Abriendo Blogger</title></head>
-  <body>
-    <main>
-      <h1>Abriendo Blogger</h1>
-      <p>Continúa para abrir el editor protegido.</p>
-      <form method="post" action="${escapeHtml(actionUrl.toString())}" autocomplete="off">
-        <input type="hidden" name="protocol" value="${HANDOFF_PROTOCOL}">
-        <input type="hidden" name="code" value="${escapeHtml(code)}">
-        <input type="hidden" name="siteKey" value="${escapeHtml(siteKey)}">
-        <button type="submit">Continuar</button>
-      </form>
-    </main>
-  </body>
-</html>`
 }
 
 export function buildLaunchSecurityHeaders(formAction) {

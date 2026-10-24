@@ -30,11 +30,24 @@ declare module "@/lib/sites/registry.mjs" {
     };
   };
 
+  export type BloggerHandoff = Omit<
+    RegisteredSite['blogger'],
+    'enabled' | 'runtime' | 'url' | 'launchUrl' | 'healthUrl' | 'adapter' | 'capabilities'
+  > & {
+    enabled: true;
+    runtime: 'central-multisite' | 'central-legacy' | 'external';
+    url: string;
+    launchUrl: string;
+    healthUrl: string;
+    adapter: string;
+    capabilities: [string, ...string[]];
+  };
+
   export const SITE_REGISTRY: readonly RegisteredSite[];
   export function getSites(): readonly RegisteredSite[];
   export function getSiteByKey(key: string): RegisteredSite;
   export function validateSite(site: RegisteredSite): RegisteredSite;
-  export function getBloggerHandoff(site: RegisteredSite): RegisteredSite['blogger'] | null;
+  export function getBloggerHandoff(site: RegisteredSite): BloggerHandoff | null;
   export function getLegacyAnalyticsProjects(): ReadonlyArray<{
     key: string;
     label: string;

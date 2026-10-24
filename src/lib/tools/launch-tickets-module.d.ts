@@ -33,6 +33,12 @@ declare module '@/lib/tools/launch-tickets.mjs' {
 
   export function getBloggerExchangeSecret(siteKey: string, env?: NodeJS.ProcessEnv): string | null
   export function isBloggerExchangeAuthorized(authorization: string | null, expectedSecret: string): boolean
-  export function renderLaunchForm(input: { action: string; code: string; siteKey: string }): string
+  export function buildLaunchRedirectLocation(input: { destination: string; code: string; siteKey: string }): string
+  export function serializeExchangeResponse(input: ConsumedLaunchTicket): {
+    protocol: typeof HANDOFF_PROTOCOL
+    siteKey: string
+    audience: string
+    subject: { role: 'admin' | 'client'; userId: string; clientId: string | null; projectId: string }
+  }
   export function buildLaunchSecurityHeaders(formAction?: string): Record<string, string>
 }
