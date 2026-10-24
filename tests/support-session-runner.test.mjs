@@ -25,7 +25,8 @@ test('database runner uses one tmpfs Postgres container and preserves failure pr
       if (!['start', 'status'].includes(fail)) {
         const migrate = dockerCalls.find(args => args[0] === 'container' && args[1] === 'exec' && args.includes('--interactive'))
         assert.ok(migrate)
-        assert.equal(migrate.at(-1), 'ON_ERROR_STOP=1')
+        assert.ok(migrate.includes('ON_ERROR_STOP=1'))
+        assert.deepEqual(migrate.slice(-2), ['-f', '-'])
       }
       const cleanup = dockerCalls.find(args => args[0] === 'container' && args[1] === 'rm')
       if (fail === 'start') assert.equal(cleanup, undefined)

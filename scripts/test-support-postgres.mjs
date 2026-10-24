@@ -113,6 +113,8 @@ try {
   await run('docker', [
     'container', 'exec', '--interactive', '--env', `PGPASSWORD=${databasePassword}`, containerId,
     'psql', '-U', 'supabase_admin', '-d', 'postgres', '-v', 'ON_ERROR_STOP=1',
+    '-c', "set statement_timeout = '30s'; set lock_timeout = '5s'",
+    '-f', '-',
   ], {
     capture: true,
     input: migrationSql,
