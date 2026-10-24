@@ -85,10 +85,28 @@ export type Database = {
         Relationships: []
       }
       invoices: {
-        Row: { amount: number; client_id: string; concept: string; created_at: string; id: string; issued_at: string; notes: string | null; number: string; paid_at: string | null; payment_method: string; status: string; updated_at: string }
-        Insert: { amount: number; client_id: string; concept: string; created_at?: string; id?: string; issued_at?: string; notes?: string | null; number: string; paid_at?: string | null; payment_method?: string; status?: string; updated_at?: string }
-        Update: { amount?: number; client_id?: string; concept?: string; created_at?: string; id?: string; issued_at?: string; notes?: string | null; number?: string; paid_at?: string | null; payment_method?: string; status?: string; updated_at?: string }
+        Row: { amount: number; client_id: string | null; concept: string; created_at: string; id: string; issued_at: string; notes: string | null; number: string; paid_at: string | null; payment_method: string; recipient_company: string | null; recipient_email: string; recipient_kind: string; recipient_name: string; status: string; updated_at: string }
+        Insert: { amount: number; client_id?: string | null; concept: string; created_at?: string; id?: string; issued_at?: string; notes?: string | null; number: string; paid_at?: string | null; payment_method?: string; recipient_company?: string | null; recipient_email: string; recipient_kind?: string; recipient_name: string; status?: string; updated_at?: string }
+        Update: { amount?: number; client_id?: string | null; concept?: string; created_at?: string; id?: string; issued_at?: string; notes?: string | null; number?: string; paid_at?: string | null; payment_method?: string; recipient_company?: string | null; recipient_email?: string; recipient_kind?: string; recipient_name?: string; status?: string; updated_at?: string }
         Relationships: [{ foreignKeyName: "invoices_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
+      }
+      invoice_audit: {
+        Row: { id: string; invoice_id: string; actor_id: string | null; operation: string; old_record: Json | null; new_record: Json | null; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      payment_requests: {
+        Row: { id: string; client_id: string | null; recipient_name: string; recipient_email: string; recipient_company: string | null; concept: string; amount: number; status: string; created_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; client_id?: string | null; recipient_name: string; recipient_email: string; recipient_company?: string | null; concept: string; amount: number; status?: string; created_by?: string | null; created_at?: string; updated_at?: string }
+        Update: { client_id?: string | null; recipient_name?: string; recipient_email?: string; recipient_company?: string | null; concept?: string; amount?: number; status?: string; updated_at?: string }
+        Relationships: []
+      }
+      payment_links: {
+        Row: { id: string; payment_request_id: string | null; invoice_id: string | null; provider: string; url: string; created_by: string | null; created_at: string }
+        Insert: { id?: string; payment_request_id?: string | null; invoice_id?: string | null; provider?: string; url: string; created_by?: string | null; created_at?: string }
+        Update: { url?: string }
+        Relationships: []
       }
       messages: {
         Row: { body: string; client_id: string; created_at: string; direction: string; id: string; read_at: string | null; reply_to_id: string | null; subject: string; type: string }
@@ -148,6 +166,9 @@ export type Database = {
     }
     Functions: {
       mark_message_read: { Args: { p_message_id: string }; Returns: undefined }
+      create_invoice_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string }; Returns: { id: string; number: string }[] }
+      issue_invoice_with_payment_link: { Args: { p_invoice_id: string; p_payment_url: string | null }; Returns: { id: string; number: string; status: string }[] }
+      mark_invoice_paid: { Args: { p_invoice_id: string }; Returns: boolean }
       start_admin_support_session: { Args: { p_client_id: string; p_token_hash: string; p_return_path: string }; Returns: SupportSessionRow[] }
       end_admin_support_session: { Args: { p_token_hash: string; p_reason: SupportEndReason }; Returns: boolean }
       claim_monthly_stat_report_delivery: { Args: { p_claim_token: string; p_email_to: string; p_month_key: string }; Returns: boolean }
