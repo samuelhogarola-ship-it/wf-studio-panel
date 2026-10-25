@@ -89,21 +89,12 @@ test('direct Blogger authorization reads and validates the complete capability c
   assert.equal(capabilityRead.columns, 'id, capability_key, state, launch_url, validated_at, metadata')
 })
 
-test('external Blogger authorization fails closed for stale or unprovisioned capabilities for clients and admins', async () => {
-  const externalSite = {
-    ...registrySite,
-    blogger: {
-      enabled: true,
-      runtime: 'external',
-      url: `https://${project.domain}/admin/blogger/`,
-    },
-  }
-  const externalCapability = { ...validCapability, launch_url: externalSite.blogger.url }
+test('direct Blogger authorization fails closed for stale or unprovisioned capabilities for clients and admins', async () => {
   const staleCapabilities = [
-    { ...externalCapability, launch_url: null },
-    { ...externalCapability, launch_url: 'https://evil.example/blogger' },
-    { ...externalCapability, validated_at: null },
-    { ...externalCapability, metadata: {} },
+    { ...validCapability, launch_url: null },
+    { ...validCapability, launch_url: 'https://evil.example/blogger' },
+    { ...validCapability, validated_at: null },
+    { ...validCapability, metadata: {} },
   ]
   const admin = { ...identity, role: 'admin' }
   for (const currentIdentity of [identity, admin]) {
@@ -113,36 +104,9 @@ test('external Blogger authorization fails closed for stale or unprovisioned cap
         client_projects: [{ ...project, slug: siteKey, client_id: currentIdentity.role === 'admin' ? null : project.client_id }],
         project_capabilities: [staleCapability],
       }
-      await assert.rejects(
-        () => authorize(seed, currentIdentity, { site: externalSite, editor: { kind: 'external', href: externalSite.blogger.url } }).result,
-        error => error?.status === 403,
-      )
+      await assert.rejects(() => authorize(seed, currentIdentity).result, error => error?.status === 403)
     }
   }
-})
-
-test('central legacy Blogger authorization needs active assignment and capability but no external handoff metadata', async () => {
-  const centralSite = {
-    key: siteKey,
-    domain: project.domain,
-    blogger: {
-      enabled: true,
-      runtime: 'central-legacy',
-      url: `https://admin.webfuengirola.com/acceso/blogger/${siteKey}`,
-    },
-  }
-  const centralCapability = {
-    ...capability,
-    state: 'active',
-    launch_url: null,
-    validated_at: null,
-    metadata: null,
-  }
-
-  assert.equal((await authorize({
-    ...activeSeed,
-    project_capabilities: [centralCapability],
-  }, identity, { site: centralSite, editor: { kind: 'iframe', href: '/blogger/index.html' } }).result).site.key, siteKey)
 })
 
 test('direct Blogger authorization fails closed for stale registry, domain, runtime or editor', async () => {

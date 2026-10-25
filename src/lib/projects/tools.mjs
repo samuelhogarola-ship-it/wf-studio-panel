@@ -72,7 +72,10 @@ function resolveTool(definition, project, viewer, configurationIssues) {
       ? capability.state
       : 'unavailable';
   let warning = configurationIssues[definition.capability];
-  if (definition.id === 'blogger' && capabilityState === 'active' &&
+  // The Sport legacy editor runs here under the existing Supabase session.
+  const centralSport = project.slug === 'sportmassagefuengirola' &&
+    String(project.domain).toLowerCase().replace(/^www\./, '') === 'sportmassagefuengirola.com';
+  if (definition.id === 'blogger' && capabilityState === 'active' && !centralSport &&
       (!capability.validated_at || !validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug))) {
     warning ??= 'La configuración de Blogger no está validada para este proyecto.';
   }

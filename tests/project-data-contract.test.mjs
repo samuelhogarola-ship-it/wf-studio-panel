@@ -138,7 +138,7 @@ test('client capability resolution fails closed for inactive or invalid Blogger 
   }
 });
 
-test('client Blogger reads revalidate runtime, editor, domain and external provisioning confirmation', async () => {
+test('client Blogger reads revalidate runtime, editor, domain and provisioning confirmation', async () => {
   const activeBlogger = {
     ...capability,
     state: 'active',
@@ -169,8 +169,8 @@ test('client Blogger reads revalidate runtime, editor, domain and external provi
     {
       label: 'missing provisioning confirmation',
       capability: { ...activeBlogger, metadata: {} },
-      site: { ...validSite, blogger: { ...validSite.blogger, runtime: 'external', url: 'https://example.com/admin/blogger/' } },
-      editor: { kind: 'external', href: 'https://example.com/admin/blogger/' },
+      site: validSite,
+      editor: { kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' },
     },
   ];
 
@@ -187,7 +187,7 @@ test('client Blogger reads revalidate runtime, editor, domain and external provi
   }
 });
 
-test('administrator Blogger warnings require provisioning only for external runtimes', () => {
+test('administrator Blogger warnings revalidate stale runtime and provisioning', () => {
   const activeBlogger = {
     ...capability,
     state: 'active',
@@ -198,8 +198,8 @@ test('administrator Blogger warnings require provisioning only for external runt
   const s = setup(
     { project_capabilities: [activeBlogger] },
     {
-      '@/lib/sites/registry.mjs': { getSiteByKey: () => ({ key: 'example', domain: 'example.com', blogger: { enabled: true, runtime: 'external', url: 'https://example.com/admin/blogger/' } }) },
-      '@/lib/blogger/editor.mjs': { getBloggerEditorTarget: () => ({ kind: 'external', href: 'https://example.com/admin/blogger/' }) },
+      '@/lib/sites/registry.mjs': { getSiteByKey: () => ({ key: 'example', domain: 'example.com', blogger: { enabled: true, runtime: 'central-multisite' } }) },
+      '@/lib/blogger/editor.mjs': { getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' }) },
     },
   );
 
