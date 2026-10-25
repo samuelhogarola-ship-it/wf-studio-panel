@@ -57,14 +57,8 @@ test("canonical website registry covers every current site and configures Samuel
   }
 });
 
-test("Sport handoff documents an empty server-only exchange secret without public credentials", async () => {
-  const [environmentExample, registrySource] = await Promise.all([
-    readFile(new URL("../.env.example", import.meta.url), "utf8"),
-    readFile(new URL("../src/config/sites.json", import.meta.url), "utf8"),
-  ]);
-
-  assert.match(environmentExample, /^WF_BLOGGER_HANDOFF_SECRET_SPORTMASSAGEFUENGIROLA=$/m);
-  assert.doesNotMatch(environmentExample, /^WF_BLOGGER_HANDOFF_SECRET_SPORTMASSAGEFUENGIROLA=.+$/m);
+test("the site registry contains no exchange secret or private credentials", async () => {
+  const registrySource = await readFile(new URL("../src/config/sites.json", import.meta.url), "utf8");
   assert.doesNotMatch(registrySource, /WF_BLOGGER_HANDOFF_SECRET|password|passwordHash|filesystemRoot/i);
 });
 

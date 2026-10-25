@@ -1,36 +1,20 @@
 # Sport Massage Central Dual Access Design
 
-## Intent
+## Final decision
 
-Sport Massage must use the single legacy editor and single GitHub-backed content source already hosted by WF Studio. Clients need a seamless entry from Área Cliente and a saved direct URL that falls back to Supabase email/password authentication.
+Sport Massage uses the single existing WF Studio Blogger editor and its current Supabase account. This decision supersedes the proposed internal ticket consumption and session exchange.
 
-## Goals
+- Área Cliente opens `/cliente/proyectos/sportmassagefuengirola/blogger` and embeds `/blogger/index.html` on the portal host using its existing Supabase session.
+- The direct URL `https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola` uses the existing Supabase email/password login when needed, preserves the destination, and embeds the same editor on the administrator host.
+- Cookies remain host-bound. A portal session does not automatically establish a session on the administrator host; the direct entry uses its existing login flow.
+- No additional login implementation, launch ticket, consume endpoint, generated magic link or token exchange is required.
 
-- Área Cliente creates a 60-second, single-use ticket bound to the authenticated user, assigned project, client, site and Studio admin origin.
-- The Studio admin host consumes that ticket once, revalidates the exact Sport Massage assignment, establishes a Supabase Auth session for the same user and opens the central legacy editor without another login.
-- `/acceso/blogger/sportmassagefuengirola` remains the canonical direct URL. Without a valid session it redirects to the existing client login while preserving the destination; after login it authorizes the same project and opens the same editor.
-- Both paths use `authorizeBloggerSite` and `/blogger/index.html`; no independent Sport Massage runtime remains in the registry.
+## Authorization
 
-## Non-goals
+Both entries require the current active client, exact assigned active project, enabled client access and active Blogger capability. Registry key, domain and enabled editor runtime remain validated. The legacy editor API uses `authorizeSportBlogger`, which delegates to the same `authorizeBloggerSite` authorization as direct entry.
 
-- No changes to the `sportmassage` repository, Hostinger, DNS, public pages, publishing bridge, Umami or other projects.
-- No password or business email in source, examples, commands, logs or responses.
-- No Coolify, GitHub Pages, Vercel or independent Blogger backend.
+Only Sport Massage's central legacy runtime stops requiring discarded external launch/provisioning metadata. Other clients retain their existing validation requirements. The project tool remains internal and honors configuration warnings.
 
-## Approach
+## Scope
 
-Reuse the existing hashed `tool_launch_tickets` table and its atomic consume RPC. Replace the external Sport Massage handoff with an internal POST delivery to the Studio admin origin. After consuming and revalidating the ticket, use a server-generated Supabase magic-link token entirely server-side to establish the normal Supabase session cookie, then redirect to the canonical direct Blogger page. Direct login already uses Supabase password authentication and a sanitized return destination, so both paths converge on the same identity, authorization and editor.
-
-Alternatives rejected: sharing cookies between subdomains weakens host isolation; a separate signed Blogger cookie creates a second session model; retaining the independent handoff contradicts the single-editor requirement.
-
-## Security constraints
-
-- Accept only the exact Sport Massage site key and exact Studio portal/admin origins.
-- Store only the SHA-256 ticket hash; never put the ticket in a URL, referrer or log.
-- Consume once, enforce expiry in PostgreSQL, and revalidate user/client/project/capability before minting a session.
-- Return indistinguishable safe failures for expired, replayed, foreign and unauthorized tickets.
-- Keep server credentials and generated Supabase verification tokens out of browser responses and logs.
-
-## Provisioning
-
-Account creation or password reset remains an operational Supabase Auth step. Use the Supabase dashboard or the existing authenticated administrator flow to create/reset the user and assign the active WF Studio client/project records; never store the password in Git or application environment variables.
+Remove only Sport Massage's external runtime endpoints, adapter, capability manifest and obsolete handoff-secret example. Keep its existing GitHub publication and optional translation configuration. Preserve all other site registry entries, external-runtime support, public websites, analytics, credentials and infrastructure. No push, merge or deployment is part of this correction.
