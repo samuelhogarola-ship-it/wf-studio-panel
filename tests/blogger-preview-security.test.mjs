@@ -15,7 +15,7 @@ test("Blogger previews are sandboxed documents instead of same-origin HTML sinks
   }
 
   for (const script of [editorScript, legacyScript]) {
-    assert.match(script, /\.srcdoc\s*=\s*html/);
+    assert.match(script, /\.srcdoc\s*=\s*(?:html|template\.innerHTML)/);
     assert.doesNotMatch(script, /(?:preview|mainPreview)\.innerHTML\s*=\s*html/);
   }
 });

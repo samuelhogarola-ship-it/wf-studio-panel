@@ -1,3 +1,5 @@
+import { decodeHTMLAttribute } from "entities";
+
 const ALLOWED_TAGS = new Set([
   "a", "b", "blockquote", "br", "code", "em", "h1", "h2", "h3", "h4", "h5", "h6", "i", "img", "li", "ol", "p", "pre", "strong", "u", "ul",
 ]);
@@ -39,7 +41,7 @@ function sanitizeTag(source) {
   let attribute;
   while ((attribute = ATTRIBUTE_RE.exec(rawAttributes))) {
     const name = attribute[1].toLowerCase();
-    const value = attribute[2] ?? attribute[3] ?? attribute[4] ?? "";
+    const value = decodeHTMLAttribute(attribute[2] ?? attribute[3] ?? attribute[4] ?? "");
     if (name.startsWith("on") || name === "style" || name === "srcdoc") continue;
     if (tag === "a" && name === "href") {
       const href = safeUrl(value, "link");

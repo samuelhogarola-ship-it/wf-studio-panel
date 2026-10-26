@@ -16,7 +16,7 @@ export async function GET() {
   const denied = await authorize()
   if (denied) return denied
   try {
-    return NextResponse.json({ posts: await listBloggerPosts() })
+    return NextResponse.json({ posts: await listBloggerPosts(), translationAvailable: Boolean(process.env.DEEPL_AUTH_KEY?.trim()) })
   } catch (error) {
     console.error('[blogger/list]', error)
     return NextResponse.json({ error: 'blogger_unavailable' }, { status: 503 })
