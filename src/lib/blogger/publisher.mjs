@@ -203,7 +203,7 @@ async function listBloggerPostImages(slug) {
     const metadata = await readImageMetadata(slug);
     const post = await readFile(repository, branch, `blog-posts/${slug}.md`);
     const featured = post ? parseMarkdown(post.content).meta.image : "";
-    return (Array.isArray(listing) ? listing : []).filter((entry) => /\.(png|jpe?g|webp|gif|svg)$/i.test(entry.name)).map((entry) => ({ ...metadata[entry.name], file: entry.name, url: publicImageUrl(slug, `img/${entry.name}`), previewUrl: `/api/posts/${encodeURIComponent(slug)}/images/${encodeURIComponent(entry.name)}`, alt: metadata[entry.name]?.alt || "", description: metadata[entry.name]?.description || "", isFeatured: featured === `img/${entry.name}` || featured === publicImageUrl(slug, `img/${entry.name}`), canDelete: true }));
+    return (Array.isArray(listing) ? listing : []).filter((entry) => /\.(png|jpe?g|webp|gif|svg)$/i.test(entry.name)).map((entry) => ({ ...metadata[entry.name], file: entry.name, url: publicImageUrl(slug, `img/${entry.name}`), previewVersion: entry.sha || "", previewUrl: `/api/posts/${encodeURIComponent(slug)}/images/${encodeURIComponent(entry.name)}`, alt: metadata[entry.name]?.alt || "", description: metadata[entry.name]?.description || "", isFeatured: featured === `img/${entry.name}` || featured === publicImageUrl(slug, `img/${entry.name}`), canDelete: true }));
   } catch (error) {
     if (String(error.message).includes("404")) return [];
     throw error;

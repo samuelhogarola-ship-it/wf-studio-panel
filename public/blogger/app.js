@@ -27,6 +27,7 @@ const state = {
   selectedEditorImage: null,
   draggedImageBlock: null,
   translationAvailable: false,
+  imagePreviewCache: new Map(),
 };
 
 const postList = document.querySelector("#postList");
@@ -327,6 +328,7 @@ async function uploadImages(event) {
 function renderImages(images) {
   state.activeImages = images;
   hydrateEditorImages();
+  void loadImagePreviews(images);
   imageList.innerHTML = "";
   document.querySelector("#imageMetaForm").hidden = !state.selectedImage;
   if (!images.length) {
@@ -738,11 +740,42 @@ function renderPreview() {
   template.innerHTML = html;
   for (const image of template.content.querySelectorAll('img')) {
     const known = findEditorImage(image.getAttribute('src'));
-    if (known?.previewUrl) image.setAttribute('src', known.previewUrl);
+    if (!known?.previewUrl) continue;
+    if (known.previewDataUrl) image.setAttribute('src', known.previewDataUrl);
+    else image.removeAttribute('src');
   }
   preview.srcdoc = template.innerHTML;
   mainPreview.srcdoc = template.innerHTML;
   htmlView.textContent = html;
+}
+
+async function loadImagePreviews(images) {
+  if (state.imagePreviewCache.size > 30) state.imagePreviewCache.clear();
+  await Promise.all(images.filter(image => image.previewUrl).map(async image => {
+    const key = `${image.previewUrl}:${image.previewVersion || ''}`;
+    try {
+      let pending = state.imagePreviewCache.get(key);
+      if (!pending) {
+        pending = fetch(image.previewUrl, { credentials: 'same-origin' })
+          .then(response => {
+            if (!response.ok) throw new Error('Could not load image preview');
+            return response.blob();
+          })
+          .then(blob => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('Could not load image preview'));
+            reader.readAsDataURL(blob);
+          }));
+        state.imagePreviewCache.set(key, pending);
+      }
+      image.previewDataUrl = await pending;
+      if (state.activeImages.includes(image)) renderPreview();
+    } catch (error) {
+      state.imagePreviewCache.delete(key);
+      if (state.activeImages.includes(image)) statusText.textContent = error.message;
+    }
+  }));
 }
 
 function findEditorImage(src) {
