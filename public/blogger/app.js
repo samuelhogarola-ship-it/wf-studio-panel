@@ -26,6 +26,8 @@ const state = {
   savedSelectionBookmark: null,
   selectedEditorImage: null,
   draggedImageBlock: null,
+  translationAvailable: false,
+  imagePreviewCache: new Map(),
 };
 
 const postList = document.querySelector("#postList");
@@ -107,7 +109,7 @@ for (const button of document.querySelectorAll(".toolbar [data-command]")) {
   button.addEventListener("click", () => {
     visualEditor.focus();
     document.execCommand(button.dataset.command);
-    fields.body.value = state.bodyFormat === "html" ? visualEditor.innerHTML : richHtmlToMarkdown(visualEditor.innerHTML);
+    fields.body.value = state.bodyFormat === "html" ? getEditorHtml() : richHtmlToMarkdown(visualEditor.innerHTML);
     renderPreview();
     markDirty();
   });
@@ -132,6 +134,10 @@ async function loadPosts() {
   try {
     const data = await api("/api/posts");
     state.posts = data.posts;
+    state.translationAvailable = data.translationAvailable === true;
+    document.querySelector('#translationStatus').textContent = state.translationAvailable
+      ? 'Selected languages are translated automatically when you publish.'
+      : 'Automatic translation is not configured. Select only the original language to publish.';
     renderPostList();
     if (state.posts[0]) await loadPost(state.posts[0].slug);
     else newPost();
@@ -182,7 +188,7 @@ function newPost() {
       date: new Date().toISOString().slice(0, 10),
       author: "Sport Massage Fuengirola",
       lang: "en",
-      publish_languages: ["en", "es", "fi"],
+      publish_languages: state.translationAvailable ? ["en", "es", "fi"] : ["en"],
       status: "draft",
     },
     body: "## Content\n\nWrite your post here...",
@@ -201,7 +207,7 @@ function fillForm(post) {
   for (const key of Object.keys(fields)) {
     if (key === "body") fields.body.value = post.body || "";
     else if (key === "tags" && Array.isArray(meta.tags)) fields.tags.value = meta.tags.join(", ");
-    else if (key === "publishLanguages") [...fields.publishLanguages.options].forEach((option) => { option.selected = (meta.publish_languages || ["en", "es", "fi"]).includes(option.value); });
+    else if (key === "publishLanguages") [...fields.publishLanguages.options].forEach((option) => { option.selected = (Array.isArray(meta.publish_languages) ? meta.publish_languages : String(meta.publish_languages || meta.lang || 'en').split(',').map(value => value.trim())).includes(option.value); });
     else fields[key].value = meta[key] || "";
   }
   visualEditor.innerHTML = state.bodyFormat === "html" ? fields.body.value : markdownPreview(fields.body.value);
@@ -245,13 +251,21 @@ async function savePost(forcedStatus = null) {
 function updatePublishedLink(slug, isPublished) {
   const link = document.querySelector("#viewPublished");
   link.hidden = !slug || !isPublished;
-  link.href = slug ? `/f/${slug}/` : "#";
+  link.href = slug ? `https://sportmassagefuengirola.com/blog/${encodeURIComponent(slug)}/` : "#";
 }
 
 async function publishPost() {
-  const post = await savePost("published");
+  const targets = [...fields.publishLanguages.selectedOptions].map(option => option.value);
+  if (!state.translationAvailable && targets.some(language => language !== fields.lang.value)) {
+    statusText.textContent = 'Automatic translation is not configured. Select only the original language to publish.';
+    return;
+  }
+  const post = await savePost("draft");
   if (!post) return;
   await api("/api/build", { method: "POST", body: { slug: post.slug } });
+  const data = await api('/api/posts');
+  state.posts = data.posts;
+  await loadPost(post.slug);
   updatePublishedLink(post.slug, true);
   statusText.textContent = "Published successfully";
 }
@@ -313,6 +327,8 @@ async function uploadImages(event) {
 
 function renderImages(images) {
   state.activeImages = images;
+  hydrateEditorImages();
+  void loadImagePreviews(images);
   imageList.innerHTML = "";
   document.querySelector("#imageMetaForm").hidden = !state.selectedImage;
   if (!images.length) {
@@ -326,7 +342,7 @@ function renderImages(images) {
     const item = document.createElement("div");
     item.className = `image-item${image.file === state.selectedImage ? " is-selected" : ""}`;
     const deleteButton = image.canDelete === false ? "" : "<button class=\"delete-image\" type=\"button\">Delete</button>";
-    item.innerHTML = `<img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || "")}"><span><strong>${escapeHtml(image.file)}</strong>${image.isFeatured ? "<small>Featured</small>" : ""}</span>${deleteButton}`;
+    item.innerHTML = `<img src="${escapeHtml(image.previewUrl || image.url)}" alt="${escapeHtml(image.alt || "")}"><span><strong>${escapeHtml(image.file)}</strong>${image.isFeatured ? "<small>Featured</small>" : ""}</span>${deleteButton}`;
     item.addEventListener("click", (event) => {
       if (event.target.closest(".delete-image")) return;
       selectImage(image.file);
@@ -346,7 +362,7 @@ function renderImages(images) {
 }
 
 function readForm() {
-  fields.body.value = state.bodyFormat === "html" ? visualEditor.innerHTML : richHtmlToMarkdown(visualEditor.innerHTML);
+  fields.body.value = state.bodyFormat === "html" ? getEditorHtml() : richHtmlToMarkdown(visualEditor.innerHTML);
   return {
     title: fields.title.value,
     slug: fields.slug.value,
@@ -377,7 +393,7 @@ function applyFormat(button) {
       const url = window.prompt("Link URL", "https://");
       if (url) document.execCommand("createLink", false, url);
     }
-    fields.body.value = state.bodyFormat === "html" ? visualEditor.innerHTML : richHtmlToMarkdown(visualEditor.innerHTML);
+    fields.body.value = state.bodyFormat === "html" ? getEditorHtml() : richHtmlToMarkdown(visualEditor.innerHTML);
     renderPreview();
     markDirty();
     return;
@@ -470,7 +486,8 @@ function insertInlineImage(image) {
   figure.draggable = true;
   figure.contentEditable = "false";
   const img = document.createElement("img");
-  img.src = image.url;
+  img.src = image.previewUrl || image.url;
+  img.dataset.publicSrc = image.url;
   img.alt = image.alt || fields.title.value || image.file;
   img.draggable = false;
   figure.append(img);
@@ -701,7 +718,7 @@ function handleImageDrop(event) {
 }
 
 function syncVisualEditor() {
-  fields.body.value = state.bodyFormat === "html" ? visualEditor.innerHTML : richHtmlToMarkdown(visualEditor.innerHTML);
+  fields.body.value = state.bodyFormat === "html" ? getEditorHtml() : richHtmlToMarkdown(visualEditor.innerHTML);
   renderPreview();
   markDirty();
 }
@@ -718,9 +735,70 @@ function insertText(text) {
 function renderPreview() {
   const html = state.bodyFormat === "html" ? fields.body.value : markdownPreview(fields.body.value);
   if (!visualEditor.innerHTML || editorViews.visual.hidden) visualEditor.innerHTML = html;
-  preview.srcdoc = html;
-  mainPreview.srcdoc = html;
+  hydrateEditorImages();
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  for (const image of template.content.querySelectorAll('img')) {
+    const known = findEditorImage(image.getAttribute('src'));
+    if (!known?.previewUrl) continue;
+    if (known.previewDataUrl) image.setAttribute('src', known.previewDataUrl);
+    else image.removeAttribute('src');
+  }
+  preview.srcdoc = template.innerHTML;
+  mainPreview.srcdoc = template.innerHTML;
   htmlView.textContent = html;
+}
+
+async function loadImagePreviews(images) {
+  if (state.imagePreviewCache.size > 30) state.imagePreviewCache.clear();
+  await Promise.all(images.filter(image => image.previewUrl).map(async image => {
+    const key = `${image.previewUrl}:${image.previewVersion || ''}`;
+    try {
+      let pending = state.imagePreviewCache.get(key);
+      if (!pending) {
+        pending = fetch(image.previewUrl, { credentials: 'same-origin' })
+          .then(response => {
+            if (!response.ok) throw new Error('Could not load image preview');
+            return response.blob();
+          })
+          .then(blob => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('Could not load image preview'));
+            reader.readAsDataURL(blob);
+          }));
+        state.imagePreviewCache.set(key, pending);
+      }
+      image.previewDataUrl = await pending;
+      if (state.activeImages.includes(image)) renderPreview();
+    } catch (error) {
+      state.imagePreviewCache.delete(key);
+      if (state.activeImages.includes(image)) statusText.textContent = error.message;
+    }
+  }));
+}
+
+function findEditorImage(src) {
+  if (!src) return undefined;
+  return state.activeImages.find(image => new URL(src, `https://sportmassagefuengirola.com/blog/${state.activeSlug || ''}/`).href === image.url);
+}
+
+function hydrateEditorImages() {
+  for (const image of visualEditor.querySelectorAll('img')) {
+    const known = findEditorImage(image.dataset.publicSrc || image.getAttribute('src'));
+    if (!known?.previewUrl) continue;
+    image.dataset.publicSrc = known.url;
+    image.src = known.previewUrl;
+  }
+}
+
+function getEditorHtml() {
+  const clone = visualEditor.cloneNode(true);
+  for (const image of clone.querySelectorAll('img[data-public-src]')) {
+    image.setAttribute('src', image.dataset.publicSrc);
+    image.removeAttribute('data-public-src');
+  }
+  return clone.innerHTML;
 }
 
 function markdownPreview(markdown) {
@@ -778,7 +856,7 @@ function richHtmlToMarkdown(html) {
   root.querySelectorAll("em, i").forEach((node) => node.replaceWith(`*${node.textContent}*`));
   root.querySelectorAll("h1, h2, h3").forEach((node) => node.replaceWith(`${"#".repeat(Number(node.tagName[1]))} ${node.textContent}\n\n`));
   root.querySelectorAll("a").forEach((node) => node.replaceWith(`[${node.textContent}](${node.getAttribute("href") || ""})`));
-  root.querySelectorAll("img").forEach((node) => node.replaceWith(`![${node.getAttribute("alt") || ""}](${node.getAttribute("src") || ""})`));
+  root.querySelectorAll("img").forEach((node) => node.replaceWith(`![${node.getAttribute("alt") || ""}](${node.dataset.publicSrc || node.getAttribute("src") || ""})`));
   root.querySelectorAll("li").forEach((node) => node.replaceWith(`- ${node.textContent}\n`));
   return root.innerText.replace(/\n{3,}/g, "\n\n").trim();
 }
@@ -841,7 +919,7 @@ async function setSelectedImageAsFeatured() {
 
 function matchesSearch(post, query) {
   if (!query) return true;
-  return [post.title, post.slug, post.description, post.category, post.level, ...post.tags]
+  return [post.title, post.slug, post.description, post.category, post.level, ...(post.tags || [])]
     .join(" ")
     .toLowerCase()
     .includes(query);

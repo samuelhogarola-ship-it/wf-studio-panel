@@ -15,6 +15,8 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.57.0",
     "clsx": "^2.1.1",
+    "entities": "8.1.0",
+    "marked": "18.1.2",
     "next": "15.5.28",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

@@ -36,3 +36,15 @@ test("publication sanitizes HTML again before emitting static output", () => {
   assert.match(html, /<p>Visible<\/p>/);
   assert.doesNotMatch(html, /<script|javascript:/i);
 });
+
+test("repeated sanitization preserves URL parameters and readable alt attributes", () => {
+  const html = '<a href="https://example.com/?a=1&amp;b=2">Link</a><img src="https://example.com/photo.jpg?width=100&amp;height=200" alt="Massage &amp; recovery">';
+  let safe = html;
+  for (let index = 0; index < 5; index++) safe = sanitizeHtml(safe);
+  assert.equal(safe, html);
+});
+
+test("encoded unsafe URL schemes are rejected after entity decoding", () => {
+  const html = sanitizeHtml('<a href="java&#x73;cript:alert(1)">Link</a><img src="javascript&colon;alert(2)">');
+  assert.equal(html, '<a>Link</a><img>');
+});
