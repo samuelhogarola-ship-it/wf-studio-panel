@@ -28,6 +28,11 @@ const state = {
   draggedImageBlock: null,
   translationAvailable: false,
   imagePreviewCache: new Map(),
+  originalLanguage: 'fi',
+  activeLanguage: 'fi',
+  originalContent: {},
+  translations: {},
+  busy: false,
 };
 
 const postList = document.querySelector("#postList");
@@ -49,10 +54,23 @@ const editorViews = {
 };
 
 document.querySelector("#newPost").addEventListener("click", () => {
+  if (state.busy) return;
   if (confirmDiscardChanges()) newPost();
 });
 document.querySelector("#savePost").addEventListener("click", () => runAction("Saving draft...", () => savePost("draft")));
 document.querySelector("#publishPost").addEventListener("click", () => runAction("Publishing...", publishPost));
+document.querySelector('#generateTranslations').addEventListener('click', () => runAction('Generating translation drafts...', generateTranslations));
+document.querySelector('#approveTranslation').addEventListener('click', () => runAction('Saving and approving...', approveCurrentTranslation));
+document.querySelector('#languageTabs').addEventListener('click', event => {
+  const button = event.target.closest('[data-language]');
+  if (button) switchContentLanguage(button.dataset.language);
+});
+fields.lang.addEventListener('change', () => {
+  captureActiveContent();
+  state.originalLanguage = fields.lang.value;
+  state.activeLanguage = fields.lang.value;
+  renderLanguageControls();
+});
 document.querySelector("#imageUpload").addEventListener("change", uploadImages);
 inlineImageUpload.addEventListener("change", uploadInlineImage);
 document.querySelector("#saveImageMeta").addEventListener("click", saveSelectedImageMeta);
@@ -60,9 +78,10 @@ document.querySelector("#setFeaturedImage").addEventListener("click", setSelecte
 document.querySelector("#insertSelectedImage").addEventListener("click", insertSelectedImage);
 search.addEventListener("input", renderPostList);
 postList.addEventListener("click", (event) => {
+  if (state.busy) return;
   const card = event.target.closest(".post-card");
   if (!card) return;
-  if (confirmDiscardChanges()) loadPost(card.dataset.slug);
+  if (confirmDiscardChanges()) runAction('Loading post...', () => loadPost(card.dataset.slug));
 });
 fields.body.addEventListener("input", () => {
   visualEditor.innerHTML = state.bodyFormat === "html" ? fields.body.value : markdownPreview(fields.body.value);
@@ -80,7 +99,7 @@ visualEditor.addEventListener("dragend", () => { state.draggedImageBlock = null;
 document.addEventListener("selectionchange", handleSelectionChange);
 fields.title.addEventListener("input", () => {
   currentTitle.textContent = fields.title.value || "New post";
-  if (!state.activeSlug && !state.slugEdited) fields.slug.value = slugifyTitle(fields.title.value);
+  if (!state.activeSlug && !state.slugEdited && state.activeLanguage === state.originalLanguage) fields.slug.value = slugifyTitle(fields.title.value);
   markDirty();
 });
 fields.slug.addEventListener("input", () => {
@@ -128,7 +147,7 @@ for (const button of selectionToolbar.querySelectorAll("[data-command], [data-bl
   button.addEventListener("click", () => applySelectionFormat(button));
 }
 
-loadPosts();
+runAction('Loading posts...', loadPosts);
 
 async function loadPosts() {
   try {
@@ -136,8 +155,8 @@ async function loadPosts() {
     state.posts = data.posts;
     state.translationAvailable = data.translationAvailable === true;
     document.querySelector('#translationStatus').textContent = state.translationAvailable
-      ? 'Selected languages are translated automatically when you publish.'
-      : 'Automatic translation is not configured. Select only the original language to publish.';
+      ? 'Optional automatic translation is available. Generate drafts, review and approve before publishing.'
+      : 'Automatic translation is not connected. You can still write, save and approve translations manually.';
     renderPostList();
     if (state.posts[0]) await loadPost(state.posts[0].slug);
     else newPost();
@@ -151,6 +170,7 @@ function renderPostList() {
   postList.innerHTML = "";
   for (const post of state.posts.filter((item) => matchesSearch(item, query))) {
     const button = document.createElement("button");
+    button.disabled = state.busy;
     button.type = "button";
     button.className = `post-card${post.slug === state.activeSlug ? " is-active" : ""}`;
     button.dataset.slug = post.slug;
@@ -187,8 +207,8 @@ function newPost() {
       description: "",
       date: new Date().toISOString().slice(0, 10),
       author: "Sport Massage Fuengirola",
-      lang: "en",
-      publish_languages: state.translationAvailable ? ["en", "es", "fi"] : ["en"],
+      lang: "fi",
+      publish_languages: ["fi"],
       status: "draft",
     },
     body: "## Content\n\nWrite your post here...",
@@ -203,6 +223,10 @@ function newPost() {
 
 function fillForm(post) {
   const meta = post.meta || {};
+  state.originalLanguage = meta.lang || 'fi';
+  state.activeLanguage = state.originalLanguage;
+  state.originalContent = { title: meta.title || '', description: meta.description || '', body: post.body || '', format: post.format || meta.content_format || 'markdown' };
+  state.translations = structuredClone(post.translations || {});
   state.bodyFormat = post.format || meta.content_format || "markdown";
   for (const key of Object.keys(fields)) {
     if (key === "body") fields.body.value = post.body || "";
@@ -220,10 +244,15 @@ function fillForm(post) {
   clearEditorImageSelection();
   selectionToolbar.hidden = true;
   state.dirty = false;
+  renderLanguageControls();
 }
 
 function markDirty() {
   state.dirty = true;
+  if (state.activeLanguage === state.originalLanguage) {
+    for (const variant of Object.values(state.translations)) variant.reviewed = false;
+  } else if (state.translations[state.activeLanguage]) state.translations[state.activeLanguage].reviewed = false;
+  renderLanguageControls();
   statusText.textContent = "Unsaved changes";
 }
 
@@ -232,6 +261,7 @@ function confirmDiscardChanges() {
 }
 
 async function savePost(forcedStatus = null) {
+  const activeLanguage = state.activeLanguage;
   const payload = readForm();
   if (forcedStatus) payload.status = forcedStatus;
   if (!validatePost(payload)) return null;
@@ -244,6 +274,7 @@ async function savePost(forcedStatus = null) {
   state.posts = data.posts;
   renderPostList();
   await loadPost(post.slug);
+  if (activeLanguage !== state.originalLanguage) switchContentLanguage(activeLanguage);
   statusText.textContent = payload.status === "published" ? "Changes saved" : "Draft saved";
   return post;
 }
@@ -255,11 +286,6 @@ function updatePublishedLink(slug, isPublished) {
 }
 
 async function publishPost() {
-  const targets = [...fields.publishLanguages.selectedOptions].map(option => option.value);
-  if (!state.translationAvailable && targets.some(language => language !== fields.lang.value)) {
-    statusText.textContent = 'Automatic translation is not configured. Select only the original language to publish.';
-    return;
-  }
   const post = await savePost("draft");
   if (!post) return;
   await api("/api/build", { method: "POST", body: { slug: post.slug } });
@@ -294,15 +320,26 @@ function slugifyTitle(value) {
 }
 
 async function runAction(message, action) {
-  const buttons = [...document.querySelectorAll("#savePost, #publishPost")];
-  buttons.forEach((button) => { button.disabled = true; });
+  if (state.busy) return;
+  state.busy = true;
+  const buttons = [...document.querySelectorAll('button')].map(button => [button, button.disabled]);
+  const inputs = [...document.querySelectorAll('input, textarea, select')].map(field => [field, field.disabled]);
+  inputs.forEach(([field]) => { field.disabled = true; });
+  visualEditor.contentEditable = 'false';
+  renderLanguageControls();
+  buttons.forEach(([button]) => { button.disabled = true; });
   statusText.textContent = message;
   try {
     await action();
   } catch (error) {
     statusText.textContent = error.message;
   } finally {
-    buttons.forEach((button) => { button.disabled = false; });
+    state.busy = false;
+    buttons.forEach(([button, disabled]) => { button.disabled = disabled; });
+    inputs.forEach(([field, disabled]) => { field.disabled = disabled; });
+    visualEditor.contentEditable = 'true';
+    renderLanguageControls();
+    renderPostList();
   }
 }
 
@@ -322,7 +359,14 @@ async function uploadImages(event) {
   }
 
   event.target.value = "";
-  await loadPost(state.activeSlug);
+  await refreshPostImages();
+}
+
+async function refreshPostImages() {
+  const post = await api(`/api/posts/${state.activeSlug}`);
+  fields.image.value = post.meta.image || '';
+  renderImages(post.images);
+  renderPreview();
 }
 
 function renderImages(images) {
@@ -349,9 +393,10 @@ function renderImages(images) {
     });
     const deleteImageButton = item.querySelector(".delete-image");
     if (deleteImageButton) {
+      deleteImageButton.disabled = state.busy;
       deleteImageButton.addEventListener("click", async () => {
         await api(`/api/posts/${state.activeSlug}/images/${encodeURIComponent(image.file)}`, { method: "DELETE" });
-        await loadPost(state.activeSlug);
+        await refreshPostImages();
       });
     }
     imageList.append(item);
@@ -362,23 +407,89 @@ function renderImages(images) {
 }
 
 function readForm() {
-  fields.body.value = state.bodyFormat === "html" ? getEditorHtml() : richHtmlToMarkdown(visualEditor.innerHTML);
+  captureActiveContent();
   return {
-    title: fields.title.value,
+    title: state.originalContent.title,
     slug: fields.slug.value,
-    description: fields.description.value,
+    description: state.originalContent.description,
     date: fields.date.value,
     lang: fields.lang.value,
-    publish_languages: [...fields.publishLanguages.selectedOptions].map((option) => option.value),
+    publish_languages: [...new Set([state.originalLanguage, ...[...fields.publishLanguages.selectedOptions].map((option) => option.value)])],
     author: fields.author.value,
     image: fields.image.value,
     tags: fields.tags.value,
     category: fields.category.value,
     level: fields.level.value,
     status: fields.status.value,
-    content_format: state.bodyFormat,
-    body: fields.body.value,
+    content_format: state.originalContent.format,
+    body: state.originalContent.body,
+    translations: state.translations,
   };
+}
+
+function captureActiveContent() {
+  fields.body.value = state.bodyFormat === 'html' ? getEditorHtml() : richHtmlToMarkdown(visualEditor.innerHTML);
+  const content = { title: fields.title.value, description: fields.description.value, body: fields.body.value, format: state.bodyFormat };
+  if (state.activeLanguage === state.originalLanguage) state.originalContent = content;
+  else if (state.translations[state.activeLanguage] || content.title || content.description || content.body.trim()) {
+    state.translations[state.activeLanguage] = { ...state.translations[state.activeLanguage], ...content };
+  }
+}
+
+function switchContentLanguage(language) {
+  captureActiveContent();
+  state.activeLanguage = language;
+  const content = language === state.originalLanguage ? state.originalContent : state.translations[language] || {title:'',description:'',body:'',format:'html'};
+  fields.title.value = content.title;
+  fields.description.value = content.description;
+  fields.body.value = content.body;
+  state.bodyFormat = content.format;
+  visualEditor.innerHTML = state.bodyFormat === 'html' ? content.body : markdownPreview(content.body);
+  currentTitle.textContent = content.title || languageName(language);
+  document.querySelector('[data-view="markdown"]').textContent = state.bodyFormat === 'html' ? 'Edit HTML' : 'Edit Markdown';
+  clearEditorImageSelection();
+  state.savedSelectionRange = null;
+  state.savedSelectionBookmark = null;
+  renderLanguageControls();
+  renderPreview();
+}
+
+function languageName(language) { return ({fi:'Finnish',en:'English',es:'Spanish'})[language] || language; }
+
+function renderLanguageControls() {
+  const tabs = document.querySelector('#languageTabs');
+  tabs.innerHTML = ['fi','en','es'].map(language => `<button type="button" data-language="${language}" class="${state.activeLanguage === language ? 'is-active' : ''}" aria-pressed="${state.activeLanguage === language}">${languageName(language)}${language === state.originalLanguage ? ' · Original' : ''}</button>`).join('');
+  fields.lang.disabled = state.busy || Object.keys(state.translations).length > 0;
+  for (const tab of tabs.querySelectorAll('button')) tab.disabled = state.busy;
+  const original = state.activeLanguage === state.originalLanguage;
+  const translation = state.translations[state.activeLanguage];
+  document.querySelector('#translationReviewStatus').textContent = original ? `Editing the ${languageName(state.originalLanguage)} original.` : translation?.reviewed ? `${languageName(state.activeLanguage)} approved for publishing.` : `${languageName(state.activeLanguage)} draft — review and approve before publishing.`;
+  document.querySelector('#approveTranslation').hidden = original;
+  document.querySelector('#generateTranslations').disabled = state.busy || !state.translationAvailable;
+  document.querySelector('#approveTranslation').disabled = state.busy;
+}
+
+async function generateTranslations() {
+  const targets = [...fields.publishLanguages.selectedOptions].map(option => option.value).filter(language => language !== state.originalLanguage);
+  if (!targets.length) { statusText.textContent = 'Select English or Spanish under Publish in first.'; return; }
+  if (targets.some(language => state.translations[language]) && !window.confirm('Generating again replaces the selected translations, including your edits. Continue?')) return;
+  const post = await savePost('draft');
+  if (!post) return;
+  await api(`/api/posts/${post.slug}/translations`, {method:'POST',body:{action:'generate',languages:targets}});
+  await loadPost(post.slug);
+  switchContentLanguage(targets[0]);
+  statusText.textContent = 'Translation drafts generated. Review, edit and approve each language before publishing.';
+}
+
+async function approveCurrentTranslation() {
+  const language = state.activeLanguage;
+  if (language === state.originalLanguage) return;
+  const post = await savePost('draft');
+  if (!post || !post.translations[language]) return;
+  await api(`/api/posts/${post.slug}/translations`, {method:'POST',body:{action:'approve',language,sourceFingerprint:post.sourceFingerprint,contentFingerprint:post.translations[language].contentFingerprint}});
+  await loadPost(post.slug);
+  switchContentLanguage(language);
+  statusText.textContent = `${languageName(language)} approved and saved.`;
 }
 
 function applyFormat(button) {
@@ -892,7 +1003,7 @@ async function saveSelectedImageMeta() {
       isFeatured: Boolean(image.isFeatured),
     },
   });
-  await loadPost(state.activeSlug);
+  await refreshPostImages();
   statusText.textContent = "Image details saved";
 }
 

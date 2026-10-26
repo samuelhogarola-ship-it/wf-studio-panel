@@ -41,8 +41,8 @@
           <label>Slug<input id="slug" type="text" /></label>
           <label>SEO description<textarea id="description" rows="3"></textarea></label>
           <label>Date<input id="date" type="date" /></label>
-            <label>Original language<select id="lang"><option value="en">English</option><option value="es">Spanish</option><option value="fi">Finnish</option></select></label>
-            <label>Publish in<select id="publishLanguages" multiple><option value="en" selected>English</option><option value="es" selected>Spanish</option><option value="fi" selected>Finnish</option></select></label>
+            <label>Original language<select id="lang"><option value="fi">Finnish</option><option value="en">English</option><option value="es">Spanish</option></select></label>
+            <label>Publish in<select id="publishLanguages" multiple><option value="fi" selected>Finnish</option><option value="en">English</option><option value="es">Spanish</option></select></label>
           <label>Author<input id="author" type="text" /></label>
           <label>Featured image<input id="image" type="text" placeholder="img/cover.webp or default" /></label>
           <label>Tags<input id="tags" type="text" placeholder="massage, recovery, wellbeing" /></label>
@@ -51,7 +51,16 @@
           <label>Status<select id="status" disabled><option value="draft">Draft</option><option value="published">Published</option></select></label>
         </section>
 
-        <p id="translationStatus" class="status-text" role="status"></p>
+        <section aria-label="Translations" class="translation-panel">
+          <p id="translationStatus" class="status-text" role="status"></p>
+          <div id="languageTabs" class="view-tabs" aria-label="Content language"></div>
+          <p id="translationReviewStatus" class="status-text" role="status"></p>
+          <div class="actions">
+            <button id="generateTranslations" type="button" class="secondary" disabled>Generate automatic translation from original</button>
+            <button id="approveTranslation" type="button" class="secondary" hidden>Approve this translation for publishing</button>
+          </div>
+          <p class="status-text">Automatic translation is optional. You can write and save translations yourself. Generating again replaces edits in the selected translations. Publishing uses your saved, approved texts.</p>
+        </section>
         <section class="workspace">
           <div class="writing-pane">
             <div class="editor-tools">

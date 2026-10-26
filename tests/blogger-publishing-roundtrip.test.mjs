@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {saveBloggerPost,readBloggerPost,listBloggerPosts,saveBloggerPostImage,publishBloggerPost,deleteBloggerPostImage,updateBloggerPostImage,readBloggerPostImage} from '../src/lib/blogger/publisher.mjs';
+import {saveBloggerPost,readBloggerPost,listBloggerPosts,saveBloggerPostImage,publishBloggerPost,deleteBloggerPostImage,updateBloggerPostImage,readBloggerPostImage,generateBloggerTranslations,approveBloggerTranslation} from '../src/lib/blogger/publisher.mjs';
 
 import test from 'node:test';
 
@@ -19,10 +19,37 @@ test('Sport Blogger preserves articles, images, tags and publication state throu
   let revision = 0;
   let head = 'fixture-head-0';
   let rejectNextPublication = false;
+  let rejectTranslation = false;
+  let changeOriginalDuringTranslation = false;
+  let editDraftDuringTranslation = false;
+  let editUnrelatedDuringTranslation = false;
   const sha=buffer=>createHash('sha1').update(buffer).digest('hex');
   globalThis.fetch=async (input,options={})=>{
     const url=new URL(input);
     if (url.hostname === 'api.deepl.com') {
+      if (rejectTranslation) return new Response('', { status: 456 });
+      if (editUnrelatedDuringTranslation) {
+        editUnrelatedDuringTranslation = false;
+        const path = `blog-posts/${slug}.translations.json`;
+        const drafts = JSON.parse(files.get(path).toString());
+        drafts.fi = { title: 'Hieronta', description: 'Palautuminen', body: '<p>Independent Finnish corrections.</p>', format: 'html' };
+        files.set(path, Buffer.from(JSON.stringify(drafts)));
+        head = `contents-${++revision}`;
+      }
+      if (editDraftDuringTranslation) {
+        editDraftDuringTranslation = false;
+        const path = `blog-posts/${slug}.translations.json`;
+        const drafts = JSON.parse(files.get(path).toString());
+        drafts.es.body = '<p>Concurrent manual wording.</p>';
+        files.set(path, Buffer.from(JSON.stringify(drafts)));
+        head = `contents-${++revision}`;
+      }
+      if (changeOriginalDuringTranslation) {
+        changeOriginalDuringTranslation = false;
+        const path = `blog-posts/${slug}.md`;
+        files.set(path, Buffer.from(files.get(path).toString().replace('Test text.', 'Updated while translating.')));
+        head = `contents-${++revision}`;
+      }
       const payload = JSON.parse(options.body);
       translations.push(payload);
       return Response.json({ translations: [{ text: payload.text[0].replaceAll('A test article', 'Un artículo de prueba').replaceAll('Offline Blogger publishing test', 'Artículo de prueba').replaceAll('Test text.', 'Texto de prueba.') }] });
@@ -131,19 +158,48 @@ test('Sport Blogger preserves articles, images, tags and publication state throu
   check('Repeated saving and publication preserve encoded URL attributes', html.includes('href="https://example.com/?a=1&amp;b=2"') && html.includes('alt="Recovery &amp; sports"'));
   const index=files.get('blog/index.html').toString();
   check('Updating an article does not duplicate its index entry',(index.match(new RegExp(`href="/blog/${slug}/"`,'g'))||[]).length,1);
+  await saveBloggerPost(slug, { ...post, publish_languages: ['en', 'es'], content_format: 'html', body: htmlBody });
   let translationError;
   const writesBeforeFailure = calls.filter(call => call.method !== 'GET').length;
-  try{await publishBloggerPost({...post,publish_languages:['en','es'],content_format:'html'},htmlBody);}catch(error){translationError=error.message;}
+  try{await generateBloggerTranslations(slug, ['es']);}catch(error){translationError=error.message;}
   check('Missing translation credential produces an explicit failure',translationError,'Missing DEEPL_AUTH_KEY');
   check('Missing translation credential never writes partial articles', calls.filter(call => call.method !== 'GET').length, writesBeforeFailure);
   process.env.DEEPL_AUTH_KEY = 'offline-fixture-only';
-  await publishBloggerPost({...post,publish_languages:['en','es'],content_format:'html'},htmlBody);
+  reopened = await generateBloggerTranslations(slug, ['es']);
+  assert.equal(reopened.translations.es.reviewed, false);
+  await assert.rejects(publishBloggerPost(reopened.meta, reopened.body), /approve/i);
+  reopened.translations.es.body += '<p>Author edit.</p>';
+  await saveBloggerPost(slug, { ...reopened.meta, body: reopened.body, translations: reopened.translations });
+  reopened = await readBloggerPost(slug);
+  reopened = await approveBloggerTranslation(slug, 'es', reopened.sourceFingerprint, reopened.translations.es.contentFingerprint);
+  await publishBloggerPost(reopened.meta, reopened.body);
   const spanish = files.get(`blog/${slug}/es/index.html`).toString();
   check('Translated article contains translated title and body', spanish.includes('<h1>Artículo de prueba</h1>') && spanish.includes('<h2>Un artículo de prueba</h2>'));
   check('Translated canonical URL points to the language directory', spanish.includes(`href="https://sportmassagefuengirola.com/blog/${slug}/es/"`));
   check('Translated photograph keeps the original public asset URL', spanish.includes(`src="${uploaded.url}"`));
+  check('Publication respects the approved manual translation', spanish.includes('<p>Author edit.</p>'));
   check('Automatic translation receives HTML with language selection', translations.length === 3 && translations.every(request => request.tag_handling === 'html' && request.target_lang === 'ES'));
   check('Publication preserves selected languages after translation', (await readBloggerPost(slug)).meta.publish_languages, 'en,es');
+  await publishBloggerPost(reopened.meta, reopened.body);
+  check('Publishing never calls the translation provider again', translations.length, 3);
+  const translationPath = `blog-posts/${slug}.translations.json`;
+  const savedTranslations = files.get(translationPath).toString();
+  rejectTranslation = true;
+  await assert.rejects(generateBloggerTranslations(slug, ['es']), /quota reached/i);
+  check('Provider quota failure preserves all reviewed edits', files.get(translationPath).toString(), savedTranslations);
+  rejectTranslation = false;
+  editDraftDuringTranslation = true;
+  await assert.rejects(generateBloggerTranslations(slug, ['es']), /translation.*changed/i);
+  check('Manual translations saved during generation are never overwritten', JSON.parse(files.get(translationPath).toString()).es.body, '<p>Concurrent manual wording.</p>');
+  editUnrelatedDuringTranslation = true;
+  reopened = await generateBloggerTranslations(slug, ['es']);
+  check('Generating one language preserves concurrent corrections to another', reopened.translations.fi.body, '<p>Independent Finnish corrections.</p>');
+  const draftsBeforeSourceRace = files.get(translationPath).toString();
+  changeOriginalDuringTranslation = true;
+  await assert.rejects(generateBloggerTranslations(slug, ['es']), /original changed/i);
+  check('Original changes during generation preserve previous reviewed translations', files.get(translationPath).toString(), draftsBeforeSourceRace);
+  reopened = await generateBloggerTranslations(slug, ['es']);
+  check('Only explicit regeneration replaces edited translated text', !reopened.translations.es.body.includes('Author edit.') && !reopened.translations.es.reviewed);
   await updateBloggerPostImage(slug, 'test.png', { alt: 'Updated photograph', description: 'Updated caption', isFeatured: true });
   reopened = await readBloggerPost(slug);
   check('Editing image details persists across reopening', reopened.images[0].alt === 'Updated photograph' && reopened.images[0].description === 'Updated caption');
@@ -168,6 +224,15 @@ test('Sport Blogger preserves articles, images, tags and publication state throu
   reopened = await readBloggerPost(slug);
   check('Deleting the featured image clears its selection', reopened.meta.image || '', '');
   check('Deleting an image removes its metadata while preserving other images', !Object.hasOwn(JSON.parse(files.get(`blog-posts/${slug}.images.json`).toString()), 'test.png') && Object.hasOwn(JSON.parse(files.get(`blog-posts/${slug}.images.json`).toString()), 'camera.jpg'));
+  delete process.env.DEEPL_AUTH_KEY;
+  const manualSlug='manual-finnish-original';
+  await saveBloggerPost(null,{...post,slug:manualSlug,lang:'fi',image:'',publish_languages:['fi','en','es'],body:'<p>Suomenkielinen alkuperäinen.</p>',content_format:'html',translations:{en:{title:'Manual English',description:'Reviewed SEO',body:'<p>Her manual English wording.</p>',format:'html'},es:{title:'Español manual',description:'SEO revisado',body:'<p>Su texto manual revisado.</p>',format:'html'}}});
+  for(const language of ['en','es']) {const draft=await readBloggerPost(manualSlug);await approveBloggerTranslation(manualSlug,language,draft.sourceFingerprint,draft.translations[language].contentFingerprint);}
+  const providerCallsBeforeManualPublication=translations.length;
+  const manual=await readBloggerPost(manualSlug);
+  await publishBloggerPost(manual.meta,manual.body);
+  check('Manual Finnish/English/Spanish publication works without any DeepL key',files.get(`blog/${manualSlug}/index.html`).toString().includes('<html lang="fi">')&&files.get(`blog/${manualSlug}/en/index.html`).toString().includes('Her manual English wording.')&&files.get(`blog/${manualSlug}/es/index.html`).toString().includes('Su texto manual revisado.'));
+  check('Manual publication never contacts the translation provider',translations.length,providerCallsBeforeManualPublication);
   assert.equal(results.filter(result => !result.passed).length, 0, JSON.stringify(results.filter(result => !result.passed), null, 2));
   
 });

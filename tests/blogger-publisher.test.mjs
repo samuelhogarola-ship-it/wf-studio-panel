@@ -77,6 +77,18 @@ test("DeepL translation request preserves HTML tags", async () => {
   assert.equal(translated, "<p>Hei <strong>maailma</strong></p>");
   assert.equal(JSON.parse(request.options.body).tag_handling, "html");
   assert.equal(JSON.parse(request.options.body).target_lang, "FI");
+  assert.equal(JSON.parse(request.options.body).source_lang, "EN");
+});
+
+test('legacy free API credentials use the free DeepL endpoint for Finnish to English',async t=>{
+  const oldKey=process.env.DEEPL_AUTH_KEY,oldUrl=process.env.DEEPL_API_URL;
+  t.after(()=>{if(oldKey===undefined)delete process.env.DEEPL_AUTH_KEY;else process.env.DEEPL_AUTH_KEY=oldKey;if(oldUrl===undefined)delete process.env.DEEPL_API_URL;else process.env.DEEPL_API_URL=oldUrl;});
+  process.env.DEEPL_AUTH_KEY='test-free-key:fx';delete process.env.DEEPL_API_URL;
+  await translateHtml('<p>Hieronta</p>','fi','en',async(url,options)=>{
+    assert.equal(url,'https://api-free.deepl.com/v2/translate');
+    const request=JSON.parse(options.body);assert.equal(request.source_lang,'FI');assert.equal(request.target_lang,'EN-GB');
+    return Response.json({translations:[{text:'<p>Massage</p>'}]});
+  });
 });
 
 test("buildPostHtml renders a static Sport Massage article under /blog", () => {
