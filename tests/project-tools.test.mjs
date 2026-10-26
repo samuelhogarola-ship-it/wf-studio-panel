@@ -63,22 +63,6 @@ test('active Blogger uses the authorized internal route and exposes no runtime c
   assert.equal(JSON.stringify(tool).includes('admin.webfuengirola.com'), false);
 });
 
-test('active central Blogger remains discoverable without external handoff metadata', () => {
-  const input = project({ capabilities: [capability('blogger')] });
-
-  const adminTool = byId(buildProjectTools({ project: input, viewer: 'admin', bloggerRuntime: 'central-legacy' })).blogger;
-  const clientTool = byId(buildProjectTools({ project: input, viewer: 'client', bloggerRuntime: 'central-legacy' })).blogger;
-
-  assert.deepEqual(
-    { state: adminTool.state, href: adminTool.href },
-    { state: 'active', href: '/paneladmin/blogger/first-site' },
-  );
-  assert.deepEqual(
-    { state: clientTool.state, href: clientTool.href },
-    { state: 'active', href: '/cliente/proyectos/first-site/blogger' },
-  );
-});
-
 test('active analytics uses the exact project internal route for each viewer', () => {
   const input = project({ capabilities: [capability('analytics')] });
 
@@ -86,6 +70,29 @@ test('active analytics uses the exact project internal route for each viewer', (
     '/paneladmin/proyectos/11111111-1111-4111-8111-111111111111/estadisticas');
   assert.equal(byId(buildProjectTools({ project: input, viewer: 'client' })).analytics.href,
     '/cliente/proyectos/first-site/estadisticas');
+});
+
+test('Sport central Blogger stays discoverable without external handoff metadata', () => {
+  const input = project({ slug: 'sportmassagefuengirola', domain: 'sportmassagefuengirola.com', capabilities: [capability('blogger')] });
+  for (const [viewer, href] of [
+    ['admin', '/paneladmin/blogger/sportmassagefuengirola'],
+    ['client', '/cliente/proyectos/sportmassagefuengirola/blogger'],
+  ]) {
+    const tool = byId(buildProjectTools({ project: input, viewer, bloggerRuntime: 'central-legacy' })).blogger;
+    assert.deepEqual({ state: tool?.state, href: tool?.href }, { state: 'active', href });
+    const invalid = buildProjectTools({ project: input, viewer, bloggerRuntime: 'central-legacy', configurationIssues: { blogger: 'Invalid runtime' } });
+    assert.equal(invalid.some(tool => tool.id === 'blogger' && tool.href), false);
+  }
+});
+
+test('the Sport metadata exception never applies to a different project or domain', () => {
+  for (const input of [
+    project({ capabilities: [capability('blogger')] }),
+    project({ slug: 'sportmassagefuengirola', domain: 'another.example', capabilities: [capability('blogger')] }),
+  ]) {
+    assert.equal(byId(buildProjectTools({ project: input, viewer: 'admin' })).blogger.state, 'misconfigured');
+    assert.equal(buildProjectTools({ project: input, viewer: 'client' }).some(tool => tool.id === 'blogger'), false);
+  }
 });
 
 test('available and unavailable tools remain visible but cannot launch for administrators', () => {

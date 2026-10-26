@@ -33,15 +33,19 @@ export function hasProjectBloggerRuntime(project: BloggerProject, site: BloggerS
     getBloggerEditorTarget(site))
 }
 
+export function getCentralBloggerRuntime(project: BloggerProject, site: BloggerSite | null): string | null {
+  return site?.key === 'sportmassagefuengirola' && site.blogger?.runtime === 'central-legacy' &&
+    hasProjectBloggerRuntime(project, site)
+    ? site.blogger.runtime
+    : null
+}
+
 export function getBloggerCapabilityIssue(
   project: BloggerProject,
   capability: BloggerCapability,
   site: BloggerSite | null,
 ): 'destination' | 'blogger' | null {
-  if (!hasProjectBloggerRuntime(project, site)) {
-    return 'blogger'
-  }
-  if (site?.blogger?.runtime === 'central-legacy' || site?.blogger?.runtime === 'central-multisite') {
+  if (getCentralBloggerRuntime(project, site)) {
     return null
   }
   if (capability.launch_url && !validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)) {
@@ -49,7 +53,7 @@ export function getBloggerCapabilityIssue(
   }
   const metadata = capability.metadata
   const provisioningConfirmed = metadata && typeof metadata === 'object' && !Array.isArray(metadata) && metadata.provisioning_confirmed === true
-  if (!capability.launch_url || !capability.validated_at || !provisioningConfirmed) {
+  if (!capability.launch_url || !capability.validated_at || !provisioningConfirmed || !hasProjectBloggerRuntime(project, site)) {
     return 'blogger'
   }
   return null

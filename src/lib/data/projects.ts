@@ -9,7 +9,7 @@ import type { CapabilityKey, Tables } from '@/lib/supabase/types'
 import { validateProjectDestination } from '@/lib/projects/model.mjs'
 import { buildPortalNavigation } from '@/lib/projects/portal-navigation.mjs'
 import { reconcileProjectsWithRegistry } from '@/lib/projects/reconciliation.mjs'
-import { getBloggerCapabilityIssue, hasProjectBloggerRuntime } from '@/lib/projects/blogger-validation'
+import { getBloggerCapabilityIssue, getCentralBloggerRuntime, hasProjectBloggerRuntime } from '@/lib/projects/blogger-validation'
 import { getSiteByKey, getSites } from '@/lib/sites/registry.mjs'
 import { getConfiguredUmamiSites, getUmamiConnections } from '@/lib/analytics/umami-core.mjs'
 import type { Locale } from '@/lib/i18n'
@@ -49,7 +49,7 @@ export function hasProjectBlogger(project: Project): boolean {
 export function getProjectBloggerRuntime(project: Pick<Project, 'slug' | 'domain'>): string | null {
   try {
     const site = getSiteByKey(project.slug)
-    return hasProjectBloggerRuntime(project, site) ? site.blogger?.runtime ?? null : null
+    return getCentralBloggerRuntime(project, site)
   } catch {
     return null
   }
