@@ -122,6 +122,10 @@ select {
   color: var(--ink);
 }
 
+.button-link[hidden], .translation-panel [hidden] { display: none; }
+.translation-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+.translation-panel .actions, .translation-panel .view-tabs { flex-wrap: wrap; }
+
 button:disabled {
   cursor: wait;
   opacity: 0.65;

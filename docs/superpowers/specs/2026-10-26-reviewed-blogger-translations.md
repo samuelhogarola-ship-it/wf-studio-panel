@@ -1,0 +1,11 @@
+# Reviewed Sport Massage translations
+
+The author writes the original in Finnish (default), optionally generates English and Spanish translations, edits and saves each language, explicitly approves each translation, then publishes. Automatic generation is optional. Manual translation and original-only publication work without any API key. The interface stays English.
+
+Publishing must never invoke the translation provider. It uses the exact saved, approved text. Saving or publishing preserves manual edits. Only the explicit “Generate automatic translation from original” action replaces the selected translations and resets approval. Original changes preserve translated text but invalidate its approval. Editing an approved translation invalidates its approval until explicitly approved again.
+
+Approach: keep original Markdown storage and store localized drafts in a sibling `<slug>.translations.json` document. Language tabs reuse the existing rich editor, title and SEO fields; shared image/date/tags metadata stays on the original. Separate editable drafts are necessary: translating inside publication cannot support review and destroys edits. Approval binds hashes of both saved original content and saved localized content. The approve action saves current edits before approving the exact persisted revision. Publication remains one atomic Git tree/commit/ref update.
+
+DeepL is optional and server-only. Existing API Free keys use the free endpoint; Developer keys use the standard endpoint. No paid plan, new chargeable subscription or public test article is authorized. Current official Developer offering is a free, non-renewing total quota of 1,000,000 characters, with no card required; availability still requires an authenticated account/key. Never access Proton Pass. Do not expose keys in the browser, logs or Git.
+
+Tests use mocked providers and an in-memory GitHub repository. Cover preservation of edits, generation only on request, review invalidation, missing key and quota/provider failure without data loss, Finnish source selection, unapproved publication rejection and atomic publication. Verify the complete UI locally, then lint/typecheck/full tests/build, independent review, PR to main and deploy the panel. Do not publish production test articles.

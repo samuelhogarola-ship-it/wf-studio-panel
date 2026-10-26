@@ -2,6 +2,7 @@ const API_BASE = "https://api.github.com";
 import { sanitizeHtml } from "./sanitize.mjs";
 import { Marked } from "marked";
 import { decodeHTML } from "entities";
+import { sourceFingerprint, normalizeTranslationDrafts, approveTranslationDraft, publicationTranslations } from "./translations.mjs";
 const markdownRenderer = new Marked({ async: false, gfm: true });
 const SITE_REPOSITORY = "samuelhogarola-ship-it/sportmassage";
 const SUPPORTED_LANGUAGES = new Set(["en", "es", "fi"]);
@@ -43,12 +44,13 @@ export async function translateHtml(html, sourceLanguage, targetLanguage, fetchI
   const source = normalizeBlogLanguage(sourceLanguage);
   const target = normalizeBlogLanguage(targetLanguage);
   if (source === target) return String(html || "");
-  const endpoint = process.env.DEEPL_API_URL?.trim() || "https://api.deepl.com/v2/translate";
+  const endpoint = process.env.DEEPL_API_URL?.trim() || (key.endsWith(":fx") ? "https://api-free.deepl.com/v2/translate" : "https://api.deepl.com/v2/translate");
   const response = await fetchImpl(endpoint, {
     method: "POST",
     headers: { Authorization: `DeepL-Auth-Key ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ text: [String(html || "")], source_lang: DEEPL_LANGUAGES[source], target_lang: DEEPL_LANGUAGES[target], tag_handling: "html", tag_handling_version: "v2" }),
+    body: JSON.stringify({ text: [String(html || "")], source_lang: source.toUpperCase(), target_lang: DEEPL_LANGUAGES[target], tag_handling: "html", tag_handling_version: "v2" }),
   });
+  if (response.status === 456) throw new Error('Translation quota reached. Your saved texts are unchanged. You can edit translations manually.');
   if (!response.ok) throw new Error(`Translation provider failed: ${response.status}`);
   const data = await response.json();
   const result = data?.translations?.[0]?.text;
@@ -68,7 +70,7 @@ function card(meta) {
 
 export function renderPostBody(meta, body) {
   return sanitizeHtml(meta.content_format === "html" ? String(body || "") : markdownRenderer.parse(String(body || "")))
-    .replace(/<img\b[^>]*>/gi, image => image.replace(/\bsrc="(img\/[a-z0-9._-]+)"/gi, (_match, source) => `src="${escapeHtml(publicImageUrl(meta.slug, source))}"`));
+    .replace(/<img\b[^>]*>/gi, image => image.replace(/\bsrc="(img\/[a-z0-9._-]+)"/gi, (_match, source) => `src="${escapeHtml(publicImageUrl(meta.publication_base_slug || meta.slug, source))}"`));
 }
 
 export function buildPostHtml(meta, body) {
@@ -79,6 +81,7 @@ export function buildPostHtml(meta, body) {
   const articleBody = renderPostBody(meta, body);
   const canonical = `https://sportmassagefuengirola.com/blog/${String(meta.slug).split("/").map(encodeURIComponent).join("/")}/`;
   const tagMarkup = tags(meta.tags).map((tag) => `<span>${escapeHtml(tag)}</span>`).join(" ");
+  const languageLinks = meta.publication_base_slug ? `<nav aria-label="Article language">${normalizePublicationLanguages(meta.publish_languages).map(language => `<a href="/blog/${escapeHtml(meta.publication_base_slug)}/${language === meta.original_language ? '' : `${language}/`}"${language === meta.lang ? ' aria-current="page"' : ''}>${({fi:'Suomi',en:'English',es:'Español'})[language]}</a>`).join(' · ')}</nav>` : '';
 
   return `<!doctype html>
 <html lang="${lang}">
@@ -90,7 +93,7 @@ export function buildPostHtml(meta, body) {
   <link rel="canonical" href="${canonical}">
   <style>body{margin:0;background:#f5f1ea;color:#19323c;font:16px/1.7 system-ui,sans-serif}main{max-width:760px;margin:auto;padding:48px 24px}a{color:#0b6572}.blog-post-card{background:#fff;padding:32px;border-radius:18px;box-shadow:0 8px 30px #19323c12}h1{font-size:clamp(2rem,5vw,3.5rem);line-height:1.1}.blog-date{color:#7b8584;text-transform:uppercase;letter-spacing:.12em;font-size:.8rem}.blog-pill{display:inline-block;margin:.2rem;padding:.2rem .6rem;border-radius:999px;background:#d9eceb;font-size:.8rem}</style>
 </head>
-<body><main><p><a href="/blog/">← Blog</a></p><article class="blog-post-card"><p class="blog-date">${escapeHtml(meta.date || "")}</p><h1>${title}</h1><p>${description}</p>${meta.image ? `<img src="${escapeHtml(publicImageUrl(meta.slug, meta.image))}" alt="${escapeHtml(meta.image_alt || meta.title)}">` : ""}<div class="blog-tags">${tagMarkup}</div><div class="blog-content">${articleBody}</div><p>By ${author}</p></article></main></body>
+<body><main><p><a href="/blog/">← Blog</a></p>${languageLinks}<article class="blog-post-card"><p class="blog-date">${escapeHtml(meta.date || "")}</p><h1>${title}</h1><p>${description}</p>${meta.image ? `<img src="${escapeHtml(publicImageUrl(meta.slug, meta.image))}" alt="${escapeHtml(meta.image_alt || meta.title)}">` : ""}<div class="blog-tags">${tagMarkup}</div><div class="blog-content">${articleBody}</div><p>By ${author}</p></article></main></body>
 </html>
 `;
 }
@@ -193,7 +196,9 @@ export async function readBloggerPost(slug) {
   const file = await readFile(repository, branch, `blog-posts/${slug}.md`);
   if (!file) return null;
   const parsed = parseMarkdown(file.content);
-  return { slug, meta: parsed.meta, body: parsed.body, format: parsed.meta.content_format || "html", images: await listBloggerPostImages(slug), isPublished: Boolean(await readFile(repository, branch, `blog/${slug}/index.html`)) };
+  const fingerprint = sourceFingerprint(parsed.meta, parsed.body);
+  const translationDocument = await readTranslationDocument(slug);
+  return { slug, meta: parsed.meta, body: parsed.body, format: parsed.meta.content_format || "html", sourceFingerprint: fingerprint, translationRevision: translationDocument.sha, translations: normalizeTranslationDrafts(translationDocument.drafts, fingerprint), images: await listBloggerPostImages(slug), isPublished: Boolean(await readFile(repository, branch, `blog/${slug}/index.html`)) };
 }
 
 async function listBloggerPostImages(slug) {
@@ -217,8 +222,64 @@ export async function saveBloggerPost(slug, input) {
   const meta = { title: input.title, slug: nextSlug, description: input.description, date: input.date || new Date().toISOString().slice(0, 10), author: input.author || "Sport Massage Fuengirola", lang: normalizeBlogLanguage(input.lang || "en"), publish_languages: normalizePublicationLanguages(input.publish_languages || input.lang || "en"), tags: tags(input.tags).join(", "), image: input.image || "", category: input.category || "", level: input.level || "", status: input.status || "draft", content_format: input.content_format === "markdown" ? "markdown" : "html" };
   const existing = await readFile(repository, branch, `blog-posts/${nextSlug}.md`);
   const body = meta.content_format === "html" ? sanitizeHtml(input.body) : String(input.body || "");
+  const previousTranslations = await readTranslationDrafts(nextSlug);
+  if (existing && Object.keys(previousTranslations).length && parseMarkdown(existing.content).meta.lang !== meta.lang) throw new Error("Keep the original language while translation drafts exist.");
+  const fingerprint = sourceFingerprint(meta, body);
+  const translations = normalizeTranslationDrafts(input.translations ?? previousTranslations, fingerprint, previousTranslations);
   await writeFile(repository, branch, `blog-posts/${nextSlug}.md`, serializeMarkdown(meta, body), `blog: save ${nextSlug}`, existing?.sha);
-  return { slug: nextSlug, meta, body, format: meta.content_format, images: await listBloggerPostImages(nextSlug), isPublished: Boolean(await readFile(repository, branch, `blog/${nextSlug}/index.html`)) };
+  if (input.translations !== undefined || Object.keys(previousTranslations).length) await saveTranslationDrafts(nextSlug, translations);
+  return { slug: nextSlug, meta, body, sourceFingerprint: fingerprint, translations, format: meta.content_format, images: await listBloggerPostImages(nextSlug), isPublished: Boolean(await readFile(repository, branch, `blog/${nextSlug}/index.html`)) };
+}
+
+async function readTranslationDrafts(slug, ref) {
+  return (await readTranslationDocument(slug, ref)).drafts;
+}
+
+async function readTranslationDocument(slug, ref) {
+  const { repository, branch } = config();
+  const file = await readFile(repository, ref || branch, `blog-posts/${slug}.translations.json`);
+  if (!file) return { drafts: {}, sha: null };
+  const data = JSON.parse(file.content);
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid translation drafts');
+  return { drafts: data, sha: file.sha };
+}
+
+async function saveTranslationDrafts(slug, drafts, expectedRevision) {
+  const { repository, branch } = config();
+  const path = `blog-posts/${slug}.translations.json`;
+  const previous = await readFile(repository, branch, path);
+  if (expectedRevision !== undefined && expectedRevision !== (previous?.sha || null)) throw new Error('Translation drafts changed. Reload before trying again.');
+  await writeFile(repository, branch, path, JSON.stringify(drafts, null, 2), `blog: save ${slug} translations`, previous?.sha);
+}
+
+export async function generateBloggerTranslations(slug, languages) {
+  const post = await readBloggerPost(slug);
+  if (!post) throw new Error('Post not found');
+  if (!Array.isArray(languages) || !languages.length) throw new Error('Select translation languages first.');
+  const targets = [...new Set(languages.map(language => normalizeBlogLanguage(language)))].filter(language => language !== post.meta.lang);
+  if (!targets.length) throw new Error('Select a language other than the original.');
+  const rendered = renderPostBody(post.meta, post.body);
+  const generated = await Promise.all(targets.map(async language => [language, {
+    title: decodeHTML(await translateHtml(escapeHtml(post.meta.title), post.meta.lang, language)),
+    description: post.meta.description ? decodeHTML(await translateHtml(escapeHtml(post.meta.description), post.meta.lang, language)) : '',
+    body: await translateHtml(rendered, post.meta.lang, language), format: 'html',
+  }]));
+  const latest = await readBloggerPost(slug);
+  if (!latest || latest.sourceFingerprint !== post.sourceFingerprint) throw new Error('The original changed during translation. Review the original and generate again.');
+  if (targets.some(language => JSON.stringify(latest.translations[language] || null) !== JSON.stringify(post.translations[language] || null))) throw new Error('Translation drafts changed during generation. Your newer edits are preserved. Reload before generating again.');
+  const translations = { ...latest.translations };
+  for (const [language, draft] of generated) translations[language] = normalizeTranslationDrafts({ [language]: draft }, post.sourceFingerprint, {})[language];
+  // No draft changes are persisted unless every provider request succeeds.
+  await saveTranslationDrafts(slug, translations, latest.translationRevision);
+  return readBloggerPost(slug);
+}
+
+export async function approveBloggerTranslation(slug, language, expectedSource, expectedContent) {
+  const post = await readBloggerPost(slug);
+  if (!post) throw new Error('Post not found');
+  const drafts = approveTranslationDraft(post.translations, normalizeBlogLanguage(language), post.sourceFingerprint, expectedSource, expectedContent);
+  await saveTranslationDrafts(slug, drafts, post.translationRevision);
+  return readBloggerPost(slug);
 }
 
 async function writeFile(repository, branch, path, content, message, sha) {
@@ -244,17 +305,17 @@ export async function publishBloggerPost(meta, body) {
   const index = await readFile(repository, reference.object.sha, indexPath);
   const sourceLanguage = normalizeBlogLanguage(meta.lang || "en");
   const publishLanguages = publishedMeta.publish_languages;
-  const renderedBody = renderPostBody(meta, safeBody);
-  const variants = await Promise.all(publishLanguages.map(async (language) => language === sourceLanguage
-    ? { language, body: renderedBody, title: meta.title, description: meta.description }
-    : { language, body: await translateHtml(renderedBody, sourceLanguage, language), title: decodeHTML(await translateHtml(escapeHtml(meta.title), sourceLanguage, language)), description: decodeHTML(await translateHtml(escapeHtml(meta.description || ""), sourceLanguage, language)) }));
+  const fingerprint = sourceFingerprint(meta, safeBody);
+  const drafts = normalizeTranslationDrafts(await readTranslationDrafts(meta.slug, reference.object.sha), fingerprint);
+  const variants = publicationTranslations({ ...meta, publish_languages: publishLanguages }, safeBody, drafts);
   const imageMetadata = await readImageMetadata(meta.slug, reference.object.sha);
   const imageAlt = imageMetadata[String(meta.image || "").split("/").pop()]?.alt || meta.image_alt;
-  const changes = [{ path: htmlPath, content: buildPostHtml({ ...meta, image_alt: imageAlt, lang: sourceLanguage }, safeBody) }];
+  const publicationMeta = { ...meta, publication_base_slug: meta.slug, original_language: sourceLanguage, publish_languages: variants.map(variant => variant.language) };
+  const changes = [{ path: htmlPath, content: buildPostHtml({ ...publicationMeta, image_alt: imageAlt, lang: sourceLanguage }, safeBody) }];
   for (const variant of variants) {
     if (variant.language === sourceLanguage) continue;
     const variantPath = `blog/${meta.slug}/${variant.language}/index.html`;
-    const variantMeta = { ...meta, slug: `${meta.slug}/${variant.language}`, title: variant.title, description: variant.description, image: meta.image ? publicImageUrl(meta.slug, meta.image) : "", image_alt: imageAlt, lang: variant.language, content_format: "html" };
+    const variantMeta = { ...publicationMeta, slug: `${meta.slug}/${variant.language}`, title: variant.title, description: variant.description, image: meta.image ? publicImageUrl(meta.slug, meta.image) : "", image_alt: imageAlt, lang: variant.language, content_format: variant.format };
     changes.push({ path: variantPath, content: buildPostHtml(variantMeta, variant.body) });
   }
   changes.push({ path: indexPath, content: upsertBlogIndexHtml(index?.content, meta) }, { path: sourcePath, content: markdown });
