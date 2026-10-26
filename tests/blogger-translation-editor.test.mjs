@@ -100,6 +100,7 @@ test('generate, edit, approve and publish uses saved review texts and regenerate
 
 test('image detail refresh preserves unsaved translated wording',async t=>{
   const {window,document}=await editor(t,{initialPost:{meta:{slug:'hieronta',title:'Hieronta',description:'Palautuminen',lang:'fi',content_format:'html',publish_languages:['fi']},body:'<p>Original</p>',images:[{file:'photo.png',url:'https://sportmassagefuengirola.com/blog/hieronta/img/photo.png'}]}});
+  assert.equal(document.querySelector('.delete-image').disabled,false);
   document.querySelector('[data-language="en"]').click();
   input(window,'#title','Unsaved English title');body(window,'<p>Keep my unsaved wording.</p>');
   document.querySelector('#saveImageMeta').click();

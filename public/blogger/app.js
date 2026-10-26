@@ -340,6 +340,7 @@ async function runAction(message, action) {
     visualEditor.contentEditable = 'true';
     renderLanguageControls();
     renderPostList();
+    for (const button of imageList.querySelectorAll('.delete-image')) button.disabled = false;
   }
 }
 
