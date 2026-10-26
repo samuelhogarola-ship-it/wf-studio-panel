@@ -150,7 +150,16 @@ async function readFile(repository, branch, path) {
 
 export async function listBloggerPosts() {
   const { repository, branch } = config();
-  const listing = await githubRequest(`/repos/${repository}/contents/blog-posts?ref=${encodeURIComponent(branch)}`);
+  let listing;
+  try {
+    listing = await githubRequest(`/repos/${repository}/contents/blog-posts?ref=${encodeURIComponent(branch)}`);
+  } catch (error) {
+    if (!String(error.message).includes("404")) throw error;
+    // New blogs do not have source files yet. Confirm the configured branch is
+    // accessible: missing permissions and missing refs also return 404.
+    await githubRequest(`/repos/${repository}/contents?ref=${encodeURIComponent(branch)}`);
+    return [];
+  }
   const files = (Array.isArray(listing) ? listing : []).filter((entry) => entry.name.endsWith(".md"));
   return Promise.all(files.map(async (entry) => {
     const post = parseMarkdown((await readFile(repository, branch, entry.path))?.content || "");

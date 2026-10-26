@@ -8,7 +8,55 @@ import {
   normalizeBlogLanguage,
   normalizePublicationLanguages,
   translateHtml,
+  listBloggerPosts,
 } from "../src/lib/blogger/publisher.mjs";
+
+test("an accessible repository without Blogger source opens as an empty blog", async (t) => {
+  const previous = process.env.BLOGGER_GITHUB_TOKEN;
+  process.env.BLOGGER_GITHUB_TOKEN = "test-token";
+  t.after(() => { if (previous === undefined) delete process.env.BLOGGER_GITHUB_TOKEN; else process.env.BLOGGER_GITHUB_TOKEN = previous; });
+  const requests = [];
+  t.mock.method(globalThis, "fetch", async url => {
+    requests.push(String(url));
+    return String(url).includes("/contents/blog-posts")
+      ? new Response("Not Found", { status: 404 })
+      : Response.json({ full_name: "samuelhogarola-ship-it/sportmassage" });
+  });
+  assert.deepEqual(await listBloggerPosts(), []);
+  assert.equal(requests.length, 2);
+  assert.match(requests[1], /\/contents\?ref=main$/);
+});
+
+test("a missing configured branch is not reported as an empty blog", async (t) => {
+  const previousToken = process.env.BLOGGER_GITHUB_TOKEN;
+  const previousBranch = process.env.BLOGGER_GITHUB_BRANCH;
+  process.env.BLOGGER_GITHUB_TOKEN = "test-token";
+  process.env.BLOGGER_GITHUB_BRANCH = "missing-branch";
+  t.after(() => {
+    if (previousToken === undefined) delete process.env.BLOGGER_GITHUB_TOKEN; else process.env.BLOGGER_GITHUB_TOKEN = previousToken;
+    if (previousBranch === undefined) delete process.env.BLOGGER_GITHUB_BRANCH; else process.env.BLOGGER_GITHUB_BRANCH = previousBranch;
+  });
+  t.mock.method(globalThis, "fetch", async url => String(url).includes("/contents")
+    ? new Response("Not Found", { status: 404 })
+    : Response.json({ full_name: "samuelhogarola-ship-it/sportmassage" }));
+  await assert.rejects(listBloggerPosts(), /GitHub request failed: 404/);
+});
+
+test("missing repository access is not reported as an empty blog", async (t) => {
+  const previous = process.env.BLOGGER_GITHUB_TOKEN;
+  process.env.BLOGGER_GITHUB_TOKEN = "test-token";
+  t.after(() => { if (previous === undefined) delete process.env.BLOGGER_GITHUB_TOKEN; else process.env.BLOGGER_GITHUB_TOKEN = previous; });
+  t.mock.method(globalThis, "fetch", async () => new Response("Not Found", { status: 404 }));
+  await assert.rejects(listBloggerPosts(), /GitHub request failed: 404/);
+});
+
+test("GitHub outages are not reported as an empty blog", async (t) => {
+  const previous = process.env.BLOGGER_GITHUB_TOKEN;
+  process.env.BLOGGER_GITHUB_TOKEN = "test-token";
+  t.after(() => { if (previous === undefined) delete process.env.BLOGGER_GITHUB_TOKEN; else process.env.BLOGGER_GITHUB_TOKEN = previous; });
+  t.mock.method(globalThis, "fetch", async () => new Response("Unavailable", { status: 503 }));
+  await assert.rejects(listBloggerPosts(), /GitHub request failed: 503/);
+});
 
 test("blogger defaults to English and keeps the selected publication languages", () => {
   assert.equal(normalizeBlogLanguage(), "en");
