@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Gestor de posts | Sport Massage Fuengirola</title>
+    <title>Post manager | Sport Massage Fuengirola</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -17,105 +17,105 @@
           </div>
         </div>
         <div class="search-row">
-          <input id="search" type="search" placeholder="Buscar posts" autocomplete="off" />
-          <button id="newPost" type="button">Nuevo</button>
+          <input id="search" type="search" placeholder="Search posts" autocomplete="off" />
+          <button id="newPost" type="button">New</button>
         </div>
         <div id="postList" class="post-list" aria-live="polite"></div>
       </aside>
 
-      <section class="editor" aria-label="Editor de post">
+      <section class="editor" aria-label="Post editor">
         <header class="topbar">
           <div>
-            <p id="statusText" class="status-text">Cargando posts...</p>
-            <h1 id="currentTitle">Gestor de contenidos</h1>
+            <p id="statusText" class="status-text">Loading posts...</p>
+            <h1 id="currentTitle">Content manager</h1>
           </div>
           <div class="actions">
-            <a id="viewPublished" class="button-link secondary" href="#" target="_blank" rel="noreferrer" hidden>Ver publicación</a>
-            <button id="savePost" class="secondary" type="button">Guardar borrador</button>
-            <button id="publishPost" type="button">Publicar</button>
+            <a id="viewPublished" class="button-link secondary" href="#" target="_blank" rel="noreferrer" hidden>View published post</a>
+            <button id="savePost" class="secondary" type="button">Save draft</button>
+            <button id="publishPost" type="button">Publish</button>
           </div>
         </header>
 
-        <section class="meta-grid" aria-label="Metadatos del post">
-          <label>Titulo<input id="title" type="text" /></label>
+        <section class="meta-grid" aria-label="Post details">
+          <label>Title<input id="title" type="text" /></label>
           <label>Slug<input id="slug" type="text" /></label>
-          <label>Descripcion SEO<textarea id="description" rows="3"></textarea></label>
-          <label>Fecha<input id="date" type="date" /></label>
-            <label>Idioma original<select id="lang"><option value="en">English</option><option value="es">Español</option><option value="fi">Suomi</option></select></label>
-            <label>Publicar en<select id="publishLanguages" multiple><option value="en" selected>English</option><option value="es" selected>Español</option><option value="fi" selected>Suomi</option></select></label>
-          <label>Autor<input id="author" type="text" /></label>
-          <label>Imagen destacada<input id="image" type="text" placeholder="img/cover.webp o default" /></label>
-          <label>Etiquetas<input id="tags" type="text" placeholder="goethe, b1, gramatica" /></label>
-          <label>Categoria<input id="category" type="text" /></label>
-          <label>Nivel<input id="level" type="text" placeholder="A2-B1" /></label>
-          <label>Estado<select id="status" disabled><option value="draft">Borrador</option><option value="published">Publicado</option></select></label>
+          <label>SEO description<textarea id="description" rows="3"></textarea></label>
+          <label>Date<input id="date" type="date" /></label>
+            <label>Original language<select id="lang"><option value="en">English</option><option value="es">Spanish</option><option value="fi">Finnish</option></select></label>
+            <label>Publish in<select id="publishLanguages" multiple><option value="en" selected>English</option><option value="es" selected>Spanish</option><option value="fi" selected>Finnish</option></select></label>
+          <label>Author<input id="author" type="text" /></label>
+          <label>Featured image<input id="image" type="text" placeholder="img/cover.webp or default" /></label>
+          <label>Tags<input id="tags" type="text" placeholder="massage, recovery, wellbeing" /></label>
+          <label>Category<input id="category" type="text" /></label>
+          <label>Level<input id="level" type="text" placeholder="A2-B1" /></label>
+          <label>Status<select id="status" disabled><option value="draft">Draft</option><option value="published">Published</option></select></label>
         </section>
 
         <section class="workspace">
           <div class="writing-pane">
             <div class="editor-tools">
-              <div class="view-tabs" aria-label="Vistas del editor">
-                <button class="is-active" data-view="visual" type="button">Vista normal</button>
-                <button data-view="markdown" type="button">Editar Markdown</button>
-                <button data-view="html" type="button">Vista HTML</button>
+              <div class="view-tabs" aria-label="Editor views">
+                <button class="is-active" data-view="visual" type="button">Visual editor</button>
+                <button data-view="markdown" type="button">Edit Markdown</button>
+                <button data-view="html" type="button">HTML view</button>
               </div>
-              <div class="toolbar" aria-label="Formato">
-                <button data-command="undo" type="button" title="Deshacer">↶</button>
-                <button data-command="redo" type="button" title="Rehacer">↷</button>
-                <button data-wrap="**|**" data-placeholder="texto" type="button"><strong>B</strong></button>
-                <button data-wrap="*|*" data-placeholder="texto" type="button"><em>I</em></button>
-                <button data-line="## " data-placeholder="Subtitulo" type="button">H2</button>
-                <button data-line="### " data-placeholder="Apartado" type="button">H3</button>
-                <button data-wrap="<p class=&quot;blog-text-lg&quot;>|</p>" data-placeholder="Texto destacado" type="button">Grande</button>
-                <button data-line="- " data-placeholder="Punto" type="button">Lista</button>
-                <button data-wrap="[|](https://)" data-placeholder="texto" type="button">Link</button>
-                <button id="insertImage" type="button">Insertar imagen aquí</button>
+              <div class="toolbar" aria-label="Formatting">
+                <button data-command="undo" type="button" title="Undo">↶</button>
+                <button data-command="redo" type="button" title="Redo">↷</button>
+                <button data-wrap="**|**" data-placeholder="text" type="button"><strong>B</strong></button>
+                <button data-wrap="*|*" data-placeholder="text" type="button"><em>I</em></button>
+                <button data-line="## " data-placeholder="Subheading" type="button">H2</button>
+                <button data-line="### " data-placeholder="Section" type="button">H3</button>
+                <button data-wrap="<p class=&quot;blog-text-lg&quot;>|</p>" data-placeholder="Highlighted text" type="button">Large text</button>
+                <button data-line="- " data-placeholder="Item" type="button">List</button>
+                <button data-wrap="[|](https://)" data-placeholder="text" type="button">Link</button>
+                <button id="insertImage" type="button">Insert image here</button>
               </div>
             </div>
-            <div id="visualEditor" class="visual-editor" contenteditable="true" role="textbox" aria-label="Editor visual" spellcheck="true"></div>
+            <div id="visualEditor" class="visual-editor" contenteditable="true" role="textbox" aria-label="Visual editor" spellcheck="true"></div>
             <textarea id="body" class="body-editor" spellcheck="true" hidden></textarea>
-            <iframe id="mainPreview" class="main-preview" title="Vista previa principal" sandbox hidden></iframe>
+            <iframe id="mainPreview" class="main-preview" title="Main preview" sandbox hidden></iframe>
             <pre id="htmlView" class="html-view" hidden></pre>
             <input id="inlineImageUpload" class="visually-hidden" type="file" accept="image/*" />
-            <div id="selectionToolbar" class="floating-toolbar selection-toolbar" role="toolbar" aria-label="Formato de la selección" hidden>
-              <button data-command="bold" type="button" title="Negrita"><strong>B</strong></button>
-              <button data-command="italic" type="button" title="Cursiva"><em>I</em></button>
+            <div id="selectionToolbar" class="floating-toolbar selection-toolbar" role="toolbar" aria-label="Selection formatting" hidden>
+              <button data-command="bold" type="button" title="Bold"><strong>B</strong></button>
+              <button data-command="italic" type="button" title="Italic"><em>I</em></button>
               <button data-block="h2" type="button">H2</button>
               <button data-block="h3" type="button">H3</button>
-              <button data-command="insertUnorderedList" type="button">Lista</button>
+              <button data-command="insertUnorderedList" type="button">List</button>
               <button id="selectionLink" type="button">Link</button>
-              <button id="selectionImage" type="button">Imagen</button>
+              <button id="selectionImage" type="button">Image</button>
             </div>
-            <div id="imageMoveToolbar" class="floating-toolbar image-move-toolbar" role="toolbar" aria-label="Mover imagen" hidden>
-              <span>Arrastra o mueve</span>
-              <button id="moveImageUp" type="button" title="Mover imagen arriba">↑</button>
-              <button id="moveImageDown" type="button" title="Mover imagen abajo">↓</button>
+            <div id="imageMoveToolbar" class="floating-toolbar image-move-toolbar" role="toolbar" aria-label="Move image" hidden>
+              <span>Drag or move</span>
+              <button id="moveImageUp" type="button" title="Move image up">↑</button>
+              <button id="moveImageDown" type="button" title="Move image down">↓</button>
             </div>
           </div>
 
-          <aside class="asset-pane" aria-label="Imagenes y vista previa">
+          <aside class="asset-pane" aria-label="Images and preview">
             <div class="asset-header">
-              <strong>Imagenes</strong>
+              <strong>Images</strong>
               <label class="file-button">
-                Subir
+                Upload
                 <input id="imageUpload" type="file" accept="image/*" multiple />
               </label>
             </div>
             <div id="imageList" class="image-list"></div>
             <form id="imageMetaForm" class="image-meta" hidden>
-              <strong id="selectedImageName">Imagen seleccionada</strong>
-              <label>Texto alt<input id="imageAlt" type="text" /></label>
-              <label>Descripcion<textarea id="imageDescription" rows="3"></textarea></label>
+              <strong id="selectedImageName">Selected image</strong>
+              <label>Alt text<input id="imageAlt" type="text" /></label>
+              <label>Description<textarea id="imageDescription" rows="3"></textarea></label>
               <div class="image-meta-actions">
-                <button id="insertSelectedImage" class="secondary" type="button">Insertar en el cursor</button>
-                <button id="setFeaturedImage" class="secondary" type="button">Usar como principal</button>
-                <button id="saveImageMeta" type="button">Guardar imagen</button>
+                <button id="insertSelectedImage" class="secondary" type="button">Insert at cursor</button>
+                <button id="setFeaturedImage" class="secondary" type="button">Set as featured</button>
+                <button id="saveImageMeta" type="button">Save image</button>
               </div>
             </form>
             <div class="preview-header">
-              <strong>Vista rapida</strong>
+              <strong>Quick preview</strong>
             </div>
-            <iframe id="preview" class="preview" title="Vista previa" sandbox></iframe>
+            <iframe id="preview" class="preview" title="Preview" sandbox></iframe>
           </aside>
         </section>
       </section>
