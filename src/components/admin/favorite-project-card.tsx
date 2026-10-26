@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ProjectFavoriteForm } from '@/components/admin/project-favorite-form'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { getCapabilityConfigurationIssue, type FavoriteProject } from '@/lib/data/projects'
+import { getCapabilityConfigurationIssue, getProjectBloggerRuntime, type FavoriteProject } from '@/lib/data/projects'
 import { buildProjectTools } from '@/lib/projects/tools.mjs'
 
 const statusLabels = {
@@ -17,7 +17,7 @@ export function FavoriteProjectCard({ project }: { project: FavoriteProject }) {
     const issue = getCapabilityConfigurationIssue(project, capability)
     return issue ? [[capability.capability_key, issue]] : []
   }))
-  const shortcuts = buildProjectTools({ project, viewer: 'admin', configurationIssues })
+  const shortcuts = buildProjectTools({ project, viewer: 'admin', configurationIssues, bloggerRuntime: getProjectBloggerRuntime(project) })
     .filter(tool => ['website', 'blogger', 'analytics'].includes(tool.id) && tool.state === 'active' && tool.href)
 
   return (

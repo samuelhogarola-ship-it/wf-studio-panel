@@ -63,6 +63,22 @@ test('active Blogger uses the authorized internal route and exposes no runtime c
   assert.equal(JSON.stringify(tool).includes('admin.webfuengirola.com'), false);
 });
 
+test('active central Blogger remains discoverable without external handoff metadata', () => {
+  const input = project({ capabilities: [capability('blogger')] });
+
+  const adminTool = byId(buildProjectTools({ project: input, viewer: 'admin', bloggerRuntime: 'central-legacy' })).blogger;
+  const clientTool = byId(buildProjectTools({ project: input, viewer: 'client', bloggerRuntime: 'central-legacy' })).blogger;
+
+  assert.deepEqual(
+    { state: adminTool.state, href: adminTool.href },
+    { state: 'active', href: '/paneladmin/blogger/first-site' },
+  );
+  assert.deepEqual(
+    { state: clientTool.state, href: clientTool.href },
+    { state: 'active', href: '/cliente/proyectos/first-site/blogger' },
+  );
+});
+
 test('active analytics uses the exact project internal route for each viewer', () => {
   const input = project({ capabilities: [capability('analytics')] });
 
@@ -157,11 +173,12 @@ test('invalid Blogger configuration is disabled for administrators and omitted f
     validated_at: '2026-10-20T10:00:00Z',
   })] });
 
-  const adminTool = byId(buildProjectTools({ project: input, viewer: 'admin' })).blogger;
+  const configurationIssues = { blogger: 'La configuración de Blogger no está validada para este proyecto.' };
+  const adminTool = byId(buildProjectTools({ project: input, viewer: 'admin', configurationIssues })).blogger;
   assert.equal(adminTool.state, 'misconfigured');
   assert.equal(adminTool.href, null);
   assert.ok(adminTool.warning);
-  assert.equal(buildProjectTools({ project: input, viewer: 'client' }).some(tool => tool.id === 'blogger'), false);
+  assert.equal(buildProjectTools({ project: input, viewer: 'client', configurationIssues }).some(tool => tool.id === 'blogger'), false);
 });
 
 test('archived projects never expose an active Blogger tool to administrators', () => {

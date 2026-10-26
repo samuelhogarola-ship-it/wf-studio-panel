@@ -45,6 +45,16 @@ export function hasProjectBlogger(project: Project): boolean {
   }
 }
 
+/** Returns a central runtime only after the registry identity, domain and editor have been validated. */
+export function getProjectBloggerRuntime(project: Pick<Project, 'slug' | 'domain'>): string | null {
+  try {
+    const site = getSiteByKey(project.slug)
+    return hasProjectBloggerRuntime(project, site) ? site.blogger?.runtime ?? null : null
+  } catch {
+    return null
+  }
+}
+
 export function getCapabilityConfigurationIssue(project: Project, capability: Pick<ProjectCapability, 'capability_key' | 'launch_url' | 'metadata' | 'validated_at'>): ProjectWarning | null {
   if (capability.capability_key === 'blogger') {
     try {
