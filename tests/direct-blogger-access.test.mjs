@@ -117,7 +117,7 @@ test('authorized Sofia resolves the Sport Massage editor in the client-safe shel
 
   assert.match(html, /Sport Massage Fuengirola/)
   assert.match(html, /src="\/blogger\/index\.html"/)
-  assert.match(html, /href="\/cliente"[^>]*>Inicio</)
+  assert.match(html, /href="\/cliente"[^>]*>Home</)
   assert.doesNotMatch(html, /paneladmin|Proyectos|Clientes|Configuración/)
 })
 

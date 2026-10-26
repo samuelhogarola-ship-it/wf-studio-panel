@@ -49,8 +49,8 @@ const editorViews = {
 document.querySelector("#newPost").addEventListener("click", () => {
   if (confirmDiscardChanges()) newPost();
 });
-document.querySelector("#savePost").addEventListener("click", () => runAction("Guardando borrador...", () => savePost("draft")));
-document.querySelector("#publishPost").addEventListener("click", () => runAction("Publicando...", publishPost));
+document.querySelector("#savePost").addEventListener("click", () => runAction("Saving draft...", () => savePost("draft")));
+document.querySelector("#publishPost").addEventListener("click", () => runAction("Publishing...", publishPost));
 document.querySelector("#imageUpload").addEventListener("change", uploadImages);
 inlineImageUpload.addEventListener("change", uploadInlineImage);
 document.querySelector("#saveImageMeta").addEventListener("click", saveSelectedImageMeta);
@@ -77,7 +77,7 @@ visualEditor.addEventListener("drop", handleImageDrop);
 visualEditor.addEventListener("dragend", () => { state.draggedImageBlock = null; });
 document.addEventListener("selectionchange", handleSelectionChange);
 fields.title.addEventListener("input", () => {
-  currentTitle.textContent = fields.title.value || "Nuevo post";
+  currentTitle.textContent = fields.title.value || "New post";
   if (!state.activeSlug && !state.slugEdited) fields.slug.value = slugifyTitle(fields.title.value);
   markDirty();
 });
@@ -91,7 +91,7 @@ document.addEventListener("keydown", (event) => {
   if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "s") return;
   event.preventDefault();
   if (!document.querySelector("#savePost").disabled) {
-    runAction("Guardando borrador...", () => savePost("draft"));
+    runAction("Saving draft...", () => savePost("draft"));
   }
 });
 window.addEventListener("beforeunload", (event) => {
@@ -148,15 +148,15 @@ function renderPostList() {
     button.type = "button";
     button.className = `post-card${post.slug === state.activeSlug ? " is-active" : ""}`;
     button.dataset.slug = post.slug;
-    const publication = post.isPublished ? "Publicado" : "Borrador";
-    button.innerHTML = `<strong>${escapeHtml(post.title)}</strong><span>${publication} · ${escapeHtml(post.slug)} · ${post.words} palabras · ${post.images.length} imagenes</span>`;
+    const publication = post.isPublished ? "Published" : "Draft";
+    button.innerHTML = `<strong>${escapeHtml(post.title)}</strong><span>${publication} · ${escapeHtml(post.slug)} · ${post.words} words · ${post.images.length} images</span>`;
     postList.append(button);
   }
 }
 
 async function loadPost(slug) {
   if (!slug) return;
-  statusText.textContent = "Cargando post...";
+  statusText.textContent = "Loading post...";
   try {
     const post = await api(`/api/posts/${slug}`);
     state.activeSlug = post.slug;
@@ -164,10 +164,10 @@ async function loadPost(slug) {
     renderImages(post.images);
     renderPostList();
     renderPreview();
-    statusText.textContent = `Post cargado: ${post.slug}`;
+    statusText.textContent = `Post loaded: ${post.slug}`;
     document.querySelector(".editor").scrollTo({ top: 0, behavior: "smooth" });
   } catch (error) {
-    statusText.textContent = `No se pudo abrir ${slug}: ${error.message}`;
+    statusText.textContent = `Could not open ${slug}: ${error.message}`;
   }
 }
 
@@ -185,13 +185,13 @@ function newPost() {
       publish_languages: ["en", "es", "fi"],
       status: "draft",
     },
-    body: "## Contenido\n\nEscribe aqui el post...",
+    body: "## Content\n\nWrite your post here...",
     images: [],
   });
   renderPostList();
   renderImages([]);
   renderPreview();
-  statusText.textContent = "Nuevo post";
+  statusText.textContent = "New post";
   updatePublishedLink(null, false);
 }
 
@@ -205,8 +205,8 @@ function fillForm(post) {
     else fields[key].value = meta[key] || "";
   }
   visualEditor.innerHTML = state.bodyFormat === "html" ? fields.body.value : markdownPreview(fields.body.value);
-  document.querySelector('[data-view="markdown"]').textContent = state.bodyFormat === "html" ? "Editar HTML" : "Editar Markdown";
-  currentTitle.textContent = fields.title.value || "Nuevo post";
+  document.querySelector('[data-view="markdown"]').textContent = state.bodyFormat === "html" ? "Edit HTML" : "Edit Markdown";
+  currentTitle.textContent = fields.title.value || "New post";
   updatePublishedLink(meta.slug || post.slug, Boolean(post.isPublished));
   state.slugEdited = Boolean(meta.slug || post.slug);
   state.savedSelectionRange = null;
@@ -218,11 +218,11 @@ function fillForm(post) {
 
 function markDirty() {
   state.dirty = true;
-  statusText.textContent = "Cambios sin guardar";
+  statusText.textContent = "Unsaved changes";
 }
 
 function confirmDiscardChanges() {
-  return !state.dirty || window.confirm("Hay cambios sin guardar. ¿Quieres descartarlos?");
+  return !state.dirty || window.confirm("You have unsaved changes. Discard them?");
 }
 
 async function savePost(forcedStatus = null) {
@@ -238,7 +238,7 @@ async function savePost(forcedStatus = null) {
   state.posts = data.posts;
   renderPostList();
   await loadPost(post.slug);
-  statusText.textContent = payload.status === "published" ? "Cambios guardados" : "Borrador guardado";
+  statusText.textContent = payload.status === "published" ? "Changes saved" : "Draft saved";
   return post;
 }
 
@@ -253,14 +253,14 @@ async function publishPost() {
   if (!post) return;
   await api("/api/build", { method: "POST", body: { slug: post.slug } });
   updatePublishedLink(post.slug, true);
-  statusText.textContent = "Publicado correctamente";
+  statusText.textContent = "Published successfully";
 }
 
 function validatePost(payload) {
   const required = [
-    [payload.title, fields.title, "El titulo es obligatorio."],
-    [payload.description, fields.description, "La meta description es obligatoria."],
-    [payload.body, editorViews.visual.hidden ? fields.body : visualEditor, "El contenido es obligatorio."],
+    [payload.title, fields.title, "Title is required."],
+    [payload.description, fields.description, "SEO description is required."],
+    [payload.body, editorViews.visual.hidden ? fields.body : visualEditor, "Content is required."],
   ];
   const invalid = required.find(([value]) => !String(value || "").trim());
   if (!invalid) return true;
@@ -294,7 +294,7 @@ async function runAction(message, action) {
 
 async function uploadImages(event) {
   if (!state.activeSlug) {
-    statusText.textContent = "Guarda el post antes de subir imagenes";
+    statusText.textContent = "Save the post before uploading images";
     event.target.value = "";
     return;
   }
@@ -316,7 +316,7 @@ function renderImages(images) {
   imageList.innerHTML = "";
   document.querySelector("#imageMetaForm").hidden = !state.selectedImage;
   if (!images.length) {
-    imageList.innerHTML = "<p class=\"status-text\">Sin imagenes para este post.</p>";
+    imageList.innerHTML = "<p class=\"status-text\">No images for this post.</p>";
     state.selectedImage = null;
     document.querySelector("#imageMetaForm").hidden = true;
     return;
@@ -325,8 +325,8 @@ function renderImages(images) {
   for (const image of images) {
     const item = document.createElement("div");
     item.className = `image-item${image.file === state.selectedImage ? " is-selected" : ""}`;
-    const deleteButton = image.canDelete === false ? "" : "<button class=\"delete-image\" type=\"button\">Borrar</button>";
-    item.innerHTML = `<img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || "")}"><span><strong>${escapeHtml(image.file)}</strong>${image.isFeatured ? "<small>Principal</small>" : ""}</span>${deleteButton}`;
+    const deleteButton = image.canDelete === false ? "" : "<button class=\"delete-image\" type=\"button\">Delete</button>";
+    item.innerHTML = `<img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.alt || "")}"><span><strong>${escapeHtml(image.file)}</strong>${image.isFeatured ? "<small>Featured</small>" : ""}</span>${deleteButton}`;
     item.addEventListener("click", (event) => {
       if (event.target.closest(".delete-image")) return;
       selectImage(image.file);
@@ -374,7 +374,7 @@ function applyFormat(button) {
     else if (button.dataset.line === "### ") document.execCommand("formatBlock", false, "h3");
     else if (button.dataset.line === "- ") document.execCommand("insertUnorderedList");
     else if (button.dataset.wrap && button.dataset.wrap.startsWith("[|]")) {
-      const url = window.prompt("URL del enlace", "https://");
+      const url = window.prompt("Link URL", "https://");
       if (url) document.execCommand("createLink", false, url);
     }
     fields.body.value = state.bodyFormat === "html" ? visualEditor.innerHTML : richHtmlToMarkdown(visualEditor.innerHTML);
@@ -384,10 +384,10 @@ function applyFormat(button) {
   }
   if (button.dataset.wrap) {
     const [before, after] = button.dataset.wrap.split("|");
-    wrapSelection(before, after, button.dataset.placeholder || "texto");
+    wrapSelection(before, after, button.dataset.placeholder || "text");
     return;
   }
-  prefixSelectedLines(button.dataset.line, button.dataset.placeholder || "texto");
+  prefixSelectedLines(button.dataset.line, button.dataset.placeholder || "text");
 }
 
 function wrapSelection(before, after, placeholder) {
@@ -420,20 +420,20 @@ function beginInlineImageUpload() {
 function insertSelectedImage() {
   const image = state.activeImages.find((item) => item.file === state.selectedImage) || state.activeImages[0];
   if (!image) {
-    statusText.textContent = "Selecciona o sube una imagen primero";
+    statusText.textContent = "Select or upload an image first";
     return;
   }
   if (editorViews.visual.hidden) setView("visual");
   rememberEditorSelection();
   insertInlineImage(image);
-  statusText.textContent = "Imagen insertada en el texto";
+  statusText.textContent = "Image inserted into the text";
 }
 
 async function uploadInlineImage(event) {
   const file = event.target.files[0];
   if (!file) return;
   const bookmark = state.savedSelectionBookmark;
-  statusText.textContent = "Subiendo e insertando imagen...";
+  statusText.textContent = "Uploading and inserting image...";
   try {
     if (!state.activeSlug) {
       const post = await savePost("draft");
@@ -455,7 +455,7 @@ async function uploadInlineImage(event) {
     state.activeImages = state.activeImages.filter((item) => item.file !== image.file).concat(image);
     insertInlineImage(image);
     renderImages(state.activeImages);
-    statusText.textContent = "Imagen insertada en el texto";
+    statusText.textContent = "Image inserted into the text";
   } catch (error) {
     statusText.textContent = error.message;
   } finally {
@@ -535,7 +535,7 @@ function applySelectionFormat(button) {
 
 function applySelectionLink() {
   const range = getInsertionRange();
-  const url = window.prompt("URL del enlace", "https://");
+  const url = window.prompt("Link URL", "https://");
   if (!url) return;
   visualEditor.focus();
   setEditorSelection(range);
@@ -803,7 +803,7 @@ async function saveSelectedImageMeta() {
   if (!image) return;
   if (image.canDelete === false) {
     fields.image.value = image.url;
-    statusText.textContent = "La imagen principal heredada ya esta asociada al post";
+    statusText.textContent = "The existing featured image is already linked to this post";
     return;
   }
   await api(`/api/posts/${state.activeSlug}/images/${encodeURIComponent(image.file)}`, {
@@ -815,7 +815,7 @@ async function saveSelectedImageMeta() {
     },
   });
   await loadPost(state.activeSlug);
-  statusText.textContent = "Metadatos de imagen guardados";
+  statusText.textContent = "Image details saved";
 }
 
 async function setSelectedImageAsFeatured() {
@@ -823,7 +823,7 @@ async function setSelectedImageAsFeatured() {
   if (!image) return;
   if (image.canDelete === false) {
     fields.image.value = image.url;
-    statusText.textContent = "La imagen principal heredada ya esta marcada";
+    statusText.textContent = "The existing featured image is already selected";
     return;
   }
   await api(`/api/posts/${state.activeSlug}/images/${encodeURIComponent(image.file)}`, {
@@ -836,7 +836,7 @@ async function setSelectedImageAsFeatured() {
   });
   fields.image.value = `img/${image.file}`;
   await savePost("draft");
-  statusText.textContent = "Imagen principal actualizada";
+  statusText.textContent = "Featured image updated";
 }
 
 function matchesSearch(post, query) {
