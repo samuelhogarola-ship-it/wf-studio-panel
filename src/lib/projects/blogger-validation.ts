@@ -38,6 +38,10 @@ export function getBloggerCapabilityIssue(
   capability: BloggerCapability,
   site: BloggerSite | null,
 ): 'destination' | 'blogger' | null {
+  if (site?.key === 'sportmassagefuengirola' && site.blogger?.runtime === 'central-legacy' &&
+      hasProjectBloggerRuntime(project, site)) {
+    return null
+  }
   if (capability.launch_url && !validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)) {
     return 'destination'
   }
