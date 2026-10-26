@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 import { Badge } from '@/components/ui/badge'
-import { getCapabilityConfigurationIssue, type ProjectWithCapabilities } from '@/lib/data/projects'
+import { getCapabilityConfigurationIssue, getProjectBloggerRuntime, type ProjectWithCapabilities } from '@/lib/data/projects'
 import { projectTranslations, type Locale } from '@/lib/i18n'
 import { buildProjectTools, type ProjectTool } from '@/lib/projects/tools.mjs'
 
@@ -40,7 +40,7 @@ export function ProjectToolGrid({ project, locale = 'es', compact = false }: { p
     const issue = getCapabilityConfigurationIssue(project, capability)
     return issue ? [[capability.capability_key, projectTranslations[locale].warnings[issue]]] : []
   }))
-  const tools = buildProjectTools({ project, viewer: 'admin', configurationIssues })
+  const tools = buildProjectTools({ project, viewer: 'admin', configurationIssues, bloggerRuntime: getProjectBloggerRuntime(project) })
     .filter(tool => !compact || compactToolIds.has(tool.id))
 
   return <div className={compact ? 'grid gap-3 sm:grid-cols-3' : 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3'}>

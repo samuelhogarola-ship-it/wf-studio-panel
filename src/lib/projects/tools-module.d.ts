@@ -15,6 +15,7 @@ declare module '@/lib/projects/tools.mjs' {
     project: ProjectWithCapabilities
     viewer: 'admin' | 'client'
     configurationIssues?: Readonly<Record<string, string>>
+    bloggerRuntime?: string | null
   }): readonly ProjectTool[]
 
   export function productTierLabel(tier: ProductTier | null | undefined, locale?: 'es' | 'en'): string

@@ -39,7 +39,7 @@ function internalHref(id, project, viewer) {
   return null;
 }
 
-function resolveTool(definition, project, viewer, configurationIssues) {
+function resolveTool(definition, project, viewer, configurationIssues, bloggerRuntime) {
   if (definition.id === 'website') {
     const href = `https://${String(project.domain ?? '').toLowerCase().replace(/^www\./, '')}`;
     if (validateProjectDestination(href, project.domain, true)) {
@@ -72,10 +72,8 @@ function resolveTool(definition, project, viewer, configurationIssues) {
       ? capability.state
       : 'unavailable';
   let warning = configurationIssues[definition.capability];
-  // The Sport legacy editor runs here under the existing Supabase session.
-  const centralSport = project.slug === 'sportmassagefuengirola' &&
-    String(project.domain).toLowerCase().replace(/^www\./, '') === 'sportmassagefuengirola.com';
-  if (definition.id === 'blogger' && capabilityState === 'active' && !centralSport &&
+  const centralBlogger = bloggerRuntime === 'central-legacy' || bloggerRuntime === 'central-multisite';
+  if (definition.id === 'blogger' && capabilityState === 'active' && !centralBlogger &&
       (!capability.validated_at || !validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug))) {
     warning ??= 'La configuración de Blogger no está validada para este proyecto.';
   }
@@ -91,13 +89,13 @@ function resolveTool(definition, project, viewer, configurationIssues) {
 }
 
 /** Pure presentation only: authorization must happen before project data reaches this resolver. */
-export function buildProjectTools({ project, viewer, configurationIssues = {} }) {
+export function buildProjectTools({ project, viewer, configurationIssues = {}, bloggerRuntime = null }) {
   if (viewer !== 'admin' && viewer !== 'client') throw new TypeError('Invalid project tool viewer');
   if (viewer === 'client' && (project.status !== 'active' || project.client_access_enabled !== true)) return [];
 
   const tools = definitions
     .filter(definition => viewer === 'admin' || definition.audience !== 'admin')
-    .map(definition => resolveTool(definition, project, viewer, configurationIssues))
+    .map(definition => resolveTool(definition, project, viewer, configurationIssues, bloggerRuntime))
     .filter(tool => viewer === 'admin' || tool.state === 'active');
   return Object.freeze(tools.map(tool => Object.freeze(tool)));
 }

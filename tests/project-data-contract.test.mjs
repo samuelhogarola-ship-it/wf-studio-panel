@@ -13,6 +13,10 @@ const configuredBlogger = {
   '@/lib/sites/registry.mjs': { getSiteByKey: () => ({ key: 'example', domain: 'example.com', blogger: { enabled: true, runtime: 'central-multisite' } }) },
   '@/lib/blogger/editor.mjs': { getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' }) },
 };
+const configuredSportBlogger = {
+  '@/lib/sites/registry.mjs': { getSiteByKey: () => ({ key: 'sportmassagefuengirola', domain: 'sportmassagefuengirola.com', blogger: { enabled: true, runtime: 'central-legacy' } }) },
+  '@/lib/blogger/editor.mjs': { getBloggerEditorTarget: () => ({ kind: 'legacy' }) },
+};
 
 // Pause one remote UPDATE before evaluating its predicates against shared rows.
 // Both competing requests execute the real server actions on the same database.
@@ -40,6 +44,14 @@ test('inventory combines search, client, lifecycle and active capability filters
   assert.equal(result.projects[0].client.name, 'Ana');
   assert.deepEqual((await s.data().getAdminProjects({ query: 'no match' })).projects, []);
   assert.deepEqual(s.events.slice(0, 2), ['admin', 'session-db']);
+});
+
+test('project tools receive the central runtime only for the exact validated Sport registry identity', () => {
+  const s = setup({}, configuredSportBlogger);
+  const sport = { ...project, slug: 'sportmassagefuengirola', domain: 'sportmassagefuengirola.com' };
+  assert.equal(s.data().getProjectBloggerRuntime(sport), 'central-legacy');
+  assert.equal(s.data().getProjectBloggerRuntime({ ...sport, domain: 'another.example' }), null);
+  assert.equal(setup({}, configuredBlogger).data().getProjectBloggerRuntime(project), null);
 });
 
 test('detail includes capability audit and universal navigation across all assigned projects', async () => {

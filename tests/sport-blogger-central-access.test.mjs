@@ -26,8 +26,13 @@ function setup({ currentProject = sportProject, currentCapability = activeCapabi
 
 test('Sport portal button and direct entry reuse the current Supabase session and the same central editor', async () => {
   const { db, load } = setup()
-  const accessibleProject = await load('src/lib/data/projects.ts').getAccessibleClientProject(siteKey)
-  const tool = buildProjectTools({ project: accessibleProject, viewer: 'client' }).find(tool => tool.id === 'blogger')
+  const projectData = load('src/lib/data/projects.ts')
+  const accessibleProject = await projectData.getAccessibleClientProject(siteKey)
+  const tool = buildProjectTools({
+    project: accessibleProject,
+    viewer: 'client',
+    bloggerRuntime: projectData.getProjectBloggerRuntime(accessibleProject),
+  }).find(tool => tool.id === 'blogger')
   assert.equal(tool?.href, '/cliente/proyectos/sportmassagefuengirola/blogger')
 
   const portalPage = load('src/app/cliente/(protected)/proyectos/[slug]/blogger/page.tsx').default

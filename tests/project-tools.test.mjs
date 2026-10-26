@@ -78,9 +78,9 @@ test('Sport central Blogger stays discoverable without external handoff metadata
     ['admin', '/paneladmin/blogger/sportmassagefuengirola'],
     ['client', '/cliente/proyectos/sportmassagefuengirola/blogger'],
   ]) {
-    const tool = byId(buildProjectTools({ project: input, viewer })).blogger;
+    const tool = byId(buildProjectTools({ project: input, viewer, bloggerRuntime: 'central-legacy' })).blogger;
     assert.deepEqual({ state: tool?.state, href: tool?.href }, { state: 'active', href });
-    const invalid = buildProjectTools({ project: input, viewer, configurationIssues: { blogger: 'Invalid runtime' } });
+    const invalid = buildProjectTools({ project: input, viewer, bloggerRuntime: 'central-legacy', configurationIssues: { blogger: 'Invalid runtime' } });
     assert.equal(invalid.some(tool => tool.id === 'blogger' && tool.href), false);
   }
 });
@@ -180,11 +180,12 @@ test('invalid Blogger configuration is disabled for administrators and omitted f
     validated_at: '2026-10-20T10:00:00Z',
   })] });
 
-  const adminTool = byId(buildProjectTools({ project: input, viewer: 'admin' })).blogger;
+  const configurationIssues = { blogger: 'La configuración de Blogger no está validada para este proyecto.' };
+  const adminTool = byId(buildProjectTools({ project: input, viewer: 'admin', configurationIssues })).blogger;
   assert.equal(adminTool.state, 'misconfigured');
   assert.equal(adminTool.href, null);
   assert.ok(adminTool.warning);
-  assert.equal(buildProjectTools({ project: input, viewer: 'client' }).some(tool => tool.id === 'blogger'), false);
+  assert.equal(buildProjectTools({ project: input, viewer: 'client', configurationIssues }).some(tool => tool.id === 'blogger'), false);
 });
 
 test('archived projects never expose an active Blogger tool to administrators', () => {

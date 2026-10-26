@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import type { ProjectWithCapabilities } from '@/lib/data/projects'
+import { getProjectBloggerRuntime, type ProjectWithCapabilities } from '@/lib/data/projects'
 import { clientPortalTranslations, projectTranslations, type Locale } from '@/lib/i18n'
 import { buildProjectTools, productTierLabel } from '@/lib/projects/tools.mjs'
 
@@ -22,7 +22,7 @@ export function ProjectSelector({ projects, locale }: {
       ) : (
         <ul aria-label={text.choose} className="grid gap-4 sm:grid-cols-2">
           {projects.map(project => {
-            const activeTools = buildProjectTools({ project, viewer: 'client' })
+            const activeTools = buildProjectTools({ project, viewer: 'client', bloggerRuntime: getProjectBloggerRuntime(project) })
               .filter(tool => tool.id === 'analytics' || tool.id === 'blogger')
             return <li key={project.id}>
               <Link href={`/cliente/proyectos/${encodeURIComponent(project.slug)}`} className="block h-full rounded-2xl border border-line bg-white p-6 transition hover:border-brand focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand">

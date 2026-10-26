@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { getAccessibleClientProject, getCapabilityConfigurationIssue, getClientPortalContext } from '@/lib/data/projects'
+import { getAccessibleClientProject, getCapabilityConfigurationIssue, getClientPortalContext, getProjectBloggerRuntime } from '@/lib/data/projects'
 import { getClientPendingItems, getClientFacturasData, getClientServicesData } from '@/lib/data/client'
 import { clientPortalTranslations, projectTranslations } from '@/lib/i18n'
 import { getLocale } from '@/lib/locale'
@@ -20,7 +20,7 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
       const issue = getCapabilityConfigurationIssue(candidate, capability)
       return issue ? [[capability.capability_key, issue]] : []
     }))
-    return [candidate.id, new Map(buildProjectTools({ project: candidate, viewer: 'client', configurationIssues }).map(tool => [tool.id, tool]))]
+    return [candidate.id, new Map(buildProjectTools({ project: candidate, viewer: 'client', configurationIssues, bloggerRuntime: getProjectBloggerRuntime(candidate) }).map(tool => [tool.id, tool]))]
   }))
   const selectedTools = projectTools.get(project.id) ?? new Map()
   const hasTool = (id: 'domains' | 'hosting' | 'invoices' | 'reports') => [...projectTools.values()].some(tools => tools.has(id))

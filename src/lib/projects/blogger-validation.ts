@@ -33,13 +33,19 @@ export function hasProjectBloggerRuntime(project: BloggerProject, site: BloggerS
     getBloggerEditorTarget(site))
 }
 
+export function getCentralBloggerRuntime(project: BloggerProject, site: BloggerSite | null): string | null {
+  return site?.key === 'sportmassagefuengirola' && site.blogger?.runtime === 'central-legacy' &&
+    hasProjectBloggerRuntime(project, site)
+    ? site.blogger.runtime
+    : null
+}
+
 export function getBloggerCapabilityIssue(
   project: BloggerProject,
   capability: BloggerCapability,
   site: BloggerSite | null,
 ): 'destination' | 'blogger' | null {
-  if (site?.key === 'sportmassagefuengirola' && site.blogger?.runtime === 'central-legacy' &&
-      hasProjectBloggerRuntime(project, site)) {
+  if (getCentralBloggerRuntime(project, site)) {
     return null
   }
   if (capability.launch_url && !validateBloggerProjectDestination(capability.launch_url, project.domain, project.slug)) {
