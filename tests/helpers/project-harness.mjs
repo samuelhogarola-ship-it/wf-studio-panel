@@ -79,6 +79,8 @@ export function database(seed = {}, failures = {}, { beforeExecute, rpcs = {} } 
       select(columns, options) { call.columns = columns; countRequested = options?.count === 'exact'; return query; },
       eq(key, value) { call.filters.push(row => row[key] === value); return query; },
       neq(key, value) { call.filters.push(row => row[key] !== value); return query; },
+      gte(key, value) { call.filters.push(row => row[key] >= value); return query; },
+      lte(key, value) { call.filters.push(row => row[key] <= value); return query; },
       is(key, value) { call.filters.push(row => row[key] === value); return query; },
       ilike(key, value) { call.filters.push(row => row[key]?.toLowerCase() === value.toLowerCase()); return query; },
       in(key, values) { call.filters.push(row => values.includes(row[key])); return query; },
