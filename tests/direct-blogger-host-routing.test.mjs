@@ -13,6 +13,17 @@ function request(path, host = ADMIN_HOST) {
   }
 }
 
+function proxiedRequest(path, forwardedHost, forwardedProto = 'https') {
+  return {
+    headers: new Headers({
+      host: 'wf-studio-panel:3000',
+      'x-forwarded-host': forwardedHost,
+      'x-forwarded-proto': forwardedProto,
+    }),
+    nextUrl: new URL(`http://wf-studio-panel:3000${path}`),
+  }
+}
+
 function loadMiddleware() {
   const updated = []
   const module = loadProjectModule('middleware.ts', {
@@ -62,6 +73,14 @@ test('admin host is owner-only and rejects all direct-client Blogger entry paths
   assert.deepEqual(updated, [])
 })
 
+test('proxy host routing preserves portal access and owner-only admin isolation', async () => {
+  const { middleware, updated } = loadMiddleware()
+  assert.equal((await middleware(proxiedRequest('/acceso/blogger/sportmassagefuengirola', PORTAL_HOST))).status, 204)
+  assert.equal((await middleware(proxiedRequest('/acceso/blogger/sportmassagefuengirola', ADMIN_HOST))).status, 404)
+  assert.equal((await middleware(proxiedRequest('/acceso/blogger/sportmassagefuengirola', `${PORTAL_HOST}, ${ADMIN_HOST}`))).status, 404)
+  assert.deepEqual(updated, ['http://wf-studio-panel:3000/acceso/blogger/sportmassagefuengirola'])
+})
+
 test('direct session lookup rejects a valid bearer outside the portal host', async () => {
   let cookieReads = 0
   const module = loadProjectModule('src/lib/blogger/direct-access-server.ts', {
@@ -73,6 +92,44 @@ test('direct session lookup rejects a valid bearer outside the portal host', asy
       DIRECT_BLOGGER_COOKIE: '__Host-wf_blogger',
       loadDirectBloggerConfig: () => ({ sessionSecret: 'secret' }),
       verifyDirectBloggerSession: () => ({ siteKey: 'sportmassagefuengirola' }),
+    },
+  })
+  assert.equal(await module.getDirectBloggerSession(), null)
+  assert.equal(cookieReads, 0)
+})
+
+test('direct session lookup accepts the strict public portal origin reported by the proxy', async () => {
+  let cookieReads = 0
+  const expected = { siteKey: 'sportmassagefuengirola', source: 'panel' }
+  const module = loadProjectModule('src/lib/blogger/direct-access-server.ts', {
+    'next/headers': {
+      headers: async () => new Headers({
+        host: 'wf-studio-panel:3000',
+        'x-forwarded-host': PORTAL_HOST,
+        'x-forwarded-proto': 'https',
+      }),
+      cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
+    },
+    '@/lib/blogger/direct-access.mjs': {
+      DIRECT_BLOGGER_COOKIE: '__Host-wf_blogger',
+      loadDirectBloggerSessionConfig: () => ({ sessionSecret: 'secret' }),
+      verifyDirectBloggerSession: () => expected,
+    },
+  })
+  assert.deepEqual(await module.getDirectBloggerSession(), expected)
+  assert.equal(cookieReads, 1)
+})
+
+test('direct session lookup rejects ambiguous proxy hosts before reading the bearer', async () => {
+  let cookieReads = 0
+  const module = loadProjectModule('src/lib/blogger/direct-access-server.ts', {
+    'next/headers': {
+      headers: async () => new Headers({
+        host: 'wf-studio-panel:3000',
+        'x-forwarded-host': `${PORTAL_HOST}, ${ADMIN_HOST}`,
+        'x-forwarded-proto': 'https',
+      }),
+      cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
     },
   })
   assert.equal(await module.getDirectBloggerSession(), null)

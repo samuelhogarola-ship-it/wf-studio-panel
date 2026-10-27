@@ -125,16 +125,16 @@ export function resolveRequestOrigin({
   allowedHosts = ["admin.webfuengirola.com", "portal.webfuengirola.com"],
 }) {
   const normalizedHost =
-    typeof forwardedHost === "string"
-      ? forwardedHost.split(",")[0]?.trim()
+    typeof forwardedHost === "string" && !forwardedHost.includes(",")
+      ? forwardedHost.trim().toLowerCase()
       : "";
   const normalizedProto =
-    typeof forwardedProto === "string"
-      ? forwardedProto.split(",")[0]?.trim()
+    typeof forwardedProto === "string" && !forwardedProto.includes(",")
+      ? forwardedProto.trim().toLowerCase()
       : "";
 
-  if (normalizedHost && allowedHosts.includes(normalizedHost)) {
-    return `${normalizedProto || "https"}://${normalizedHost}`;
+  if (normalizedProto === "https" && normalizedHost && allowedHosts.includes(normalizedHost)) {
+    return `https://${normalizedHost}`;
   }
 
   if (typeof fallbackOrigin === "string" && fallbackOrigin.trim().length > 0) {

@@ -99,6 +99,26 @@ test("resolveRequestOrigin prefers forwarded host over fallback origin", () => {
   );
 });
 
+test("resolveRequestOrigin rejects ambiguous or non-HTTPS proxy headers", () => {
+  const input = {
+    requestOrigin: "http://wf-studio-panel:3000",
+    allowedHosts: ["portal.webfuengirola.com"],
+  };
+  for (const [forwardedHost, forwardedProto] of [
+    ["portal.webfuengirola.com", "http"],
+    ["portal.webfuengirola.com", "javascript"],
+    ["portal.webfuengirola.com, admin.webfuengirola.com", "https"],
+    ["portal.webfuengirola.com", "https, http"],
+    ["admin.webfuengirola.com", "https"],
+  ]) {
+    assert.equal(
+      resolveRequestOrigin({ ...input, forwardedHost, forwardedProto }),
+      "http://wf-studio-panel:3000",
+      `${forwardedHost} / ${forwardedProto}`,
+    );
+  }
+});
+
 test("resolveRequestOrigin falls back to configured origin when proxy headers are missing", () => {
   assert.equal(
     resolveRequestOrigin({
