@@ -126,8 +126,6 @@ test('Sport panel launch consumes one audience-bound ticket and establishes the 
     method: 'POST',
     headers: {
       origin: 'https://portal.webfuengirola.com',
-      'x-forwarded-host': 'portal.webfuengirola.com',
-      'x-forwarded-proto': 'https',
     },
   }), { params: Promise.resolve({ siteKey }) })
   assert.equal(response.status, 303)

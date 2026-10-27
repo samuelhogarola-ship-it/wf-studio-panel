@@ -143,12 +143,7 @@ export function resolveRequestOrigin({
   if (requestUrl && allowedHosts.includes(requestHost)) {
     return requestUrl.origin;
   }
-  const trustedInternalOrigin = requestUrl?.protocol === "http:" && requestUrl.port === "3000" && (
-    requestHost === "localhost" ||
-    requestHost === "127.0.0.1" ||
-    requestHost === "0.0.0.0" ||
-    /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(requestHost)
-  );
+  const trustedInternalOrigin = isTrustedInternalRequestOrigin(requestUrl?.origin);
 
   if (trustedInternalOrigin && normalizedProto === "https" && normalizedHost && allowedHosts.includes(normalizedHost)) {
     return `https://${normalizedHost}`;
@@ -159,6 +154,22 @@ export function resolveRequestOrigin({
   }
 
   return requestOrigin;
+}
+
+export function isTrustedInternalRequestOrigin(origin) {
+  let requestUrl;
+  try {
+    requestUrl = new URL(origin);
+  } catch {
+    return false;
+  }
+  const requestHost = requestUrl.hostname.toLowerCase();
+  return requestUrl.protocol === "http:" && requestUrl.port === "3000" && (
+    requestHost === "localhost" ||
+    requestHost === "127.0.0.1" ||
+    requestHost === "0.0.0.0" ||
+    /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(requestHost)
+  );
 }
 
 export function getProtectedArea(pathname) {

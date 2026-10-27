@@ -25,6 +25,7 @@ declare module '@/lib/security/redirects.mjs' {
     fallbackOrigin?: string | null
     allowedHosts?: string[]
   }): string
+  export function isTrustedInternalRequestOrigin(origin: string | null | undefined): boolean
 
   export function getProtectedArea(pathname: string): ProtectedArea
 }
