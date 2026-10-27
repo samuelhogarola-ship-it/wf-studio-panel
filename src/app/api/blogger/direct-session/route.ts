@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   const requestUrl = new URL(request.url)
   const forwardedHost = request.headers.get('x-forwarded-host')
   const forwardedProto = request.headers.get('x-forwarded-proto')
-  const fallbackOrigin = forwardedHost === null && forwardedProto === null && request.headers.get('origin') === PORTAL_ORIGIN
+  const fallbackOrigin = request.headers.get('origin') === PORTAL_ORIGIN
     ? PORTAL_ORIGIN
     : undefined
   const origin = resolveRequestOrigin({
