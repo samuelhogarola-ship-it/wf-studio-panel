@@ -1,7 +1,5 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { renderToStaticMarkup } from 'react-dom/server'
-
 import { client, project, capability, database, loadProjectModule } from './helpers/project-harness.mjs'
 import { buildProjectTools } from '../src/lib/projects/tools.mjs'
 
@@ -24,27 +22,26 @@ function setup({ currentProject = sportProject, currentCapability = activeCapabi
   return { db, load }
 }
 
-test('Sport portal button and direct entry reuse the current Supabase session and the same central editor', async () => {
+test('Sport client surfaces expose no Blogger entry while the administrator editor remains available', async () => {
   const { db, load } = setup()
   const projectData = load('src/lib/data/projects.ts')
   const accessibleProject = await projectData.getAccessibleClientProject(siteKey)
-  const tool = buildProjectTools({
+  const clientTools = buildProjectTools({
     project: accessibleProject,
     viewer: 'client',
     bloggerRuntime: projectData.getProjectBloggerRuntime(accessibleProject),
+  })
+  assert.equal(clientTools.some(tool => tool.id === 'blogger'), false)
+
+  const adminTool = buildProjectTools({
+    project: accessibleProject,
+    viewer: 'admin',
+    bloggerRuntime: projectData.getProjectBloggerRuntime(accessibleProject),
   }).find(tool => tool.id === 'blogger')
-  assert.equal(tool?.href, '/cliente/proyectos/sportmassagefuengirola/blogger')
+  assert.equal(adminTool?.href, '/paneladmin/blogger/sportmassagefuengirola')
 
   const portalPage = load('src/app/cliente/(protected)/proyectos/[slug]/blogger/page.tsx').default
-  const directPage = load('src/app/acceso/blogger/[siteKey]/page.tsx').default
-  for (const element of [
-    await portalPage({ params: Promise.resolve({ slug: siteKey }) }),
-    await directPage({ params: Promise.resolve({ siteKey }) }),
-  ]) {
-    const html = renderToStaticMarkup(element)
-    assert.match(html, /src="\/blogger\/index\.html"/)
-    assert.doesNotMatch(html, /<form|\/launch|\/exchange|\/consume|https:\/\/sportmassagefuengirola\.com\/admin/)
-  }
+  await assert.rejects(() => portalPage({ params: Promise.resolve({ slug: siteKey }) }), { message: '404' })
 
   const authorization = await load('src/lib/blogger/legacy-authorize.ts').authorizeSportBlogger()
   assert.equal(authorization.identity.userId, 'sport-user')
@@ -53,7 +50,7 @@ test('Sport portal button and direct entry reuse the current Supabase session an
   assert.ok(db.calls.every(call => call.operation === 'select'), 'entry must not create tickets or another authentication session')
 })
 
-test('Sport portal, direct entry and editor API deny foreign, revoked or mismatched assignments', async () => {
+test('Sport portal and editor API deny foreign, revoked or mismatched assignments', async () => {
   for (const options of [
     { currentProject: { ...sportProject, client_id: 'another-client' } },
     { currentProject: { ...sportProject, status: 'archived' } },
@@ -64,9 +61,7 @@ test('Sport portal, direct entry and editor API deny foreign, revoked or mismatc
   ]) {
     const { load } = setup(options)
     const portalPage = load('src/app/cliente/(protected)/proyectos/[slug]/blogger/page.tsx').default
-    const directPage = load('src/app/acceso/blogger/[siteKey]/page.tsx').default
     await assert.rejects(() => portalPage({ params: Promise.resolve({ slug: siteKey }) }), { message: '404' })
-    await assert.rejects(() => directPage({ params: Promise.resolve({ siteKey }) }), { message: '404' })
     await assert.rejects(() => load('src/lib/blogger/legacy-authorize.ts').authorizeSportBlogger(), error => error.status === 403)
   }
 })

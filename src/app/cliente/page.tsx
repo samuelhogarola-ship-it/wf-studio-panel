@@ -6,7 +6,7 @@ import { FormMessage } from '@/components/ui/form-message'
 import { getOptionalIdentity } from '@/lib/auth'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
-import { buildCanonicalClientDestinationUrl, isDirectBloggerDestination, sanitizeClientDestination } from '@/lib/security/redirects.mjs'
+import { sanitizeClientDestination } from '@/lib/security/redirects.mjs'
 
 type ClientLoginPageProps = {
   searchParams?: Promise<{
@@ -40,9 +40,7 @@ export default async function ClientLoginPage({ searchParams }: ClientLoginPageP
   }
 
   if (identity?.role === 'client') {
-    if (params?.redirectedFrom !== undefined) redirect(isDirectBloggerDestination(destination)
-      ? buildCanonicalClientDestinationUrl(destination).toString()
-      : destination)
+    if (params?.redirectedFrom !== undefined) redirect(destination)
     redirect('/cliente/dashboard')
   }
 

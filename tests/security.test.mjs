@@ -27,18 +27,10 @@ test("sanitizeInternalRedirect rejects external redirects", () => {
   );
 });
 
-test("sanitizeClientDestination keeps client portal and direct Blogger routes", () => {
+test("sanitizeClientDestination keeps client portal routes", () => {
   assert.equal(
     sanitizeClientDestination("/cliente/proyectos/example?tab=blogger#editor"),
     "/cliente/proyectos/example?tab=blogger#editor",
-  );
-  assert.equal(
-    sanitizeClientDestination("/acceso/blogger/sportmassagefuengirola"),
-    "/acceso/blogger/sportmassagefuengirola",
-  );
-  assert.equal(
-    sanitizeClientDestination("/acceso/blogger/samuel-coach?draft=1#editor"),
-    "/acceso/blogger/samuel-coach?draft=1#editor",
   );
 });
 
@@ -49,6 +41,8 @@ test("sanitizeClientDestination rejects external, encoded and administrator dest
     "/\\evil.example/phish",
     "/cliente/%2e%2e/paneladmin/inicio",
     "/cliente/%252e%252e%252fpaneladmin/inicio",
+    "/acceso/blogger/sportmassagefuengirola",
+    "/acceso/blogger/samuel-coach?draft=1#editor",
     "/acceso/blogger/%73portmassagefuengirola",
     "/paneladmin/inicio",
   ]) {
@@ -56,7 +50,7 @@ test("sanitizeClientDestination rejects external, encoded and administrator dest
   }
 });
 
-test("sanitizeClientDestination rejects malformed direct Blogger site segments", () => {
+test("sanitizeClientDestination rejects every direct Blogger destination", () => {
   for (const value of [
     "/acceso/blogger",
     "/acceso/blogger/",

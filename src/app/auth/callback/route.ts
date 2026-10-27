@@ -2,8 +2,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 import { createSupabaseRouteClient } from '@/lib/supabase/server'
 import {
-  buildCanonicalClientDestinationUrl,
-  isDirectBloggerDestination,
   resolveRequestOrigin,
   sanitizeClientDestination,
   sanitizeInternalRedirect,
@@ -24,19 +22,14 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code')
   const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? ''
   const isAdminHost = host.startsWith('admin.')
-  const requestedNext = requestUrl.searchParams.get('next')
-  const directBloggerDestination = isDirectBloggerDestination(requestedNext)
-  const next = directBloggerDestination
-    ? sanitizeClientDestination(requestedNext)
-    : isAdminHost
+  const next = isAdminHost
     ? sanitizeInternalRedirect(requestUrl.searchParams.get('next'), {
         fallback: '/paneladmin/inicio',
+        allowedPrefixes: ['/paneladmin'],
       })
     : sanitizeClientDestination(requestUrl.searchParams.get('next'))
   const appUrl = getAppBaseUrl(request, requestUrl)
-  const successUrl = directBloggerDestination
-    ? buildCanonicalClientDestinationUrl(next)
-    : new URL(next, appUrl)
+  const successUrl = new URL(next, appUrl)
   const successResponse = NextResponse.redirect(successUrl)
 
   try {

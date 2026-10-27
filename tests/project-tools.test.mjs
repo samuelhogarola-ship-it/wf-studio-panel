@@ -72,17 +72,16 @@ test('active analytics uses the exact project internal route for each viewer', (
     '/cliente/proyectos/first-site/estadisticas');
 });
 
-test('Sport central Blogger stays discoverable without external handoff metadata', () => {
+test('Sport central Blogger remains available only to administrators without external handoff metadata', () => {
   const input = project({ slug: 'sportmassagefuengirola', domain: 'sportmassagefuengirola.com', capabilities: [capability('blogger')] });
-  for (const [viewer, href] of [
-    ['admin', '/paneladmin/blogger/sportmassagefuengirola'],
-    ['client', '/cliente/proyectos/sportmassagefuengirola/blogger'],
-  ]) {
-    const tool = byId(buildProjectTools({ project: input, viewer, bloggerRuntime: 'central-legacy' })).blogger;
-    assert.deepEqual({ state: tool?.state, href: tool?.href }, { state: 'active', href });
-    const invalid = buildProjectTools({ project: input, viewer, bloggerRuntime: 'central-legacy', configurationIssues: { blogger: 'Invalid runtime' } });
-    assert.equal(invalid.some(tool => tool.id === 'blogger' && tool.href), false);
-  }
+  const adminTool = byId(buildProjectTools({ project: input, viewer: 'admin', bloggerRuntime: 'central-legacy' })).blogger;
+  assert.deepEqual(
+    { state: adminTool?.state, href: adminTool?.href },
+    { state: 'active', href: '/paneladmin/blogger/sportmassagefuengirola' },
+  );
+
+  const clientTools = buildProjectTools({ project: input, viewer: 'client', bloggerRuntime: 'central-legacy' });
+  assert.equal(clientTools.some(tool => tool.id === 'blogger'), false);
 });
 
 test('the Sport metadata exception never applies to a different project or domain', () => {

@@ -1,7 +1,5 @@
 const DEFAULT_ALLOWED_PREFIXES = ["/cliente", "/paneladmin"];
 const CLIENT_DESTINATION_FALLBACK = "/cliente/dashboard";
-const BLOGGER_SITE_SEGMENT = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const ADMIN_ORIGIN = "https://admin.webfuengirola.com";
 const PORTAL_ORIGIN = "https://portal.webfuengirola.com";
 
 export function sanitizeInternalRedirect(next, options = {}) {
@@ -55,11 +53,7 @@ export function sanitizeClientDestination(value) {
 
     const isClientPortal =
       url.pathname === "/cliente" || url.pathname.startsWith("/cliente/");
-    const directBloggerMatch = url.pathname.match(/^\/acceso\/blogger\/([^/]+)$/);
-    const isDirectBlogger =
-      directBloggerMatch !== null && BLOGGER_SITE_SEGMENT.test(directBloggerMatch[1]);
-
-    if (!isClientPortal && !isDirectBlogger) {
+    if (!isClientPortal) {
       return CLIENT_DESTINATION_FALLBACK;
     }
 
@@ -69,21 +63,14 @@ export function sanitizeClientDestination(value) {
   }
 }
 
-export function isDirectBloggerDestination(value) {
-  const destination = sanitizeClientDestination(value);
-  return destination === value && destination.startsWith("/acceso/blogger/");
-}
-
 export function buildCanonicalClientDestinationUrl(value) {
   const destination = sanitizeClientDestination(value);
-  const origin = isDirectBloggerDestination(destination) ? ADMIN_ORIGIN : PORTAL_ORIGIN;
-  return new URL(destination, origin);
+  return new URL(destination, PORTAL_ORIGIN);
 }
 
 export function buildCanonicalClientLoginUrl(value, error) {
   const destination = sanitizeClientDestination(value);
-  const origin = isDirectBloggerDestination(destination) ? ADMIN_ORIGIN : PORTAL_ORIGIN;
-  const loginUrl = new URL("/cliente", origin);
+  const loginUrl = new URL("/cliente", PORTAL_ORIGIN);
   loginUrl.searchParams.set("redirectedFrom", destination);
   if (error === "callback_exchange_failed") {
     loginUrl.searchParams.set("error", error);
@@ -93,8 +80,7 @@ export function buildCanonicalClientLoginUrl(value, error) {
 
 export function buildCanonicalClientCallbackUrl(value) {
   const destination = sanitizeClientDestination(value);
-  const origin = isDirectBloggerDestination(destination) ? ADMIN_ORIGIN : PORTAL_ORIGIN;
-  const callbackUrl = new URL("/auth/callback", origin);
+  const callbackUrl = new URL("/auth/callback", PORTAL_ORIGIN);
   callbackUrl.searchParams.set("next", destination);
   return callbackUrl;
 }

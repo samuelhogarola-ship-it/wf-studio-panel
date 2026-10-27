@@ -105,7 +105,7 @@ test('every protected client page resolves through PortalViewer for both clients
   for (const viewerMode of ['client', 'support']) {
     const s = setup({ viewerMode, projects: [{ ...project, analytics_registry_key: 'example' }], capabilities, configuredAnalytics: true, configuredBlogger: true });
     for (const route of routes) assert.ok(render(await s.page(route)).length > 0, `${viewerMode}: ${route}`);
-    for (const route of ['proyectos/[slug]', 'proyectos/[slug]/estadisticas', 'proyectos/[slug]/blogger']) {
+    for (const route of ['proyectos/[slug]', 'proyectos/[slug]/estadisticas']) {
       assert.ok(render(await s.page(route, { params: Promise.resolve({ slug: project.slug }) })).length > 0, `${viewerMode}: ${route}`);
     }
   }
@@ -268,7 +268,7 @@ test('legacy clients can open assigned projects while project tools stay capabil
   await assert.rejects(() => blogger.page('proyectos/[slug]/blogger', { params: Promise.resolve({ slug: 'example' }) }), { message: '404' });
 });
 
-test('Blogger route authorizes only through the accessible project lookup', async () => {
+test('Blogger route remains unavailable without an approved external handoff', async () => {
   const activeBlogger = { ...capability, capability_key: 'blogger', state: 'active' };
   const Page = loadProjectModule(`${protectedRoot}/proyectos/[slug]/blogger/page.tsx`, {
     '@/lib/data/projects': {
@@ -280,13 +280,12 @@ test('Blogger route authorizes only through the accessible project lookup', asyn
     '@/lib/sites/registry.mjs': {
       getSiteByKey: () => ({ key: project.slug, name: project.name, domain: project.domain, blogger: { enabled: true } }),
     },
-    '@/lib/blogger/editor.mjs': {
-      getBloggerEditorTarget: () => ({ kind: 'iframe', href: '/blogger/editor/index.html?siteKey=example' }),
-    },
   }).default;
 
-  const html = render(await Page({ params: Promise.resolve({ slug: project.slug }) }));
-  assert.match(html, /Blogger · Example/);
+  await assert.rejects(
+    () => Page({ params: Promise.resolve({ slug: project.slug }) }),
+    { message: '404' },
+  );
 });
 
 test('project routes still hide archived, client-hidden and foreign projects in either historical mode', async () => {

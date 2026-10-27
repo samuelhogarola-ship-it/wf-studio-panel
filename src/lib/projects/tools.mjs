@@ -40,6 +40,10 @@ function internalHref(id, project, viewer) {
 }
 
 function resolveTool(definition, project, viewer, configurationIssues, bloggerRuntime) {
+  if (definition.id === 'blogger' && viewer === 'client' && bloggerRuntime === 'central-legacy') {
+    return null;
+  }
+
   if (definition.id === 'website') {
     const href = `https://${String(project.domain ?? '').toLowerCase().replace(/^www\./, '')}`;
     if (validateProjectDestination(href, project.domain, true)) {
@@ -96,6 +100,6 @@ export function buildProjectTools({ project, viewer, configurationIssues = {}, b
   const tools = definitions
     .filter(definition => viewer === 'admin' || definition.audience !== 'admin')
     .map(definition => resolveTool(definition, project, viewer, configurationIssues, bloggerRuntime))
-    .filter(tool => viewer === 'admin' || tool.state === 'active');
+    .filter(tool => tool && (viewer === 'admin' || tool.state === 'active'));
   return Object.freeze(tools.map(tool => Object.freeze(tool)));
 }

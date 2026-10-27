@@ -1,7 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 
 import { getBloggerEditorTarget } from '../src/lib/blogger/editor.mjs'
+
+const sites = JSON.parse(readFileSync(new URL('../src/config/sites.json', import.meta.url), 'utf8'))
 
 test('routes each Blogger runtime to its configured editor without mixing storage backends', () => {
   assert.deepEqual(getBloggerEditorTarget({ key: 'samuel', blogger: { runtime: 'central-multisite', url: 'https://admin.example/editor' } }), {
@@ -21,9 +24,18 @@ test('Sport Massage central access always resolves to the legacy Studio editor',
     blogger: {
       enabled: true,
       runtime: 'central-legacy',
-      url: 'https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
+      url: 'https://sportmassagefuengirola.com/admin/blogger/',
     },
   }), { kind: 'iframe', href: '/blogger/index.html' })
+})
+
+test('Sport Massage registry describes only its direct URL without handoff metadata', () => {
+  const site = sites.find(candidate => candidate.key === 'sportmassagefuengirola')
+
+  assert.equal(site.blogger.url, 'https://sportmassagefuengirola.com/admin/blogger/')
+  for (const key of ['launchUrl', 'healthUrl', 'adapter', 'capabilities']) {
+    assert.equal(Object.hasOwn(site.blogger, key), false, key)
+  }
 })
 
 test('fails closed for missing or unknown Blogger runtimes', () => {
