@@ -22,6 +22,10 @@ const migrationUrl = new URL(
   '../supabase/migrations/202610170004_tool_launch_tickets.sql',
   import.meta.url,
 )
+const hardeningMigrationUrl = new URL(
+  '../supabase/migrations/202610270001_harden_tool_launch_tickets.sql',
+  import.meta.url,
+)
 const launchRoutePath = 'src/app/api/tools/blogger/[siteKey]/launch/route.ts'
 const exchangeRoutePath = 'src/app/api/tool-launch/exchange/route.ts'
 const protocol = 'wf-blogger-handoff/v1'
@@ -253,6 +257,16 @@ test('migration keeps launch tickets outside browser roles and exposes RPCs only
   assert.match(source, /revoke all on function public\.consume_tool_launch_ticket[\s\S]*from public, anon, authenticated/i)
   assert.match(source, /grant execute on function public\.create_tool_launch_ticket[\s\S]*to service_role/i)
   assert.match(source, /grant execute on function public\.consume_tool_launch_ticket[\s\S]*to service_role/i)
+})
+
+test('ticket hardening serializes per-user creation, rate limits launches and prunes retained rows', async () => {
+  const source = await readFile(hardeningMigrationUrl, 'utf8')
+  assert.match(source, /pg_advisory_xact_lock/i)
+  assert.match(source, /create index[^;]*\(user_id, site_key, created_at\)/i)
+  assert.match(source, /created_at\s*>\s*now\(\)\s*-\s*interval '5 minutes'/i)
+  assert.match(source, /raise exception[^;]*launch rate limit/i)
+  assert.match(source, /delete from public\.tool_launch_tickets[\s\S]*consumed_at[\s\S]*interval '1 hour'/i)
+  assert.match(source, /security definer[\s\S]*set search_path = ''/i)
 })
 
 test('createLaunchTicket emits an opaque code but stores only its SHA-256 hash for exactly 60 seconds', async () => {

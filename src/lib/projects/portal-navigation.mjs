@@ -47,7 +47,7 @@ export function buildPortalNavigation({ mode, projects = [], locale = 'es' }) {
     });
     if (enabled('blogger')) items.push({
       id: 'sport-blogger',
-      href: '/acceso/blogger/sportmassagefuengirola',
+      href: `/cliente/proyectos/${sportMassage.slug}/blogger`,
       label: text.blogger,
     });
     items.push({ id: 'help', href: '/cliente/mensajeria?new=1', label: text.help });

@@ -33,7 +33,7 @@ test('correct independent credentials create a secure host-only Blogger session'
   assert.equal(response.status, 303)
   assert.equal(response.headers.get('location'), 'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola')
   const cookie = response.headers.get('set-cookie')
-  assert.match(cookie, /__Host-wf_sport_blogger=/)
+  assert.match(cookie, /__Host-wf_blogger=/)
   assert.match(cookie, /HttpOnly/i)
   assert.match(cookie, /Secure/i)
   assert.match(cookie, /SameSite=Strict/i)
@@ -61,7 +61,7 @@ test('logout clears only the direct Blogger session and returns to the neutral r
   const response = await POST(formRequest({ action: 'logout' }))
   assert.equal(response.status, 303)
   assert.equal(response.headers.get('location'), 'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola')
-  assert.match(response.headers.get('set-cookie'), /__Host-wf_sport_blogger=;/)
+  assert.match(response.headers.get('set-cookie'), /__Host-wf_blogger=;/)
   assert.match(response.headers.get('set-cookie'), /Max-Age=0/i)
 })
 
@@ -69,7 +69,7 @@ test('login rejects oversized bodies before password verification', async () => 
   let passwordChecks = 0
   const { POST } = loadProjectModule(routePath, {
     '@/lib/blogger/direct-access.mjs': {
-      DIRECT_BLOGGER_COOKIE: '__Host-wf_sport_blogger',
+      DIRECT_BLOGGER_COOKIE: '__Host-wf_blogger',
       loadDirectBloggerConfig: () => ({ username: 'sportmassagefuengirola@gmail.com', passwordHash: 'unused', sessionSecret: 'unused' }),
       verifyDirectBloggerPassword: async () => { passwordChecks += 1; return false },
       createDirectBloggerSession: () => 'unused',
@@ -88,7 +88,7 @@ test('login rate limits repeated password work per proxy-confirmed client', asyn
   let passwordChecks = 0
   const { POST } = loadProjectModule(routePath, {
     '@/lib/blogger/direct-access.mjs': {
-      DIRECT_BLOGGER_COOKIE: '__Host-wf_sport_blogger',
+      DIRECT_BLOGGER_COOKIE: '__Host-wf_blogger',
       loadDirectBloggerConfig: () => ({ username: 'sportmassagefuengirola@gmail.com', passwordHash: 'unused', sessionSecret: 'unused' }),
       verifyDirectBloggerPassword: async () => { passwordChecks += 1; return false },
       createDirectBloggerSession: () => 'unused',

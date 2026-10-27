@@ -102,7 +102,7 @@ test('Sport Massage direct route renders the independent English login instead o
 })
 
 test('direct credential session opens the existing editor and exposes Sign out', async () => {
-  const { Page } = setup({ directSession: { siteKey: 'sportmassagefuengirola' } })
+  const { Page } = setup({ directSession: { siteKey: 'sportmassagefuengirola', source: 'direct', subject: null } })
   const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }))
   assert.match(html, /src="\/blogger\/index\.html"/)
   assert.match(html, />Sign out</)
@@ -118,8 +118,16 @@ test('an ordinary Sofia panel session still requires the independent Blogger cre
   assert.doesNotMatch(html, /src="\/blogger\/index\.html"|paneladmin/)
 })
 
-test('authorized aGama client receives only the exact aGama editor', async () => {
-  const { Page } = setup({ identity: identities.agama, authorizedSites: ['agama'] })
+test('aGama panel-ticket session receives only the exact aGama editor', async () => {
+  const { Page } = setup({
+    identity: identities.agama,
+    authorizedSites: ['agama'],
+    directSession: {
+      siteKey: 'agama',
+      source: 'panel',
+      subject: { userId: identities.agama.userId, clientId: 'client-agama', projectId: 'project-agama' },
+    },
+  })
   const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ siteKey: 'agama' }) }))
 
   assert.match(html, /aGama/)

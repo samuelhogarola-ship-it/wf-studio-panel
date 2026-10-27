@@ -70,7 +70,7 @@ test('direct session lookup rejects a valid bearer outside the portal host', asy
       cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
     },
     '@/lib/blogger/direct-access.mjs': {
-      DIRECT_BLOGGER_COOKIE: '__Host-wf_sport_blogger',
+      DIRECT_BLOGGER_COOKIE: '__Host-wf_blogger',
       loadDirectBloggerConfig: () => ({ sessionSecret: 'secret' }),
       verifyDirectBloggerSession: () => ({ siteKey: 'sportmassagefuengirola' }),
     },

@@ -261,12 +261,13 @@ test('stale support sign-out fails closed before the real administrator identity
 test('ordinary client and administrator sign-out remain unchanged outside support preview', async () => {
   for (const [redirect, destination] of [['client', '/cliente'], ['admin', '/paneladmin']]) {
     let signOuts = 0
+    const cleared = []
     const route = loadProjectModule('src/app/auth/sign-out/route.ts', {
       '@/lib/support/portal-viewer': { getOptionalSupportViewer: async () => null },
       '@/lib/supabase/server': {
         createSupabaseRouteClient: () => ({ auth: { signOut: async () => { signOuts += 1 } } }),
       },
-      'next/server': { NextResponse: { redirect(url) { return { location: url.toString(), cookies: { set() {} } } } } },
+      'next/server': { NextResponse: { redirect(url) { return { location: url.toString(), cookies: { set(...args) { cleared.push(args) } } } } } },
     })
     const response = await route.POST({
       url: 'https://studio.example.test/auth/sign-out', headers: new Headers(),
@@ -274,6 +275,9 @@ test('ordinary client and administrator sign-out remain unchanged outside suppor
     })
     assert.equal(response.location, `https://studio.example.test${destination}`)
     assert.equal(signOuts, 1)
+    assert.equal(cleared[0][0], '__Host-wf_blogger')
+    assert.equal(cleared[0][1], '')
+    assert.equal(cleared[0][2].maxAge, 0)
   }
 })
 

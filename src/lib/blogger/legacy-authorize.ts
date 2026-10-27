@@ -7,8 +7,8 @@ const SPORT_MASSAGE_SITE_KEY = 'sportmassagefuengirola'
 
 /** The legacy API is a single-tenant Sport Massage runtime. */
 export async function authorizeSportBlogger() {
-  const directSession = await getDirectBloggerSession()
-  if (directSession?.siteKey === SPORT_MASSAGE_SITE_KEY) {
+  const directSession = await getDirectBloggerSession(SPORT_MASSAGE_SITE_KEY)
+  if (directSession?.siteKey === SPORT_MASSAGE_SITE_KEY && directSession.source === 'direct') {
     return {
       ...getBloggerSite(SPORT_MASSAGE_SITE_KEY),
       identity: {
@@ -20,6 +20,7 @@ export async function authorizeSportBlogger() {
       capability: null,
     }
   }
+  if (directSession?.source === 'panel') return authorizeBloggerSite(SPORT_MASSAGE_SITE_KEY)
   const identity = await getOptionalIdentity()
   if (identity?.role !== 'admin') {
     throw Object.assign(new Error('Blogger access denied'), { status: identity ? 403 : 401 })

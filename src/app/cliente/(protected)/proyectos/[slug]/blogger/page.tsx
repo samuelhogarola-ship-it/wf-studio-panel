@@ -1,14 +1,22 @@
 import Link from 'next/link'
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 
+import { PanelBloggerLaunch } from '@/components/blogger/panel-blogger-launch'
 import { getAccessibleClientProject } from '@/lib/data/projects'
 import { getBloggerEditorTarget } from '@/lib/blogger/editor.mjs'
 import { getSiteByKey } from '@/lib/sites/registry.mjs'
 
 export const dynamic = 'force-dynamic'
 
-export default async function ClientBloggerPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ClientBloggerPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>
+  searchParams?: Promise<{ error?: string }>
+}) {
   const { slug } = await params
+  const query = await searchParams
   const project = await getAccessibleClientProject(slug)
   if (!project?.capabilities.some(capability => capability.capability_key === 'blogger' && capability.state === 'active')) notFound()
   let site
@@ -18,7 +26,13 @@ export default async function ClientBloggerPage({ params }: { params: Promise<{ 
     notFound()
   }
   if (!site.blogger.enabled || site.domain.replace(/^www\./, '') !== project.domain.replace(/^www\./, '')) notFound()
-  if (site.key === 'sportmassagefuengirola') redirect('/acceso/blogger/sportmassagefuengirola')
+  if (site.blogger.runtime === 'central-legacy' || site.blogger.runtime === 'central-multisite') {
+    return <PanelBloggerLaunch
+      action={`/api/tools/blogger/${encodeURIComponent(site.key)}/launch`}
+      siteName={site.name}
+      launchFailed={query?.error === 'launch'}
+    />
+  }
   const target = getBloggerEditorTarget(site)
   if (!target) notFound()
   const handoff = typeof site.blogger.launchUrl === 'string'
