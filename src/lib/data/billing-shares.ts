@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { hashBillingShareToken } from '@/lib/billing/share-token'
-import { createSupabaseAdminClient, createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export type SharedBillingBundle = {
   document: { id: string; number: string | null; document_type: string; title: string; recipient_name: string; document_date: string; due_date: string | null; net_cents: number; tax_cents: number; total_cents: number }
@@ -12,7 +12,7 @@ export type SharedBillingBundle = {
 
 export async function getSharedBillingDocument(rawToken: string): Promise<SharedBillingBundle | null> {
   if (!/^[a-f0-9]{64}$/.test(rawToken)) return null
-  const db = createSupabaseAdminClient()
+  const db = await createSupabaseServerClient()
   const { data, error } = await db.rpc('resolve_billing_share', { p_token_hash: hashBillingShareToken(rawToken) })
   if (error || !data) return null
   return data as unknown as SharedBillingBundle

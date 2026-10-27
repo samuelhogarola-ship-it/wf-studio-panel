@@ -24,7 +24,8 @@ export async function createBillingShareAction(_previous: BillingShareActionStat
   const saved = Array.isArray(data) ? data[0] : data
   if (error || !saved?.id) return { error: 'No se pudo crear el enlace privado.' }
   revalidatePath(`/paneladmin/contabilidad/documentos/${documentId.data}`)
-  return { success: 'Enlace privado creado durante 7 días.', shareUrl: `/d/${rawToken}`, shareId: saved.id }
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '')
+  return { success: 'Enlace privado creado durante 7 días.', shareUrl: `${baseUrl ?? ''}/d/${rawToken}`, shareId: saved.id }
 }
 
 export async function revokeBillingShareAction(formData: FormData) {

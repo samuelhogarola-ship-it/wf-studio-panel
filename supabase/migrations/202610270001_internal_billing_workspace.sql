@@ -531,12 +531,12 @@ using (private.is_admin()) with check (private.is_admin());
 create policy billing_documents_admin_all on public.billing_documents for all to authenticated
 using (private.is_admin()) with check (private.is_admin());
 create policy billing_documents_client_read on public.billing_documents for select to authenticated
-using (client_id = private.current_portal_client_id() and status = 'issued');
+using (client_id = private.current_portal_client_id() and status in ('issued', 'paid'));
 create policy billing_document_lines_admin_all on public.billing_document_lines for all to authenticated
 using (private.is_admin()) with check (private.is_admin());
 create policy billing_document_lines_client_read on public.billing_document_lines for select to authenticated
 using (exists (select 1 from public.billing_documents d where d.id = document_id
-  and d.client_id = private.current_portal_client_id() and d.status = 'issued'));
+  and d.client_id = private.current_portal_client_id() and d.status in ('issued', 'paid')));
 create policy billing_number_sequences_admin_read on public.billing_number_sequences for select to authenticated using (private.is_admin());
 create policy billing_payments_admin_all on public.billing_payments for all to authenticated
 using (private.is_admin()) with check (private.is_admin());

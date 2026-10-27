@@ -43,6 +43,7 @@ test('share schema closes revoked, expired and paid documents with one-document 
   assert.match(sql, /s\.expires_at > now\(\)/i)
   assert.match(sql, /d\.status = 'issued'/i)
   assert.match(sql, /where s\.token_hash = p_token_hash/i)
+  assert.match(sql, /billing_documents_client_read[\s\S]*status in \('issued', 'paid'\)/i)
 })
 
 test('public share and registered-client pages show document balance and active payment option', async () => {
