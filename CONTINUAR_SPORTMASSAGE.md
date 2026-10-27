@@ -132,6 +132,10 @@ La página ofrece acceso con Google o Apple; no debe presumirse que el correo el
 6. Probar traducción real finés→inglés y finés→español con una frase genérica en memoria, sin crear ni publicar artículos. Confirmar también el manejo de errores y el respeto a las correcciones manuales con las pruebas aisladas.
 7. Mantener como no verificada la entrega real de artículos a Hostinger hasta poder comprobarla sin violar la prohibición de publicar contenido de prueba.
 
+## Verificación local final del 27/10/2026
+
+Ver [el informe local](docs/verification/2026-10-27-sportmassage-local.md): suite completa (554 aprobadas, 2 omitidas, 0 fallos), lint, tipos y build aprobados. En navegador real se verificaron conservación de FI/EN/ES tras guardar/recargar y anchos de 1440, 390 y 360 px sin desbordamiento; el fixture no usa claves ni permite publicar. Se cerraron las pestañas de la tarea y el servidor temporal. El informe separa esos resultados de la API real y de la configuración remota aún bloqueada.
+
 ## Archivos relevantes para continuar
 
 - `public/blogger/index.html`, `public/blogger/app.js`, `public/blogger/styles.css`: interfaz y estado del editor.
