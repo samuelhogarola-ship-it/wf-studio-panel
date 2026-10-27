@@ -69,6 +69,69 @@ export type Database = {
         Update: { title?: string; body?: string }
         Relationships: []
       }
+      billing_products: {
+        Row: { id: string; name: string; description: string | null; default_net_cents: number | null; tax_mode: string; tax_rate_bps: number; active: boolean; sort_order: number; created_at: string; updated_at: string }
+        Insert: { id?: string; name: string; description?: string | null; default_net_cents?: number | null; tax_mode?: string; tax_rate_bps?: number; active?: boolean; sort_order?: number; created_at?: string; updated_at?: string }
+        Update: { name?: string; description?: string | null; default_net_cents?: number | null; tax_mode?: string; tax_rate_bps?: number; active?: boolean; sort_order?: number; updated_at?: string }
+        Relationships: []
+      }
+      billing_documents: {
+        Row: { id: string; document_type: string; number: string | null; status: string; client_id: string | null; recipient_name: string; recipient_email: string; recipient_company: string | null; title: string; notes: string | null; document_date: string; due_date: string | null; source_proposal_id: string | null; parent_invoice_id: string | null; legacy_invoice_id: string | null; tax_breakdown_review_required: boolean; net_cents: number; tax_cents: number; total_cents: number; issued_at: string | null; created_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; document_type: string; number?: string | null; status?: string; client_id?: string | null; recipient_name: string; recipient_email: string; recipient_company?: string | null; title: string; notes?: string | null; document_date?: string; due_date?: string | null; source_proposal_id?: string | null; parent_invoice_id?: string | null; legacy_invoice_id?: string | null; tax_breakdown_review_required?: boolean; net_cents?: number; tax_cents?: number; total_cents?: number; issued_at?: string | null; created_by?: string | null; created_at?: string; updated_at?: string }
+        Update: { document_type?: string; number?: string | null; status?: string; client_id?: string | null; recipient_name?: string; recipient_email?: string; recipient_company?: string | null; title?: string; notes?: string | null; document_date?: string; due_date?: string | null; source_proposal_id?: string | null; parent_invoice_id?: string | null; legacy_invoice_id?: string | null; tax_breakdown_review_required?: boolean; net_cents?: number; tax_cents?: number; total_cents?: number; issued_at?: string | null; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "billing_documents_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
+          { foreignKeyName: "billing_documents_legacy_invoice_id_fkey"; columns: ["legacy_invoice_id"]; isOneToOne: true; referencedRelation: "invoices"; referencedColumns: ["id"] },
+        ]
+      }
+      billing_document_lines: {
+        Row: { id: string; document_id: string; product_id: string | null; product_name: string | null; description: string; quantity: number; unit_net_cents: number; tax_mode: string; tax_rate_bps: number; net_cents: number; tax_cents: number; total_cents: number; sort_order: number; created_at: string }
+        Insert: { id?: string; document_id: string; product_id?: string | null; product_name?: string | null; description: string; quantity: number; unit_net_cents: number; tax_mode: string; tax_rate_bps: number; net_cents: number; tax_cents: number; total_cents: number; sort_order?: number; created_at?: string }
+        Update: never
+        Relationships: [{ foreignKeyName: "billing_document_lines_document_id_fkey"; columns: ["document_id"]; isOneToOne: false; referencedRelation: "billing_documents"; referencedColumns: ["id"] }]
+      }
+      billing_number_sequences: {
+        Row: { series: string; year: number; last_number: number }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      billing_payments: {
+        Row: { id: string; document_id: string; amount_cents: number; paid_on: string; method: string; note: string | null; advance_invoice_id: string | null; reversed_at: string | null; reversed_by: string | null; created_by: string | null; created_at: string }
+        Insert: { id?: string; document_id: string; amount_cents: number; paid_on?: string; method: string; note?: string | null; advance_invoice_id?: string | null; reversed_at?: string | null; reversed_by?: string | null; created_by?: string | null; created_at?: string }
+        Update: { reversed_at?: string | null; reversed_by?: string | null }
+        Relationships: [{ foreignKeyName: "billing_payments_document_id_fkey"; columns: ["document_id"]; isOneToOne: false; referencedRelation: "billing_documents"; referencedColumns: ["id"] }]
+      }
+      billing_payment_options: {
+        Row: { id: string; document_id: string; method: string; url: string | null; instructions: string | null; active: boolean; created_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; document_id: string; method: string; url?: string | null; instructions?: string | null; active?: boolean; created_by?: string | null; created_at?: string; updated_at?: string }
+        Update: { method?: string; url?: string | null; instructions?: string | null; active?: boolean; updated_at?: string }
+        Relationships: [{ foreignKeyName: "billing_payment_options_document_id_fkey"; columns: ["document_id"]; isOneToOne: true; referencedRelation: "billing_documents"; referencedColumns: ["id"] }]
+      }
+      billing_share_links: {
+        Row: { id: string; document_id: string; token_hash: string; expires_at: string; revoked_at: string | null; created_by: string | null; created_at: string }
+        Insert: { id?: string; document_id: string; token_hash: string; expires_at?: string; revoked_at?: string | null; created_by?: string | null; created_at?: string }
+        Update: { revoked_at?: string | null }
+        Relationships: [{ foreignKeyName: "billing_share_links_document_id_fkey"; columns: ["document_id"]; isOneToOne: false; referencedRelation: "billing_documents"; referencedColumns: ["id"] }]
+      }
+      ledger_income: {
+        Row: { id: string; category: string; description: string; occurred_on: string; source_mode: string; net_cents: number; tax_mode: string; tax_rate_bps: number; tax_cents: number; total_cents: number; created_by: string | null; created_at: string }
+        Insert: { id?: string; category: string; description: string; occurred_on: string; source_mode: string; net_cents: number; tax_mode: string; tax_rate_bps: number; tax_cents: number; total_cents: number; created_by?: string | null; created_at?: string }
+        Update: never
+        Relationships: []
+      }
+      ledger_expenses: {
+        Row: { id: string; supplier_name: string; supplier_tax_id: string | null; invoice_reference: string | null; category: string; occurred_on: string; net_cents: number; tax_rate_bps: number; tax_cents: number; deductible_tax_cents: number; total_cents: number; payment_method: string; notes: string | null; created_by: string | null; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      ledger_expense_attachments: {
+        Row: { id: string; expense_id: string; storage_path: string; original_name: string; content_type: string; size_bytes: number; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: [{ foreignKeyName: "ledger_expense_attachments_expense_id_fkey"; columns: ["expense_id"]; isOneToOne: false; referencedRelation: "ledger_expenses"; referencedColumns: ["id"] }]
+      }
       activities: {
         Row: { activity_type: string; client_id: string; created_at: string; description: string | null; id: string; minutes_used: number; notify_client: boolean; pack_id: string; title: string; updated_at: string; work_date: string }
         Insert: { activity_type: string; client_id: string; created_at?: string; description?: string | null; id?: string; minutes_used: number; notify_client?: boolean; pack_id: string; title: string; updated_at?: string; work_date?: string }
@@ -165,6 +228,18 @@ export type Database = {
       }
     }
     Functions: {
+      save_billing_product: { Args: { p_id: string | null; p_name: string; p_description: string | null; p_default_net_cents: number | null; p_tax_mode: string; p_tax_rate_bps: number; p_active: boolean; p_sort_order: number }; Returns: Database['public']['Tables']['billing_products']['Row'] }
+      delete_billing_product: { Args: { p_id: string }; Returns: boolean }
+      save_billing_document_draft: { Args: { p_id: string | null; p_document_type: string; p_client_id: string | null; p_recipient_name: string; p_recipient_email: string; p_recipient_company: string | null; p_title: string; p_notes: string | null; p_document_date: string; p_due_date: string | null; p_source_proposal_id: string | null; p_parent_invoice_id: string | null; p_lines: Json }; Returns: Database['public']['Tables']['billing_documents']['Row'] }
+      issue_billing_document: { Args: { p_document_id: string }; Returns: Database['public']['Tables']['billing_documents']['Row'] }
+      record_billing_payment: { Args: { p_document_id: string; p_amount_cents: number; p_paid_on: string; p_method: string; p_note: string | null }; Returns: { payment_id: string; balance_cents: number; advance_invoice_id: string | null }[] }
+      reverse_billing_payment: { Args: { p_payment_id: string }; Returns: boolean }
+      set_billing_payment_option: { Args: { p_document_id: string; p_method: string; p_url: string | null; p_instructions: string | null; p_active: boolean }; Returns: boolean }
+      create_billing_share: { Args: { p_document_id: string; p_token_hash: string; p_expires_at: string }; Returns: Database['public']['Tables']['billing_share_links']['Row'] }
+      revoke_billing_share: { Args: { p_share_id: string }; Returns: boolean }
+      resolve_billing_share: { Args: { p_token_hash: string }; Returns: Json }
+      create_ledger_income: { Args: { p_category: string; p_description: string; p_occurred_on: string; p_source_mode: string; p_net_cents: number; p_tax_mode: string; p_tax_rate_bps: number }; Returns: Database['public']['Tables']['ledger_income']['Row'] }
+      create_ledger_expense: { Args: { p_supplier_name: string; p_supplier_tax_id: string | null; p_invoice_reference: string | null; p_category: string; p_occurred_on: string; p_net_cents: number; p_tax_rate_bps: number; p_tax_cents: number; p_deductible_tax_cents: number; p_total_cents: number; p_payment_method: string; p_notes: string | null; p_storage_path: string | null; p_original_name: string | null; p_content_type: string | null; p_size_bytes: number | null }; Returns: Database['public']['Tables']['ledger_expenses']['Row'] }
       mark_message_read: { Args: { p_message_id: string }; Returns: undefined }
       create_invoice_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string }; Returns: { id: string; number: string }[] }
       issue_invoice_with_payment_link: { Args: { p_invoice_id: string; p_payment_url: string | null }; Returns: { id: string; number: string; status: string }[] }

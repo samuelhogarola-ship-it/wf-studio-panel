@@ -33,7 +33,7 @@ function run(command, args, { capture = false, extraEnv = {}, cwd = workspace, s
         .replace(/postgres(?:ql)?:\/\/\S+/gi, 'postgresql://[redacted]')
         .replace(/private-credential(?:-sentinel)?|leaksecret/gi, '[redacted]')
         .trim()
-      const suffix = diagnostic ? `: ${diagnostic.slice(0, 500)}` : ''
+      const suffix = diagnostic ? `: ${diagnostic.slice(-2000)}` : ''
       reject(new Error(`Local database test command failed: ${safeArgs.join(' ')} (exit ${code})${suffix}`))
     })
   })
@@ -127,7 +127,7 @@ try {
     safeArgs: ['container', 'migrate'],
   })
   console.error('[support-db] migrations applied')
-  await run(process.execPath, ['--test', 'tests/support-session-postgres.test.mjs'], { cwd: root, extraEnv: { WF_SUPPORT_TEST_DATABASE_URL: databaseUrl } })
+  await run(process.execPath, ['--test', 'tests/support-session-postgres.test.mjs', 'tests/internal-billing-postgres.test.mjs', 'tests/legacy-final-invoices-import.test.mjs'], { cwd: root, extraEnv: { WF_SUPPORT_TEST_DATABASE_URL: databaseUrl } })
   console.error('[support-db] integration tests passed')
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Local database tests failed')

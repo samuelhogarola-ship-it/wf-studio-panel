@@ -1,5 +1,6 @@
 import { requireClientCapability } from '@/lib/projects/client-access'
 import { getClientFacturasData } from '@/lib/data/client'
+import { getClientBillingDocuments } from '@/lib/data/billing-shares'
 import { formatDate } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +13,10 @@ const PAYMENT_LABELS: Record<string, string> = {
 
 export default async function ClientFacturasPage() {
   const identity = await requireClientCapability('invoices')
-  const invoices = await getClientFacturasData(identity.client.id)
+  const [invoices, billingDocuments] = await Promise.all([
+    getClientFacturasData(identity.client.id),
+    getClientBillingDocuments(identity.client.id),
+  ])
 
   const pendingTotal = invoices
     .filter((i) => i.status === 'issued' || i.status === 'pending')
@@ -40,6 +44,8 @@ export default async function ClientFacturasPage() {
           </div>
         </div>
       )}
+
+      {billingDocuments.length > 0 ? <section className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white"><div className="border-b border-slate-100 px-5 py-4"><h2 className="font-bold">Propuestas y facturas de WF Studio</h2></div><div className="divide-y divide-slate-100">{billingDocuments.map(document => <div key={document.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"><div><p className="font-semibold">{document.title}</p><p className="text-xs text-slate-500">{document.number ?? 'Documento'} · {document.document_type === 'proposal' ? 'Propuesta' : 'Factura'}</p></div><div className="text-right"><p className="font-bold">{(document.total_cents / 100).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</p><p className={document.balanceCents ? 'text-xs font-semibold text-amber-700' : 'text-xs font-semibold text-emerald-700'}>{document.balanceCents ? `Pendiente ${(document.balanceCents / 100).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}` : 'Pagado'}</p></div></div>)}</div></section> : null}
 
       {invoices.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">

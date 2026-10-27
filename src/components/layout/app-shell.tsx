@@ -106,6 +106,16 @@ export function AdminShell({
           ),
         },
         {
+          href: '/paneladmin/contabilidad',
+          label: t(locale, 'shell.nav.accounting'),
+          icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 2h16v20H4z" /><path d="M8 6h8M8 10h8M8 14h3M13 14h3M8 18h3M13 18h3" />
+            </svg>
+          ),
+          activePrefix: '/paneladmin/contabilidad',
+        },
+        {
           href: '/paneladmin/servicios',
           label: 'Servicios',
           icon: (

@@ -9,6 +9,12 @@ Subapp independiente para WF-Studio con:
 - actividades y consumo
 - notificaciones email con Resend
 
+## Contabilidad interna
+
+El área `/paneladmin/contabilidad` mantiene un catálogo editable de productos, crea propuestas y facturas, registra cobros parciales y activa la forma de pago que verá el cliente. También registra ingresos —incluidas clases exentas— y gastos con justificantes privados.
+
+Los resúmenes mensual, trimestral y anual mantienen separados los registros individuales y los totales mensuales directos para evitar duplicidades. Las exportaciones CSV de documentos, cobros, ingresos y gastos están preparadas para entregar a la gestora. No existe integración directa con AEAT: la clasificación y presentación fiscal siguen en manos de la gestora.
+
 ## Stack
 
 - Next.js 15
