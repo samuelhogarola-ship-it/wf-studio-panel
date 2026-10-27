@@ -12,7 +12,7 @@ const diagnosticsSource = await readFile(new URL("../src/app/api/auth-diagnostic
 
 test("forwarded hosts are ignored unless explicitly allowlisted", () => {
   assert.equal(resolveRequestOrigin({ forwardedHost: "evil.example", forwardedProto: "https", requestOrigin: "https://portal.webfuengirola.com", fallbackOrigin: "https://portal.webfuengirola.com", allowedHosts: ["portal.webfuengirola.com"] }), "https://portal.webfuengirola.com");
-  assert.equal(resolveRequestOrigin({ forwardedHost: "portal.webfuengirola.com", forwardedProto: "https", requestOrigin: "https://fallback.example", fallbackOrigin: "https://fallback.example", allowedHosts: ["portal.webfuengirola.com"] }), "https://portal.webfuengirola.com");
+  assert.equal(resolveRequestOrigin({ forwardedHost: "portal.webfuengirola.com", forwardedProto: "https", requestOrigin: "http://wf-studio-panel:3000", fallbackOrigin: "https://fallback.example", allowedHosts: ["portal.webfuengirola.com"] }), "https://portal.webfuengirola.com");
 });
 
 test("authentication boundaries use server-owned destinations and same-origin logout", () => {

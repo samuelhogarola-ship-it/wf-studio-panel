@@ -122,9 +122,13 @@ test('Sport panel launch consumes one audience-bound ticket and establishes the 
       },
     },
   })
-  const response = await route.POST(new Request('https://portal.webfuengirola.com/api/tools/blogger/sportmassagefuengirola/launch', {
+  const response = await route.POST(new Request('http://wf-studio-panel:3000/api/tools/blogger/sportmassagefuengirola/launch', {
     method: 'POST',
-    headers: { origin: 'https://portal.webfuengirola.com' },
+    headers: {
+      origin: 'https://portal.webfuengirola.com',
+      'x-forwarded-host': 'portal.webfuengirola.com',
+      'x-forwarded-proto': 'https',
+    },
   }), { params: Promise.resolve({ siteKey }) })
   assert.equal(response.status, 303)
   assert.equal(response.headers.get('location'), 'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola')

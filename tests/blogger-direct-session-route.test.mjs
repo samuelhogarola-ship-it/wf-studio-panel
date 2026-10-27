@@ -40,6 +40,29 @@ test('correct independent credentials create a secure host-only Blogger session'
   assert.doesNotMatch(cookie, /Domain=/i)
 })
 
+test('accepts the public portal host reported by the trusted reverse proxy', async () => {
+  const { POST } = await configuredRoute()
+  const body = new URLSearchParams({
+    action: 'login',
+    username: 'sportmassagefuengirola@gmail.com',
+    password,
+  })
+  const response = await POST(new Request('http://wf-studio-panel:3000/api/blogger/direct-session', {
+    method: 'POST',
+    body,
+    headers: {
+      origin: 'https://portal.webfuengirola.com',
+      'content-type': 'application/x-www-form-urlencoded',
+      'x-forwarded-host': 'portal.webfuengirola.com',
+      'x-forwarded-proto': 'https',
+    },
+  }))
+
+  assert.equal(response.status, 303)
+  assert.equal(response.headers.get('location'), 'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola')
+  assert.match(response.headers.get('set-cookie'), /__Host-wf_blogger=/)
+})
+
 test('wrong credentials return one generic error and do not create a session', async () => {
   const { POST } = await configuredRoute()
   const response = await POST(formRequest({ action: 'login', username: 'sportmassagefuengirola@gmail.com', password: 'Wrong-Password-2026!' }))

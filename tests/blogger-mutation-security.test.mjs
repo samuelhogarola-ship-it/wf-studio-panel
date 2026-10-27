@@ -13,6 +13,20 @@ test('accepts exact same-origin JSON mutations', () => {
   assert.doesNotThrow(() => assertTrustedMutation(request(), { requireJson: true }))
 })
 
+test('accepts the public origin reported by the trusted reverse proxy', () => {
+  const proxiedRequest = new Request('http://localhost:3000/api/blogger/site/posts', {
+    method: 'POST',
+    headers: {
+      origin: 'https://admin.webfuengirola.com',
+      'content-type': 'application/json; charset=utf-8',
+      'x-forwarded-host': 'admin.webfuengirola.com',
+      'x-forwarded-proto': 'https',
+    },
+  })
+
+  assert.doesNotThrow(() => assertTrustedMutation(proxiedRequest, { requireJson: true }))
+})
+
 test('rejects absent, foreign and lookalike origins', () => {
   for (const origin of [undefined, 'https://evil.example', 'https://admin.webfuengirola.com.evil.example']) {
     const headers = origin ? { origin, 'content-type': 'application/json' } : { 'content-type': 'application/json' }

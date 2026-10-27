@@ -7,6 +7,7 @@ import {
   verifyDirectBloggerPassword,
 } from '@/lib/blogger/direct-access.mjs'
 import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
+import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
 
 export const runtime = 'nodejs'
 
@@ -72,7 +73,13 @@ async function readForm(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const url = new URL(request.url)
+  const requestUrl = new URL(request.url)
+  const origin = resolveRequestOrigin({
+    forwardedHost: request.headers.get('x-forwarded-host'),
+    forwardedProto: request.headers.get('x-forwarded-proto'),
+    requestOrigin: requestUrl.origin,
+  })
+  const url = new URL(`${requestUrl.pathname}${requestUrl.search}`, origin)
   if (!allowedHost(url)) return new NextResponse(null, { status: 404 })
   try {
     assertTrustedMutation(request)

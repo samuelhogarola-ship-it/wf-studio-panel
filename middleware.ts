@@ -2,19 +2,29 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 import { updateSession } from '@/lib/supabase/middleware'
-import { sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
+import { resolveRequestOrigin, sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
 import { SUPPORT_COOKIE_NAME } from '@/lib/support/constants'
 
 const ADMIN_HOST = 'admin.webfuengirola.com'
 const PORTAL_HOST = 'portal.webfuengirola.com'
 
 export async function middleware(request: NextRequest) {
-  const host = (request.headers.get('host') ?? '').trim().toLowerCase().split(':')[0]
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const origin = resolveRequestOrigin({
+    forwardedHost,
+    forwardedProto,
+    requestOrigin: request.nextUrl.origin,
+  })
+  const host = new URL(origin).hostname
   const pathname = request.nextUrl.pathname
   const hasSupportRoutingHint = Boolean(request.cookies?.get(SUPPORT_COOKIE_NAME)?.value)
 
   // Only apply domain routing in production (known hosts)
   const isKnownHost = host === ADMIN_HOST || host === PORTAL_HOST
+  if ((forwardedHost !== null || forwardedProto !== null) && !isKnownHost) {
+    return new NextResponse(null, { status: 404 })
+  }
 
   if (isKnownHost) {
     if (host === ADMIN_HOST && (
