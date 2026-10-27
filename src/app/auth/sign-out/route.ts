@@ -7,12 +7,22 @@ import { clearSupportCookie, endSupportSession, SUPPORT_COOKIE_NAME } from '@/li
 import { cookies } from 'next/headers'
 import { DIRECT_BLOGGER_COOKIE } from '@/lib/blogger/direct-access.mjs'
 
+const CANONICAL_APP_ORIGINS = new Set([
+  'https://admin.webfuengirola.com',
+  'https://portal.webfuengirola.com',
+])
+
+function getCanonicalBrowserOrigin(request: NextRequest) {
+  const origin = request.headers.get('origin')
+  return origin && CANONICAL_APP_ORIGINS.has(origin) ? origin : undefined
+}
+
 function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
   return resolveRequestOrigin({
     forwardedHost: request.headers.get('x-forwarded-host'),
     forwardedProto: request.headers.get('x-forwarded-proto'),
     requestOrigin: requestUrl.origin,
-    fallbackOrigin: process.env.APP_URL,
+    fallbackOrigin: getCanonicalBrowserOrigin(request) ?? process.env.APP_URL,
     allowedHosts: ['admin.webfuengirola.com', 'portal.webfuengirola.com'],
   })
 }
@@ -21,7 +31,16 @@ export async function POST(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const appUrl = getAppBaseUrl(request, requestUrl)
   const requestOrigin = request.headers.get('origin')
-  if (requestOrigin && requestOrigin !== new URL(appUrl).origin) {
+  const appOrigin = new URL(appUrl).origin
+  if (requestOrigin && requestOrigin !== appOrigin) {
+    console.warn('[auth/sign-out] rejected origin', {
+      requestUrlOrigin: requestUrl.origin,
+      requestOrigin,
+      appOrigin,
+      forwardedHost: request.headers.get('x-forwarded-host'),
+      forwardedProto: request.headers.get('x-forwarded-proto'),
+      host: request.headers.get('host'),
+    })
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   const supportViewer = await getOptionalSupportViewer()
