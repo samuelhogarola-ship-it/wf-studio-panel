@@ -19,8 +19,8 @@ export async function GET(request: Request) {
 
   if (dataset === 'documents') {
     const { data } = await db.from('billing_documents').select('*').order('document_date')
-    headers = ['Número', 'Fecha', 'Tipo', 'Estado', 'Cliente', 'Concepto', 'Base', 'IVA', 'Total']
-    rows = (data ?? []).filter(item => within(item.document_date, from, to)).map(item => [item.number, item.document_date, item.document_type, item.status, item.recipient_name, item.title, item.net_cents, item.tax_cents, item.total_cents])
+    headers = ['Número', 'Fecha', 'Tipo', 'Estado', 'Cliente', 'Concepto', 'Base', 'IVA', 'Total', 'Desglose fiscal pendiente de revisar']
+    rows = (data ?? []).filter(item => within(item.document_date, from, to)).map(item => [item.number, item.document_date, item.document_type, item.status, item.recipient_name, item.title, item.net_cents, item.tax_cents, item.total_cents, item.tax_breakdown_review_required ? 'Sí' : 'No'])
   } else if (dataset === 'payments') {
     const [{ data }, { data: documents }] = await Promise.all([db.from('billing_payments').select('*').is('reversed_at', null).order('paid_on'), db.from('billing_documents').select('*')])
     const documentNumbers = new Map((documents ?? []).map(document => [document.id, document.number ?? document.title]))
