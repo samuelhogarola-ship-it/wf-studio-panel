@@ -103,6 +103,28 @@ test('proxy headers cannot relabel the public admin host as the client portal', 
   assert.deepEqual(updated, [])
 })
 
+test('opaque Coolify proxy headers admit only the two portal Blogger POST boundaries', async () => {
+  const { middleware, updated } = loadMiddleware()
+  const requestWith = (pathname, method = 'POST') => ({
+    method,
+    headers: new Headers({
+      origin: `https://${PORTAL_HOST}`,
+      'x-forwarded-host': 'opaque.internal:8443',
+      'x-forwarded-proto': 'https',
+    }),
+    nextUrl: new URL(`http://10.0.0.2${pathname}`),
+    cookies: { get() { return undefined } },
+  })
+  assert.notEqual((await middleware(requestWith('/api/blogger/direct-session'))).status, 404)
+  assert.notEqual((await middleware(requestWith('/api/tools/blogger/sportmassagefuengirola/launch'))).status, 404)
+  assert.equal((await middleware(requestWith('/api/blogger/direct-session', 'GET'))).status, 404)
+  assert.equal((await middleware(requestWith('/api/posts'))).status, 404)
+  assert.deepEqual(updated, [
+    'http://10.0.0.2/api/blogger/direct-session',
+    'http://10.0.0.2/api/tools/blogger/sportmassagefuengirola/launch',
+  ])
+})
+
 test('direct session lookup rejects a valid bearer outside the portal host', async () => {
   let cookieReads = 0
   const module = loadProjectModule('src/lib/blogger/direct-access-server.ts', {

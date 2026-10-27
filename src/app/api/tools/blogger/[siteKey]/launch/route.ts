@@ -130,7 +130,7 @@ export async function POST(
     forwardedHost,
     forwardedProto,
     requestOrigin: rawOrigin,
-    fallbackOrigin: forwardedHost === null && forwardedProto === null && browserOrigin === PORTAL_ORIGIN
+    fallbackOrigin: browserOrigin === PORTAL_ORIGIN
       ? PORTAL_ORIGIN
       : undefined,
   })

@@ -18,11 +18,16 @@ export async function middleware(request: NextRequest) {
   })
   const host = new URL(origin).hostname
   const pathname = request.nextUrl.pathname
+  const isPortalBloggerMutation = request.method === 'POST' &&
+    request.headers.get('origin') === 'https://portal.webfuengirola.com' && (
+      pathname === '/api/blogger/direct-session' ||
+      /^\/api\/tools\/blogger\/[a-z0-9]+(?:-[a-z0-9]+)*\/launch$/.test(pathname)
+    )
   const hasSupportRoutingHint = Boolean(request.cookies?.get(SUPPORT_COOKIE_NAME)?.value)
 
   // Only apply domain routing in production (known hosts)
   const isKnownHost = host === ADMIN_HOST || host === PORTAL_HOST
-  if ((forwardedHost !== null || forwardedProto !== null) && !isKnownHost) {
+  if ((forwardedHost !== null || forwardedProto !== null) && !isKnownHost && !isPortalBloggerMutation) {
     return new NextResponse(null, { status: 404 })
   }
 
