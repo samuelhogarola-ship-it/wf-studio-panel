@@ -13,6 +13,10 @@ const CANONICAL_APP_ORIGINS = new Set([
 ])
 
 function getCanonicalBrowserOrigin(request: NextRequest) {
+  if (
+    request.headers.get('x-forwarded-host') !== null ||
+    request.headers.get('x-forwarded-proto') !== null
+  ) return undefined
   const origin = request.headers.get('origin')
   return origin && CANONICAL_APP_ORIGINS.has(origin) ? origin : undefined
 }

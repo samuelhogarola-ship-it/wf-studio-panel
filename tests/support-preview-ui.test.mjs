@@ -381,7 +381,7 @@ test('ordinary sign-out cannot use a canonical fallback to relabel a public host
   const previousAppUrl = process.env.APP_URL
   const previousWarn = console.warn
   const warnings = []
-  process.env.APP_URL = 'https://portal.webfuengirola.com'
+  process.env.APP_URL = 'https://admin.webfuengirola.com'
   console.warn = (message, details) => warnings.push({ message, details })
   try {
     const route = loadProjectModule('src/app/auth/sign-out/route.ts', {
@@ -394,7 +394,7 @@ test('ordinary sign-out cannot use a canonical fallback to relabel a public host
         redirect() { assert.fail('must not redirect') },
       } },
     })
-    for (const { url, origin, host } of [
+    for (const { url, origin, host, forwardedHost, forwardedProto } of [
       {
         url: 'https://admin.webfuengirola.com/auth/sign-out',
         origin: 'https://portal.webfuengirola.com',
@@ -405,38 +405,47 @@ test('ordinary sign-out cannot use a canonical fallback to relabel a public host
         origin: 'https://evil.example',
         host: 'wf-studio-panel:3000',
       },
+      {
+        url: 'http://wf-studio-panel:3000/auth/sign-out',
+        origin: 'https://portal.webfuengirola.com',
+        host: 'wf-studio-panel:3000',
+        forwardedHost: 'admin.webfuengirola.com',
+      },
+      {
+        url: 'http://wf-studio-panel:3000/auth/sign-out',
+        origin: 'https://portal.webfuengirola.com',
+        host: 'wf-studio-panel:3000',
+        forwardedProto: 'https',
+      },
+      {
+        url: 'http://wf-studio-panel:3000/auth/sign-out',
+        origin: 'https://portal.webfuengirola.com',
+        host: 'wf-studio-panel:3000',
+        forwardedHost: 'evil.example',
+        forwardedProto: 'https',
+      },
+      {
+        url: 'http://wf-studio-panel:3000/auth/sign-out',
+        origin: 'https://portal.webfuengirola.com',
+        host: 'wf-studio-panel:3000',
+        forwardedHost: '',
+      },
     ]) {
+      const headers = new Headers({ origin, host })
+      if (forwardedHost !== undefined) headers.set('x-forwarded-host', forwardedHost)
+      if (forwardedProto !== undefined) headers.set('x-forwarded-proto', forwardedProto)
       const response = await route.POST({
         url,
-        headers: new Headers({ origin, host }),
+        headers,
         formData: async () => assert.fail('must not read form data'),
       })
       assert.deepEqual(response, { body: { error: 'Forbidden' }, status: 403 })
     }
 
-    assert.deepEqual(warnings, [
-      {
-        message: '[auth/sign-out] rejected origin',
-        details: {
-          requestUrlOrigin: 'https://admin.webfuengirola.com',
-          requestOrigin: 'https://portal.webfuengirola.com',
-          appOrigin: 'https://admin.webfuengirola.com',
-          forwardedHost: null,
-          forwardedProto: null,
-          host: 'admin.webfuengirola.com',
-        },
-      },
-      {
-        message: '[auth/sign-out] rejected origin',
-        details: {
-          requestUrlOrigin: 'http://wf-studio-panel:3000',
-          requestOrigin: 'https://evil.example',
-          appOrigin: 'https://portal.webfuengirola.com',
-          forwardedHost: null,
-          forwardedProto: null,
-          host: 'wf-studio-panel:3000',
-        },
-      },
+    assert.equal(warnings.length, 6)
+    assert.ok(warnings.every(({ message }) => message === '[auth/sign-out] rejected origin'))
+    assert.deepEqual(Object.keys(warnings[0].details).sort(), [
+      'appOrigin', 'forwardedHost', 'forwardedProto', 'host', 'requestOrigin', 'requestUrlOrigin',
     ])
   } finally {
     console.warn = previousWarn
