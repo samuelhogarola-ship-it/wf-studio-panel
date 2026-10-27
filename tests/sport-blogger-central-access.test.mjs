@@ -69,11 +69,9 @@ test('Sport portal, direct entry and editor API deny foreign, revoked or mismatc
   }
 })
 
-test('Sport panel launch consumes one audience-bound ticket and establishes the scoped session without exposing it', async () => {
+test('Sport panel launch creates one custom-origin ticket without setting a portal Blogger session', async () => {
   const { db } = setup()
   const created = []
-  const consumed = []
-  const secret = 'server-derived-session-secret_Aa1!234567890'
   const route = loadProjectModule('src/app/api/tools/blogger/[siteKey]/launch/route.ts', {
     '@/lib/auth': {
       getOptionalIdentity: async () => ({ userId: 'sport-user', email: client.email, role: 'client' }),
@@ -87,39 +85,26 @@ test('Sport panel launch consumes one audience-bound ticket and establishes the 
       getSiteByKey: key => key === siteKey ? {
         key: siteKey,
         domain: sportProject.domain,
-        blogger: { enabled: true, runtime: 'central-legacy' },
+        blogger: {
+          enabled: true,
+          runtime: 'central-legacy',
+          customOrigin: 'https://blogger.sportmassagefuengirola.com',
+        },
       } : null,
       getBloggerHandoff: () => null,
     },
     '@/lib/supabase/admin': { getSupabaseAdminClient: () => db },
-    '@/lib/blogger/direct-access.mjs': {
-      DIRECT_BLOGGER_COOKIE: '__Host-wf_blogger',
-      createDirectBloggerSession: ({ secret: supplied }) => {
-        assert.equal(supplied, secret)
-        return 'scoped-session-value'
-      },
-      loadDirectBloggerSessionConfig: () => ({ sessionSecret: secret, siteKey }),
-    },
     '@/lib/tools/launch-tickets.mjs': {
-      buildLaunchSecurityHeaders: () => ({ 'Cache-Control': 'private, no-store, max-age=0' }),
+      buildLaunchSecurityHeaders: () => ({
+        'Cache-Control': 'private, no-store, max-age=0',
+        'Referrer-Policy': 'no-referrer',
+      }),
       buildLaunchRedirectLocation: () => { throw new Error('external launch must not be used') },
       async createLaunchTicket(_database, input) {
         created.push(input)
         return { code: 'T'.repeat(43), expiresAt: new Date(Date.now() + 60_000).toISOString() }
       },
-      async consumeLaunchTicket(_database, input) {
-        consumed.push(input)
-        return {
-          protocol: 'wf-blogger-handoff/v1',
-          siteKey,
-          audience: 'https://portal.webfuengirola.com',
-          projectId: sportProject.id,
-          clientId: client.id,
-          userId: 'sport-user',
-          actorRole: 'client',
-          expiresAt: new Date(Date.now() + 60_000).toISOString(),
-        }
-      },
+      async consumeLaunchTicket() { throw new Error('custom launch must be consumed on the custom host') },
     },
   })
   const response = await route.POST(new Request('http://10.0.0.2/api/tools/blogger/sportmassagefuengirola/launch', {
@@ -129,25 +114,48 @@ test('Sport panel launch consumes one audience-bound ticket and establishes the 
     },
   }), { params: Promise.resolve({ siteKey }) })
   assert.equal(response.status, 303)
-  assert.equal(response.headers.get('location'), 'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola')
+  assert.equal(
+    response.headers.get('location'),
+    `https://blogger.sportmassagefuengirola.com/api/blogger/handoff?code=${'T'.repeat(43)}`,
+  )
   assert.equal(created.length, 1)
   assert.deepEqual(created[0], {
     siteKey,
-    audience: 'https://portal.webfuengirola.com',
+    audience: 'https://blogger.sportmassagefuengirola.com',
     projectId: sportProject.id,
     clientId: client.id,
     userId: 'sport-user',
     actorRole: 'client',
   })
-  assert.deepEqual(consumed, [{ code: 'T'.repeat(43), siteKey, audience: 'https://portal.webfuengirola.com' }])
-  assert.match(response.headers.get('set-cookie') ?? '', /__Host-wf_blogger=scoped-session-value/)
-  assert.match(response.headers.get('set-cookie') ?? '', /HttpOnly/i)
-  assert.match(response.headers.get('set-cookie') ?? '', /Secure/i)
-  assert.match(response.headers.get('set-cookie') ?? '', /SameSite=strict/i)
-  assert.doesNotMatch(
-    `${response.headers.get('location')} ${await response.text()}`,
-    new RegExp(`${'T'.repeat(43)}|token|admin\\.webfuengirola\\.com`, 'i'),
-  )
+  assert.equal(response.headers.get('set-cookie'), null)
+  assert.equal(response.headers.get('referrer-policy'), 'no-referrer')
+  assert.doesNotMatch(`${response.headers.get('location')} ${await response.text()}`, /token|admin\.webfuengirola\.com/i)
+})
+
+test('panel-created Sport session renders logout and a public-site Home link', async () => {
+  const site = {
+    key: siteKey,
+    name: 'Sport Massage Fuengirola',
+    domain: sportProject.domain,
+    productionUrl: 'https://sportmassagefuengirola.com',
+    blogger: { enabled: true, runtime: 'central-legacy' },
+  }
+  const page = loadProjectModule('src/app/acceso/blogger/[siteKey]/page.tsx', {
+    '@/lib/blogger/direct-access-server': {
+      getDirectBloggerSession: async () => ({
+        siteKey,
+        source: 'panel',
+        subject: { userId: 'sport-user', clientId: client.id, projectId: sportProject.id },
+      }),
+    },
+    '@/lib/blogger/authorize': {
+      authorizeBloggerSite: async () => ({ site, root: '/data/blogger/sportmassagefuengirola' }),
+    },
+  }).default
+  const html = renderToStaticMarkup(await page({ params: Promise.resolve({ siteKey }) }))
+  assert.match(html, /href="https:\/\/sportmassagefuengirola\.com"[^>]*>Home</)
+  assert.match(html, /action="\/api\/blogger\/direct-session"/)
+  assert.match(html, />Sign out</)
 })
 
 test('Sport panel launch fails closed when the consumed ticket binding differs', async () => {

@@ -6,6 +6,7 @@ import {
   DIRECT_BLOGGER_COOKIE,
   loadDirectBloggerSessionConfig,
 } from '@/lib/blogger/direct-access.mjs'
+import { getCustomBloggerOrigin } from '@/lib/blogger/custom-hosts.mjs'
 import { getAccessibleClientProject, getActiveClientCapability } from '@/lib/data/projects'
 import { validateProjectDestination } from '@/lib/projects/model.mjs'
 import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
@@ -185,15 +186,27 @@ export async function POST(
         return launchErrorRedirect(requestOrigin, siteKey, 300)
       }
       const database = getSupabaseAdminClient()
+      const customOrigin = getCustomBloggerOrigin(site)
       const binding = {
         siteKey,
-        audience: requestOrigin,
+        audience: customOrigin ?? requestOrigin,
         projectId: project.id,
         clientId,
         userId: identity.userId,
         actorRole: 'client' as const,
       }
       const ticket = await createLaunchTicket(database, binding)
+      if (customOrigin) {
+        const location = new URL('/api/blogger/handoff', customOrigin)
+        location.searchParams.set('code', ticket.code)
+        return new NextResponse(null, {
+          status: 303,
+          headers: {
+            ...buildLaunchSecurityHeaders(),
+            Location: location.toString(),
+          },
+        })
+      }
       const consumed = await consumeLaunchTicket(database, {
         code: ticket.code,
         siteKey,

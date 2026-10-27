@@ -40,8 +40,8 @@ export default async function DirectBloggerPage({
 
   return <DirectBloggerShell
     site={authorization.site}
-    homeHref={directSession?.source === 'direct' ? 'https://sportmassagefuengirola.com/' : identity?.role === 'admin' ? '/paneladmin/inicio' : '/cliente'}
+    homeHref={directSession ? authorization.site.productionUrl : identity?.role === 'admin' ? '/paneladmin/inicio' : '/cliente'}
     target={target}
-    directSession={directSession?.source === 'direct'}
+    directSession={Boolean(directSession)}
   />
 }
