@@ -21,7 +21,7 @@ test('Sport Massage central access always resolves to the legacy Studio editor',
     blogger: {
       enabled: true,
       runtime: 'central-legacy',
-      url: 'https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
+      url: 'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
     },
   }), { kind: 'iframe', href: '/blogger/index.html' })
 })

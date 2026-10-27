@@ -58,7 +58,7 @@ function capabilityFor(siteKey) {
   }
 }
 
-function setup({ identity = null, authorizedSites = [] } = {}) {
+function setup({ identity = null, directSession = null, authorizedSites = [] } = {}) {
   const clients = authorizedSites.map((siteKey, index) => ({
     id: `client-${siteKey}`,
     name: siteKey === 'sportmassagefuengirola' ? 'Sofia' : 'aGama editor',
@@ -75,6 +75,7 @@ function setup({ identity = null, authorizedSites = [] } = {}) {
   })
   const mocks = {
     '@/lib/auth': { getOptionalIdentity: async () => identity },
+    '@/lib/blogger/direct-access-server': { getDirectBloggerSession: async () => directSession },
     '@/lib/blogger/sites.mjs': {
       getBloggerSite(siteKey) {
         const site = sites[siteKey]
@@ -89,26 +90,23 @@ function setup({ identity = null, authorizedSites = [] } = {}) {
   return { db, Page }
 }
 
-test('direct Blogger route keeps unauthenticated login on the admin host with the exact destination', async () => {
+test('Sport Massage direct route renders the independent English login instead of the panel login', async () => {
   const { Page, db } = setup()
-
-  await assert.rejects(
-    () => Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }),
-    { message: 'redirect:https://admin.webfuengirola.com/cliente?redirectedFrom=%2Facceso%2Fblogger%2Fsportmassagefuengirola' },
-  )
+  const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }))
+  assert.match(html, /Access Blogger/)
+  assert.match(html, /sportmassagefuengirola@gmail\.com/)
+  assert.match(html, /type="password"/)
+  assert.match(html, />Show</)
+  assert.doesNotMatch(html, /Forgot|Reset|Change password|admin\.webfuengirola\.com/)
   assert.deepEqual(db.calls, [])
 })
 
-test('direct Blogger route carries a callback exchange error to the canonical client login', async () => {
-  const { Page } = setup()
-
-  await assert.rejects(
-    () => Page({
-      params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }),
-      searchParams: Promise.resolve({ error: 'callback_exchange_failed' }),
-    }),
-    { message: 'redirect:https://admin.webfuengirola.com/cliente?redirectedFrom=%2Facceso%2Fblogger%2Fsportmassagefuengirola&error=callback_exchange_failed' },
-  )
+test('direct credential session opens the existing editor and exposes Sign out', async () => {
+  const { Page } = setup({ directSession: { siteKey: 'sportmassagefuengirola' } })
+  const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }))
+  assert.match(html, /src="\/blogger\/index\.html"/)
+  assert.match(html, />Sign out</)
+  assert.doesNotMatch(html, /admin\.webfuengirola\.com|paneladmin/)
 })
 
 test('authorized Sofia resolves the Sport Massage editor in the client-safe shell', async () => {

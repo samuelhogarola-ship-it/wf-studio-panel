@@ -82,3 +82,22 @@ test('Sport cannot invoke the discarded external launch operation', async () => 
   assert.deepEqual(await response.json(), { error: 'tool_unavailable' })
   assert.deepEqual(db.calls, [])
 })
+
+test('direct Blogger-only session authorizes only the existing Sport legacy publisher', async () => {
+  let panelAuthorizationCalls = 0
+  const authorization = await loadProjectModule('src/lib/blogger/legacy-authorize.ts', {
+    '@/lib/blogger/direct-access-server': {
+      getDirectBloggerSession: async () => ({ siteKey, expiresAt: Date.now() + 60_000 }),
+    },
+    '@/lib/blogger/authorize': {
+      authorizeBloggerSite: async () => { panelAuthorizationCalls += 1; throw new Error('panel auth must not be required') },
+    },
+    '@/lib/blogger/sites.mjs': {
+      getBloggerSite: key => ({ site: { key, domain: 'sportmassagefuengirola.com', name: 'Sport Massage' }, root: '/data/blogger/sportmassagefuengirola' }),
+    },
+  }).authorizeSportBlogger()
+
+  assert.equal(authorization.site.key, siteKey)
+  assert.equal(authorization.identity.role, 'blogger')
+  assert.equal(panelAuthorizationCalls, 0)
+})

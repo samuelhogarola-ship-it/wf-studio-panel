@@ -2,6 +2,7 @@ import { getManifestSites } from "./manifest.ts";
 
 const LOCAL_SUFFIXES = new Set(["localhost", "local", "internal", "lan", "home", "test", "invalid", "example"]);
 const STUDIO_ORIGIN = "https://admin.webfuengirola.com";
+const CLIENT_STUDIO_ORIGIN = "https://portal.webfuengirola.com";
 const SITE_DOMAINS = new Map(getManifestSites().map((site) => [site.key, site.domain]));
 const SITE_PRODUCTION_HOST_OVERRIDES = new Map([
   ["samuelcoachdealeman", "www.samuelcoachdealeman.com"],
@@ -106,7 +107,7 @@ export function validateSite(site) {
     if (!['central-multisite', 'central-legacy', 'external'].includes(site.blogger.runtime)) {
       throw new Error(`Registro de sitios: Blogger de ${site.key} no tiene runtime válido`);
     }
-    parseHttpsUrl(site.blogger.url, "Blogger", site, new Set([...allowedOrigins, STUDIO_ORIGIN]));
+    parseHttpsUrl(site.blogger.url, "Blogger", site, new Set([...allowedOrigins, STUDIO_ORIGIN, CLIENT_STUDIO_ORIGIN]));
   }
   const handoffMetadata = site.blogger?.adapter !== undefined || site.blogger?.capabilities !== undefined;
   if (handoffMetadata) {

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
+    "blogger:hash-password": "node scripts/hash-blogger-password.mjs",
     "test": "node --test tests/*.test.mjs",
     "test:db": "node scripts/test-support-postgres.mjs"
   },

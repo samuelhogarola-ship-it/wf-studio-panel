@@ -1,0 +1,77 @@
+import { createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
+import { promisify } from 'node:util'
+
+export const DIRECT_BLOGGER_COOKIE = '__Host-wf_sport_blogger'
+export const DIRECT_BLOGGER_SITE_KEY = 'sportmassagefuengirola'
+export const DIRECT_BLOGGER_USERNAME = 'sportmassagefuengirola@gmail.com'
+
+const HASH_PREFIX = 'scrypt$v1'
+const SCRYPT_OPTIONS = Object.freeze({ N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 })
+const scrypt = promisify(scryptCallback)
+
+function safeEqual(left, right) {
+  const a = Buffer.from(String(left))
+  const b = Buffer.from(String(right))
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
+function strong(value) {
+  return typeof value === 'string' && value.length >= 20 && value.length <= 256 &&
+    /[a-z]/.test(value) && /[A-Z]/.test(value) && /\d/.test(value) && /[^A-Za-z0-9]/.test(value) &&
+    new Set(value).size >= 12
+}
+
+function supportedPasswordHash(value) {
+  if (typeof value !== 'string') return false
+  const parts = value.split('$')
+  if (parts.length !== 4 || `${parts[0]}$${parts[1]}` !== HASH_PREFIX) return false
+  try {
+    return Buffer.from(parts[2], 'base64url').length === 16 && Buffer.from(parts[3], 'base64url').length === 32
+  } catch { return false }
+}
+
+export async function generateDirectBloggerPasswordHash(password, { salt = randomBytes(16) } = {}) {
+  if (!strong(password) || !Buffer.isBuffer(salt) || salt.length !== 16) throw new Error('Blogger password must be strong')
+  const derived = await scrypt(password, salt, 32, SCRYPT_OPTIONS)
+  return `${HASH_PREFIX}$${salt.toString('base64url')}$${Buffer.from(derived).toString('base64url')}`
+}
+
+export async function verifyDirectBloggerPassword(password, encoded) {
+  if (typeof password !== 'string' || password.length < 1 || password.length > 256 || !supportedPasswordHash(encoded)) return false
+  const [, , saltEncoded, hashEncoded] = encoded.split('$')
+  const expected = Buffer.from(hashEncoded, 'base64url')
+  const actual = await scrypt(password, Buffer.from(saltEncoded, 'base64url'), expected.length, SCRYPT_OPTIONS)
+  return timingSafeEqual(expected, Buffer.from(actual))
+}
+
+export function loadDirectBloggerConfig(env = process.env) {
+  const username = env.SPORT_BLOGGER_DIRECT_USERNAME?.trim().toLowerCase()
+  const passwordHash = env.SPORT_BLOGGER_DIRECT_PASSWORD_HASH?.trim()
+  const sessionSecret = env.SPORT_BLOGGER_DIRECT_SESSION_SECRET?.trim()
+  if (username !== DIRECT_BLOGGER_USERNAME || !supportedPasswordHash(passwordHash) || !strong(sessionSecret)) {
+    throw new Error('Direct Blogger access is unavailable')
+  }
+  return Object.freeze({ username, passwordHash, sessionSecret, siteKey: DIRECT_BLOGGER_SITE_KEY })
+}
+
+export function createDirectBloggerSession({ secret, now = Date.now(), ttlMs = 8 * 60 * 60 * 1000 }) {
+  if (!strong(secret) || !Number.isSafeInteger(now) || !Number.isSafeInteger(ttlMs) || ttlMs < 1 || ttlMs > 24 * 60 * 60 * 1000) {
+    throw new Error('Direct Blogger session configuration is invalid')
+  }
+  const payload = Buffer.from(JSON.stringify({ v: 1, siteKey: DIRECT_BLOGGER_SITE_KEY, expiresAt: now + ttlMs })).toString('base64url')
+  const signature = createHmac('sha256', secret).update(payload).digest('base64url')
+  return `${payload}.${signature}`
+}
+
+export function verifyDirectBloggerSession(token, { secret, now = Date.now() }) {
+  if (typeof token !== 'string' || !strong(secret)) return null
+  const [payload, signature, extra] = token.split('.')
+  if (!payload || !signature || extra) return null
+  const expected = createHmac('sha256', secret).update(payload).digest('base64url')
+  if (!safeEqual(signature, expected)) return null
+  try {
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+    if (claims?.v !== 1 || claims.siteKey !== DIRECT_BLOGGER_SITE_KEY || !Number.isSafeInteger(claims.expiresAt) || claims.expiresAt <= now) return null
+    return { siteKey: claims.siteKey, expiresAt: claims.expiresAt }
+  } catch { return null }
+}
