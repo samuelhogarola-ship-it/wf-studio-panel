@@ -81,6 +81,39 @@ create table public.billing_number_sequences (
   primary key (series, year)
 );
 
+create table public.billing_payments (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references public.billing_documents(id) on delete restrict,
+  amount_cents bigint not null check (amount_cents > 0),
+  paid_on date not null default current_date,
+  method text not null check (method in ('manual_link', 'transfer', 'cash', 'card', 'other')),
+  note text,
+  advance_invoice_id uuid references public.billing_documents(id) on delete set null,
+  reversed_at timestamptz,
+  reversed_by uuid references auth.users(id) on delete set null,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
+create index billing_payments_document_date_idx on public.billing_payments(document_id, paid_on, created_at);
+
+create table public.billing_payment_options (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null unique references public.billing_documents(id) on delete cascade,
+  method text not null check (method in ('manual_link', 'transfer', 'cash')),
+  url text,
+  instructions text,
+  active boolean not null default false,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  check ((method = 'manual_link' and url is not null) or (method <> 'manual_link' and url is null))
+);
+
+drop trigger if exists set_billing_payment_options_updated_at on public.billing_payment_options;
+create trigger set_billing_payment_options_updated_at before update on public.billing_payment_options
+for each row execute function public.set_updated_at();
+
 drop trigger if exists set_billing_products_updated_at on public.billing_products;
 create trigger set_billing_products_updated_at before update on public.billing_products
 for each row execute function public.set_updated_at();
@@ -250,10 +283,89 @@ begin
 end;
 $$;
 
+create or replace function public.record_billing_payment(
+  p_document_id uuid, p_amount_cents bigint, p_paid_on date, p_method text, p_note text default null
+)
+returns table(payment_id uuid, balance_cents bigint, advance_invoice_id uuid)
+language plpgsql security definer set search_path = public, private as $$
+declare document_row public.billing_documents%rowtype; paid_total bigint; saved_payment_id uuid;
+  saved_advance_id uuid; single_tax_rate integer; advance_net bigint; advance_tax bigint;
+begin
+  if not private.is_admin() then raise exception using errcode = '42501', message = 'Not authorized'; end if;
+  if p_amount_cents <= 0 or p_method not in ('manual_link', 'transfer', 'cash', 'card', 'other') then raise exception 'Invalid payment'; end if;
+  select * into document_row from public.billing_documents where id = p_document_id for update;
+  if not found or document_row.status not in ('issued', 'paid') then raise exception 'Document cannot receive payments'; end if;
+  select coalesce(sum(amount_cents), 0)::bigint into paid_total from public.billing_payments
+    where document_id = p_document_id and reversed_at is null;
+  if paid_total + p_amount_cents > document_row.total_cents then raise exception 'Payment exceeds document balance'; end if;
+  insert into public.billing_payments(document_id, amount_cents, paid_on, method, note, created_by)
+    values (p_document_id, p_amount_cents, coalesce(p_paid_on, current_date), p_method, nullif(trim(p_note), ''), auth.uid())
+    returning id into saved_payment_id;
+
+  if document_row.document_type = 'proposal' then
+    select min(tax_rate_bps) into single_tax_rate from public.billing_document_lines
+      where document_id = document_row.id and tax_mode = 'taxable'
+      having count(*) = (select count(*) from public.billing_document_lines where document_id = document_row.id)
+        and min(tax_rate_bps) = max(tax_rate_bps);
+    if single_tax_rate is not null then
+      advance_net := round(p_amount_cents::numeric * 10000 / (10000 + single_tax_rate))::bigint;
+      advance_tax := p_amount_cents - advance_net;
+      insert into public.billing_documents(document_type, status, client_id, recipient_name, recipient_email, recipient_company,
+        title, notes, document_date, source_proposal_id, net_cents, tax_cents, total_cents, created_by)
+      values ('advance_invoice', 'draft', document_row.client_id, document_row.recipient_name, document_row.recipient_email,
+        document_row.recipient_company, 'Anticipo · ' || document_row.title, 'Generada desde el cobro de la propuesta ' || coalesce(document_row.number, ''),
+        coalesce(p_paid_on, current_date), document_row.id, advance_net, advance_tax, p_amount_cents, auth.uid())
+      returning id into saved_advance_id;
+      insert into public.billing_document_lines(document_id, product_name, description, quantity, unit_net_cents,
+        tax_mode, tax_rate_bps, net_cents, tax_cents, total_cents, sort_order)
+      values (saved_advance_id, 'Anticipo', 'Anticipo de ' || document_row.title, 1, advance_net,
+        'taxable', single_tax_rate, advance_net, advance_tax, p_amount_cents, 1);
+      update public.billing_payments set advance_invoice_id = saved_advance_id where id = saved_payment_id;
+    end if;
+  end if;
+
+  paid_total := paid_total + p_amount_cents;
+  if paid_total = document_row.total_cents then update public.billing_documents set status = 'paid' where id = p_document_id; end if;
+  return query select saved_payment_id, document_row.total_cents - paid_total, saved_advance_id;
+end;
+$$;
+
+create or replace function public.reverse_billing_payment(p_payment_id uuid)
+returns boolean language plpgsql security definer set search_path = public, private as $$
+declare target_document_id uuid;
+begin
+  if not private.is_admin() then raise exception using errcode = '42501', message = 'Not authorized'; end if;
+  update public.billing_payments set reversed_at = timezone('utc', now()), reversed_by = auth.uid()
+    where id = p_payment_id and reversed_at is null returning document_id into target_document_id;
+  if not found then return false; end if;
+  update public.billing_documents set status = 'issued' where id = target_document_id and status = 'paid';
+  return true;
+end;
+$$;
+
+create or replace function public.set_billing_payment_option(
+  p_document_id uuid, p_method text, p_url text, p_instructions text, p_active boolean
+)
+returns boolean language plpgsql security definer set search_path = public, private as $$
+begin
+  if not private.is_admin() then raise exception using errcode = '42501', message = 'Not authorized'; end if;
+  if p_method not in ('manual_link', 'transfer', 'cash') then raise exception 'Invalid payment method'; end if;
+  if p_method = 'manual_link' and (p_url is null or p_url !~ '^https://') then raise exception 'Invalid payment URL'; end if;
+  if p_method <> 'manual_link' then p_url := null; end if;
+  insert into public.billing_payment_options(document_id, method, url, instructions, active, created_by)
+  values (p_document_id, p_method, p_url, nullif(trim(p_instructions), ''), p_active, auth.uid())
+  on conflict (document_id) do update set method = excluded.method, url = excluded.url,
+    instructions = excluded.instructions, active = excluded.active;
+  return true;
+end;
+$$;
+
 alter table public.billing_products enable row level security;
 alter table public.billing_documents enable row level security;
 alter table public.billing_document_lines enable row level security;
 alter table public.billing_number_sequences enable row level security;
+alter table public.billing_payments enable row level security;
+alter table public.billing_payment_options enable row level security;
 
 create policy billing_products_admin_all on public.billing_products for all to authenticated
 using (private.is_admin()) with check (private.is_admin());
@@ -267,15 +379,32 @@ create policy billing_document_lines_client_read on public.billing_document_line
 using (exists (select 1 from public.billing_documents d where d.id = document_id
   and d.client_id = private.current_portal_client_id() and d.status = 'issued'));
 create policy billing_number_sequences_admin_read on public.billing_number_sequences for select to authenticated using (private.is_admin());
+create policy billing_payments_admin_all on public.billing_payments for all to authenticated
+using (private.is_admin()) with check (private.is_admin());
+create policy billing_payments_client_read on public.billing_payments for select to authenticated
+using (exists (select 1 from public.billing_documents d where d.id = document_id
+  and d.client_id = private.current_portal_client_id() and d.status in ('issued', 'paid')));
+create policy billing_payment_options_admin_all on public.billing_payment_options for all to authenticated
+using (private.is_admin()) with check (private.is_admin());
+create policy billing_payment_options_client_read on public.billing_payment_options for select to authenticated
+using (active and exists (select 1 from public.billing_documents d where d.id = document_id
+  and d.client_id = private.current_portal_client_id() and d.status in ('issued', 'paid')));
 
 revoke all on function public.save_billing_product(uuid, text, text, bigint, text, integer, boolean, integer) from public, anon;
 revoke all on function public.delete_billing_product(uuid) from public, anon;
 revoke all on function public.save_billing_document_draft(uuid, text, uuid, text, text, text, text, text, date, date, uuid, uuid, jsonb) from public, anon;
 revoke all on function public.issue_billing_document(uuid) from public, anon;
+revoke all on function public.record_billing_payment(uuid, bigint, date, text, text) from public, anon;
+revoke all on function public.reverse_billing_payment(uuid) from public, anon;
+revoke all on function public.set_billing_payment_option(uuid, text, text, text, boolean) from public, anon;
 grant execute on function public.save_billing_product(uuid, text, text, bigint, text, integer, boolean, integer) to authenticated;
 grant execute on function public.delete_billing_product(uuid) to authenticated;
 grant execute on function public.save_billing_document_draft(uuid, text, uuid, text, text, text, text, text, date, date, uuid, uuid, jsonb) to authenticated;
 grant execute on function public.issue_billing_document(uuid) to authenticated;
-grant select on public.billing_products, public.billing_documents, public.billing_document_lines to authenticated;
+grant execute on function public.record_billing_payment(uuid, bigint, date, text, text) to authenticated;
+grant execute on function public.reverse_billing_payment(uuid) to authenticated;
+grant execute on function public.set_billing_payment_option(uuid, text, text, text, boolean) to authenticated;
+grant select on public.billing_products, public.billing_documents, public.billing_document_lines,
+  public.billing_payments, public.billing_payment_options to authenticated;
 
 commit;
