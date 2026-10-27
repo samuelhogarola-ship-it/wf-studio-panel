@@ -22,12 +22,38 @@ test('direct Blogger session is signed, site-bound, expiring and invalidated by 
   assert.deepEqual(direct.verifyDirectBloggerSession(token, { secret, now: now + 1_000 }), {
     siteKey: 'sportmassagefuengirola',
     audience: 'portal.webfuengirola.com',
-    scope: 'sport-blogger:legacy',
+    scope: 'blogger:central',
+    source: 'direct',
+    subject: null,
     expiresAt: now + 8 * 60 * 60 * 1000,
   })
   assert.equal(direct.verifyDirectBloggerSession(`${token}x`, { secret, now }), null)
   assert.equal(direct.verifyDirectBloggerSession(token, { secret: `${secret}rotated!`, now }), null)
   assert.equal(direct.verifyDirectBloggerSession(token, { secret, now: now + 8 * 60 * 60 * 1000 }), null)
+})
+
+test('the scoped Blogger session supports every configured central static site without cross-site reuse', () => {
+  const now = 1_800_000_000_000
+  const subject = { userId: 'user-1', clientId: 'client-1', projectId: 'project-1' }
+  const token = direct.createDirectBloggerSession({
+    secret,
+    siteKey: 'personaltrainerfuengirola',
+    subject,
+    now,
+  })
+  assert.deepEqual(direct.verifyDirectBloggerSession(token, {
+    secret,
+    siteKey: 'personaltrainerfuengirola',
+    now: now + 1_000,
+  }), {
+    siteKey: 'personaltrainerfuengirola',
+    audience: 'portal.webfuengirola.com',
+    scope: 'blogger:central',
+    source: 'panel',
+    subject,
+    expiresAt: now + 8 * 60 * 60 * 1000,
+  })
+  assert.equal(direct.verifyDirectBloggerSession(token, { secret, siteKey: 'agama', now }), null)
 })
 
 test('direct credential configuration is fixed to Sport Massage and fails closed', () => {
@@ -45,5 +71,27 @@ test('direct credential configuration is fixed to Sport Massage and fails closed
     SPORT_BLOGGER_DIRECT_USERNAME: 'other@example.com',
     SPORT_BLOGGER_DIRECT_PASSWORD_HASH: passwordHash,
     SPORT_BLOGGER_DIRECT_SESSION_SECRET: secret,
+  }), /unavailable/i)
+})
+
+test('session configuration can derive a domain-separated signer from the existing Supabase server secret', () => {
+  assert.equal(typeof direct.loadDirectBloggerSessionConfig, 'function')
+  const material = 'supabase-server-secret-material-with-more-than-32-characters'
+  const first = direct.loadDirectBloggerSessionConfig({ SUPABASE_SECRET_KEY: material })
+  const second = direct.loadDirectBloggerSessionConfig({ SUPABASE_SECRET_KEY: material })
+  const other = direct.loadDirectBloggerSessionConfig({
+    SUPABASE_SECRET_KEY: 'another-supabase-server-secret-with-more-than-32-characters',
+  })
+
+  assert.equal(first.sessionSecret, second.sessionSecret)
+  assert.notEqual(first.sessionSecret, other.sessionSecret)
+  assert.notEqual(first.sessionSecret, material)
+  assert.equal(first.siteKey, 'sportmassagefuengirola')
+})
+
+test('a present but invalid explicit session secret fails closed instead of silently falling back', () => {
+  assert.throws(() => direct.loadDirectBloggerSessionConfig({
+    SPORT_BLOGGER_DIRECT_SESSION_SECRET: 'weak',
+    SUPABASE_SECRET_KEY: 'supabase-server-secret-material-with-more-than-32-characters',
   }), /unavailable/i)
 })

@@ -1,13 +1,14 @@
 import { createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
 import { promisify } from 'node:util'
 
-export const DIRECT_BLOGGER_COOKIE = '__Host-wf_sport_blogger'
+export const DIRECT_BLOGGER_COOKIE = '__Host-wf_blogger'
 export const DIRECT_BLOGGER_SITE_KEY = 'sportmassagefuengirola'
 export const DIRECT_BLOGGER_USERNAME = 'sportmassagefuengirola@gmail.com'
 export const DIRECT_BLOGGER_AUDIENCE = 'portal.webfuengirola.com'
-export const DIRECT_BLOGGER_SCOPE = 'sport-blogger:legacy'
+export const DIRECT_BLOGGER_SCOPE = 'blogger:central'
 
 const HASH_PREFIX = 'scrypt$v1'
+const SITE_KEY_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const SCRYPT_OPTIONS = Object.freeze({ N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 })
 const scrypt = promisify(scryptCallback)
 
@@ -49,29 +50,60 @@ export async function verifyDirectBloggerPassword(password, encoded) {
 export function loadDirectBloggerConfig(env = process.env) {
   const username = env.SPORT_BLOGGER_DIRECT_USERNAME?.trim().toLowerCase()
   const passwordHash = env.SPORT_BLOGGER_DIRECT_PASSWORD_HASH?.trim()
-  const sessionSecret = env.SPORT_BLOGGER_DIRECT_SESSION_SECRET?.trim()
-  if (username !== DIRECT_BLOGGER_USERNAME || !supportedPasswordHash(passwordHash) || !strong(sessionSecret)) {
+  const { sessionSecret } = loadDirectBloggerSessionConfig(env)
+  if (username !== DIRECT_BLOGGER_USERNAME || !supportedPasswordHash(passwordHash)) {
     throw new Error('Direct Blogger access is unavailable')
   }
   return Object.freeze({ username, passwordHash, sessionSecret, siteKey: DIRECT_BLOGGER_SITE_KEY })
 }
 
-export function createDirectBloggerSession({ secret, now = Date.now(), ttlMs = 8 * 60 * 60 * 1000 }) {
-  if (!strong(secret) || !Number.isSafeInteger(now) || !Number.isSafeInteger(ttlMs) || ttlMs < 1 || ttlMs > 24 * 60 * 60 * 1000) {
+export function loadDirectBloggerSessionConfig(env = process.env) {
+  const configured = env.SPORT_BLOGGER_DIRECT_SESSION_SECRET?.trim()
+  if (configured) {
+    if (!strong(configured)) throw new Error('Direct Blogger session is unavailable')
+    return Object.freeze({ sessionSecret: configured, siteKey: DIRECT_BLOGGER_SITE_KEY })
+  }
+  const serverSecret = env.SUPABASE_SECRET_KEY?.trim()
+  if (typeof serverSecret !== 'string' || serverSecret.length < 32) {
+    throw new Error('Direct Blogger session is unavailable')
+  }
+  const derived = createHmac('sha256', serverSecret)
+    .update('wf-studio/sport-blogger-session/v1', 'utf8')
+    .digest('base64url')
+  return Object.freeze({ sessionSecret: `derived_${derived}!Aa1`, siteKey: DIRECT_BLOGGER_SITE_KEY })
+}
+
+export function createDirectBloggerSession({
+  secret,
+  siteKey = DIRECT_BLOGGER_SITE_KEY,
+  subject = null,
+  now = Date.now(),
+  ttlMs = 8 * 60 * 60 * 1000,
+}) {
+  const validSubject = subject === null || (
+    typeof subject === 'object' &&
+    typeof subject.userId === 'string' && subject.userId &&
+    typeof subject.clientId === 'string' && subject.clientId &&
+    typeof subject.projectId === 'string' && subject.projectId
+  )
+  if (!strong(secret) || !SITE_KEY_PATTERN.test(siteKey) || !validSubject ||
+    !Number.isSafeInteger(now) || !Number.isSafeInteger(ttlMs) || ttlMs < 1 || ttlMs > 24 * 60 * 60 * 1000) {
     throw new Error('Direct Blogger session configuration is invalid')
   }
   const payload = Buffer.from(JSON.stringify({
     v: 1,
-    siteKey: DIRECT_BLOGGER_SITE_KEY,
+    siteKey,
     audience: DIRECT_BLOGGER_AUDIENCE,
     scope: DIRECT_BLOGGER_SCOPE,
+    source: subject ? 'panel' : 'direct',
+    subject,
     expiresAt: now + ttlMs,
   })).toString('base64url')
   const signature = createHmac('sha256', secret).update(payload).digest('base64url')
   return `${payload}.${signature}`
 }
 
-export function verifyDirectBloggerSession(token, { secret, now = Date.now() }) {
+export function verifyDirectBloggerSession(token, { secret, siteKey = DIRECT_BLOGGER_SITE_KEY, now = Date.now() }) {
   if (typeof token !== 'string' || !strong(secret)) return null
   const [payload, signature, extra] = token.split('.')
   if (!payload || !signature || extra) return null
@@ -79,9 +111,21 @@ export function verifyDirectBloggerSession(token, { secret, now = Date.now() }) 
   if (!safeEqual(signature, expected)) return null
   try {
     const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
-    if (claims?.v !== 1 || claims.siteKey !== DIRECT_BLOGGER_SITE_KEY ||
+    const validSubject = claims?.source === 'direct'
+      ? claims.subject === null
+      : claims?.source === 'panel' && typeof claims.subject?.userId === 'string' && claims.subject.userId &&
+        typeof claims.subject?.clientId === 'string' && claims.subject.clientId &&
+        typeof claims.subject?.projectId === 'string' && claims.subject.projectId
+    if (claims?.v !== 1 || claims.siteKey !== siteKey || !SITE_KEY_PATTERN.test(claims.siteKey) ||
       claims.audience !== DIRECT_BLOGGER_AUDIENCE || claims.scope !== DIRECT_BLOGGER_SCOPE ||
-      !Number.isSafeInteger(claims.expiresAt) || claims.expiresAt <= now) return null
-    return { siteKey: claims.siteKey, audience: claims.audience, scope: claims.scope, expiresAt: claims.expiresAt }
+      !validSubject || !Number.isSafeInteger(claims.expiresAt) || claims.expiresAt <= now) return null
+    return {
+      siteKey: claims.siteKey,
+      audience: claims.audience,
+      scope: claims.scope,
+      source: claims.source,
+      subject: claims.subject,
+      expiresAt: claims.expiresAt,
+    }
   } catch { return null }
 }

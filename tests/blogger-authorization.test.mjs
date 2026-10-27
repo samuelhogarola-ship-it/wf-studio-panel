@@ -28,6 +28,14 @@ function authorize(seed, currentIdentity = identity, options = {}) {
   const configuredSite = options.site ?? registrySite
   const module = loadProjectModule('src/lib/blogger/authorize.ts', {
     '@/lib/auth': { getOptionalIdentity: async () => currentIdentity },
+    '@/lib/blogger/direct-access-server': {
+      getDirectBloggerSession: async () => currentIdentity?.role === 'client' && !options.noScopedSession
+        ? {
+            source: 'panel',
+            subject: { userId: currentIdentity.userId, clientId: client.id, projectId: project.id },
+          }
+        : null,
+    },
     '@/lib/blogger/sites.mjs': { getBloggerSite: () => ({ ...site, site: configuredSite }) },
     '@/lib/blogger/editor.mjs': { getBloggerEditorTarget: () => options.editor === undefined ? { kind: 'iframe', href: `/blogger/editor/index.html?siteKey=${siteKey}` } : options.editor },
     '@/lib/supabase/admin': { getSupabaseAdminClient: () => db },
@@ -65,7 +73,7 @@ test('ordinary clients cannot use generic multisite APIs for the Sport legacy pu
       url: 'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
     },
   }
-  const { db, result } = authorize(activeSeed, identity, { site: legacySite })
+  const { db, result } = authorize(activeSeed, identity, { site: legacySite, noScopedSession: true })
   await assert.rejects(() => result, error => error?.status === 403)
   assert.deepEqual(db.calls, [])
 })

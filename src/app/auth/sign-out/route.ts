@@ -5,6 +5,7 @@ import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
 import { getOptionalSupportViewer } from '@/lib/support/portal-viewer'
 import { clearSupportCookie, endSupportSession, SUPPORT_COOKIE_NAME } from '@/lib/support/support-session'
 import { cookies } from 'next/headers'
+import { DIRECT_BLOGGER_COOKIE } from '@/lib/blogger/direct-access.mjs'
 
 function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
   return resolveRequestOrigin({
@@ -35,6 +36,13 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData()
   const redirectTarget = formData.get('redirect') === 'admin' ? '/paneladmin' : '/cliente'
   const response = NextResponse.redirect(new URL(redirectTarget, appUrl))
+  response.cookies.set(DIRECT_BLOGGER_COOKIE, '', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'strict',
+    path: '/',
+    maxAge: 0,
+  })
 
   try {
     const supabase = createSupabaseRouteClient(request, response)

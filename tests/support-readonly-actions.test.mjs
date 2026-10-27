@@ -57,7 +57,10 @@ const clientMutationMatrix = [
   {
     id: 'POST /api/tools/blogger/[siteKey]/launch', name: 'POST /api/tools/blogger/[siteKey]/launch', route: '/cliente/proyectos/[slug]/blogger',
     kind: 'route-handler', owner: 'task6', clientBundlePolicy: 'task6-deferred', evidence: 'task6-plan-boundary',
-    dynamicSurface: { source: `${protectedRoot}/proyectos/[slug]/blogger/page.tsx`, kind: 'form', reason: 'url' },
+    dynamicSurfaces: [
+      { source: `${protectedRoot}/proyectos/[slug]/blogger/page.tsx`, kind: 'form', reason: 'url' },
+      { source: 'src/components/blogger/panel-blogger-launch.tsx', kind: 'form', reason: 'url' },
+    ],
   },
 ]
 
@@ -109,7 +112,7 @@ test('the mutation matrix classifies every action and mutation route reachable f
   const dynamicKey = surface => `${surface.source}#${surface.kind}#${surface.reason}`
   assert.deepEqual(
     inventory.dynamicMutations.map(dynamicKey).sort(),
-    clientMutationMatrix.filter(entry => entry.dynamicSurface).map(entry => dynamicKey(entry.dynamicSurface)).sort(),
+    clientMutationMatrix.flatMap(entry => entry.dynamicSurfaces ?? []).map(dynamicKey).sort(),
     'reachable dynamic mutation surfaces must be explicitly classified one-for-one',
   )
   assert.equal(inventory.actions.some(action => action.id === 'src/lib/actions/resources.ts#publishResource'), false)

@@ -19,16 +19,18 @@ export default async function DirectBloggerPage({
 }) {
   const [{ siteKey }, query] = await Promise.all([params, searchParams])
   const sportMassage = siteKey === 'sportmassagefuengirola'
-  const directSession = sportMassage ? await getDirectBloggerSession() : null
+  const directSession = await getDirectBloggerSession(siteKey)
   if (sportMassage && !directSession) {
     return <DirectBloggerLogin invalid={query?.error === 'invalid'} />
   }
-  const identity = sportMassage ? null : await getOptionalIdentity()
-  if (!sportMassage && !identity) notFound()
+  const identity = directSession ? null : await getOptionalIdentity()
+  if (!directSession && !identity) notFound()
 
   let authorization
   try {
-    authorization = directSession ? getBloggerSite(siteKey) : await authorizeBloggerSite(siteKey)
+    authorization = directSession?.source === 'direct'
+      ? getBloggerSite(siteKey)
+      : await authorizeBloggerSite(siteKey)
   } catch {
     notFound()
   }
@@ -38,8 +40,8 @@ export default async function DirectBloggerPage({
 
   return <DirectBloggerShell
     site={authorization.site}
-    homeHref={directSession ? 'https://sportmassagefuengirola.com/' : identity?.role === 'admin' ? '/paneladmin/inicio' : '/cliente'}
+    homeHref={directSession?.source === 'direct' ? 'https://sportmassagefuengirola.com/' : identity?.role === 'admin' ? '/paneladmin/inicio' : '/cliente'}
     target={target}
-    directSession={Boolean(directSession)}
+    directSession={directSession?.source === 'direct'}
   />
 }
