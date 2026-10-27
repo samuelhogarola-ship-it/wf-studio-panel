@@ -47,22 +47,28 @@ function validBinding(
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url)
   const forwardedHost = request.headers.get('x-forwarded-host')
+  const rawHost = request.headers.get('host')?.trim().toLowerCase() ?? ''
+  if (rawHost.includes(',')) return new NextResponse(null, { status: 404 })
   const candidateSite = getCustomBloggerSiteByHost(forwardedHost ?? '') ??
-    getCustomBloggerSiteByHost(requestUrl.hostname)
+    getCustomBloggerSiteByHost(requestUrl.hostname) ?? getCustomBloggerSiteByHost(rawHost)
   if (!candidateSite) return new NextResponse(null, { status: 404 })
 
   const customOrigin = getCustomBloggerOrigin(candidateSite)
   if (!customOrigin) return new NextResponse(null, { status: 404 })
+  const requestOrigin = forwardedHost === null && request.headers.get('x-forwarded-proto') === null &&
+      getCustomBloggerSiteByHost(rawHost)?.key === candidateSite.key
+    ? customOrigin
+    : requestUrl.origin
   const origin = resolveRequestOrigin({
     forwardedHost,
     forwardedProto: request.headers.get('x-forwarded-proto'),
-    requestOrigin: requestUrl.origin,
+    requestOrigin,
     allowedHosts: [new URL(customOrigin).hostname],
   })
   if (!hasConsistentForwardedOrigin({
     forwardedHost,
     forwardedProto: request.headers.get('x-forwarded-proto'),
-    requestOrigin: requestUrl.origin,
+    requestOrigin,
     allowedHosts: [new URL(customOrigin).hostname],
   })) return new NextResponse(null, { status: 404 })
   if (origin !== customOrigin) return new NextResponse(null, { status: 404 })

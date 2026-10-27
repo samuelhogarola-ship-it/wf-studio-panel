@@ -31,12 +31,19 @@ function customBloggerPathAllowed(site: { key: string; blogger?: { runtime?: str
 export async function middleware(request: NextRequest) {
   const forwardedHost = request.headers.get('x-forwarded-host')
   const forwardedProto = request.headers.get('x-forwarded-proto')
-  const candidateCustomHost = customHostCandidate(forwardedHost, request.nextUrl.hostname)
+  const rawHost = request.headers.get('host')?.trim().toLowerCase() ?? ''
+  if (rawHost.includes(',')) return new NextResponse(null, { status: 404 })
+  const candidateCustomHost = customHostCandidate(forwardedHost, request.nextUrl.hostname) ??
+    customHostCandidate(null, rawHost)
   const allowedHosts = [ADMIN_HOST, PORTAL_HOST, ...(candidateCustomHost ? [candidateCustomHost] : [])]
+  const rawPublicHost = allowedHosts.includes(rawHost) ? rawHost : null
+  const requestOrigin = forwardedHost === null && forwardedProto === null && rawPublicHost
+    ? `https://${rawPublicHost}`
+    : request.nextUrl.origin
   const origin = resolveRequestOrigin({
     forwardedHost,
     forwardedProto,
-    requestOrigin: request.nextUrl.origin,
+    requestOrigin,
     allowedHosts,
   })
   const host = new URL(origin).hostname
@@ -50,7 +57,7 @@ export async function middleware(request: NextRequest) {
   const consistentProxyOrigin = hasConsistentForwardedOrigin({
     forwardedHost,
     forwardedProto,
-    requestOrigin: request.nextUrl.origin,
+    requestOrigin,
     allowedHosts,
   })
   if (!consistentProxyOrigin && !isPortalBloggerMutation) {
@@ -107,9 +114,7 @@ export async function middleware(request: NextRequest) {
 
     // portal root → /cliente login
     if (host === PORTAL_HOST && pathname === '/') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/cliente'
-      return NextResponse.redirect(url)
+      return NextResponse.redirect(new URL('/cliente', origin))
     }
   }
 
