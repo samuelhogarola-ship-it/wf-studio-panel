@@ -1,19 +1,27 @@
 import 'server-only'
 
 import { requireAdmin } from '@/lib/auth'
-import { collectAllRows } from '@/lib/supabase/pagination'
+import { collectAllRows, dateIdCursorFilter, type DateIdCursor } from '@/lib/supabase/pagination'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export async function getLedgerSummary({ from, to }: { from: string; to: string }) {
   await requireAdmin()
   const db = await createSupabaseServerClient()
   const [income, expenses] = await Promise.all([
-    collectAllRows((start, end) => db.from('ledger_income').select('*')
-      .gte('occurred_on', from).lte('occurred_on', to)
-      .order('occurred_on', { ascending: false }).order('id').range(start, end)),
-    collectAllRows((start, end) => db.from('ledger_expenses').select('*')
-      .gte('occurred_on', from).lte('occurred_on', to)
-      .order('occurred_on', { ascending: false }).order('id').range(start, end)),
+    collectAllRows((cursor: DateIdCursor | null, limit) => {
+      let query = db.from('ledger_income').select('*')
+        .gte('occurred_on', from).lte('occurred_on', to)
+        .order('occurred_on', { ascending: false }).order('id', { ascending: false }).limit(limit)
+      if (cursor) query = query.or(dateIdCursorFilter('occurred_on', cursor, 'descending'))
+      return query
+    }, row => ({ date: row.occurred_on, id: row.id })),
+    collectAllRows((cursor: DateIdCursor | null, limit) => {
+      let query = db.from('ledger_expenses').select('*')
+        .gte('occurred_on', from).lte('occurred_on', to)
+        .order('occurred_on', { ascending: false }).order('id', { ascending: false }).limit(limit)
+      if (cursor) query = query.or(dateIdCursorFilter('occurred_on', cursor, 'descending'))
+      return query
+    }, row => ({ date: row.occurred_on, id: row.id })),
   ])
   return {
     from, to, income, expenses,

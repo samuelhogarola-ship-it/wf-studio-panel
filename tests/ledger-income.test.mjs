@@ -34,7 +34,7 @@ test('period summary keeps individual aggregation separate from manual monthly t
 
 test('income persistence and UI distinguish individual entries from direct monthly summaries', async () => {
   const [sql, formSource, page] = await Promise.all([
-    readFile(new URL('../supabase/migrations/202610270001_internal_billing_workspace.sql', import.meta.url), 'utf8'),
+    readFile(new URL('../supabase/migrations/202610270003_internal_billing_workspace.sql', import.meta.url), 'utf8'),
     readFile(new URL('../src/components/billing/income-form.tsx', import.meta.url), 'utf8'),
     readFile(new URL('../src/app/paneladmin/(protected)/contabilidad/page.tsx', import.meta.url), 'utf8'),
   ])

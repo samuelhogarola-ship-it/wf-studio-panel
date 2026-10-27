@@ -37,6 +37,18 @@ test('rounds tax per line before summing a document', () => {
   )
 })
 
+test('uses exact thousandth quantities and rejects greater precision', () => {
+  assert.deepEqual(
+    calculations.calculateLine({ quantity: 1.005, unitNetCents: 100, taxMode: 'taxable', taxRateBps: 2_100 }),
+    { netCents: 101, taxCents: 21, totalCents: 122 },
+  )
+  assert.throws(
+    () => calculations.calculateLine({ quantity: 1.0001, unitNetCents: 100, taxMode: 'taxable', taxRateBps: 2_100 }),
+    /tres decimales/i,
+  )
+  assert.equal(schema.billingLineInputSchema.safeParse({ description: 'Horas', quantity: 1.0001, unitNetCents: 100, taxMode: 'taxable', taxRateBps: 2_100 }).success, false)
+})
+
 test('rejects payments that exceed the document total', () => {
   assert.throws(() => calculations.remainingBalance(10_000, [8_000, 2_001]), /excede/i)
 })

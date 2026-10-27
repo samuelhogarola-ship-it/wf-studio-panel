@@ -20,15 +20,31 @@ export async function getSharedBillingDocument(rawToken: string): Promise<Shared
 
 export async function getClientBillingDocuments(clientId: string) {
   const db = await createSupabaseServerClient()
-  const { data: documents } = await db.from('billing_documents').select('*').eq('client_id', clientId).in('status', ['issued', 'paid']).order('document_date', { ascending: false })
-  const result = []
-  for (const document of documents ?? []) {
-    const [{ data: payments }, { data: paymentOption }] = await Promise.all([
-      db.from('billing_payments').select('*').eq('document_id', document.id).is('reversed_at', null),
-      db.from('billing_payment_options').select('*').eq('document_id', document.id).eq('active', true).maybeSingle(),
-    ])
-    const paidCents = (payments ?? []).reduce((sum, payment) => sum + payment.amount_cents, 0)
-    result.push({ ...document, paidCents, balanceCents: Math.max(0, document.total_cents - paidCents), paymentOption })
+  const { data: documents, error: documentsError } = await db.from('billing_documents').select('*').eq('client_id', clientId).in('status', ['issued', 'paid']).order('document_date', { ascending: false })
+  if (documentsError) throw new Error('No se pudieron cargar los documentos de facturación.')
+  if (!documents?.length) return []
+
+  const ids = documents.map(document => document.id)
+  const idList = ids.join(',')
+  const [{ data: payments, error: paymentsError }, { data: paymentOptions, error: optionsError }] = await Promise.all([
+    db.from('billing_payments').select('*')
+      .or(`document_id.in.(${idList}),advance_invoice_id.in.(${idList})`).is('reversed_at', null),
+    db.from('billing_payment_options').select('*').in('document_id', ids).eq('active', true),
+  ])
+  if (paymentsError || optionsError) throw new Error('No se pudieron cargar los cobros de facturación.')
+
+  const paymentsByDocument = new Map<string, Map<string, number>>()
+  for (const payment of payments ?? []) {
+    for (const documentId of [payment.document_id, payment.advance_invoice_id]) {
+      if (!documentId || !ids.includes(documentId)) continue
+      const documentPayments = paymentsByDocument.get(documentId) ?? new Map<string, number>()
+      documentPayments.set(payment.id, payment.amount_cents)
+      paymentsByDocument.set(documentId, documentPayments)
+    }
   }
-  return result
+  const optionsByDocument = new Map((paymentOptions ?? []).map(option => [option.document_id, option]))
+  return documents.map(document => {
+    const paidCents = [...(paymentsByDocument.get(document.id)?.values() ?? [])].reduce((sum, amount) => sum + amount, 0)
+    return { ...document, paidCents, balanceCents: Math.max(0, document.total_cents - paidCents), paymentOption: optionsByDocument.get(document.id) ?? null }
+  })
 }

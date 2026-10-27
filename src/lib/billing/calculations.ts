@@ -21,12 +21,16 @@ function assertWholeCents(value: number, label: string) {
 
 export function calculateLine(input: BillingLineInput): BillingLineAmounts {
   if (!Number.isFinite(input.quantity) || input.quantity <= 0) throw new Error('La cantidad debe ser mayor que cero.')
+  const quantityThousandths = Math.round(input.quantity * 1_000)
+  if (Math.abs(input.quantity * 1_000 - quantityThousandths) > Number.EPSILON * 1_000) {
+    throw new Error('La cantidad admite como máximo tres decimales.')
+  }
   assertWholeCents(input.unitNetCents, 'El precio')
   if (!Number.isInteger(input.taxRateBps) || input.taxRateBps < 0 || input.taxRateBps > 10_000) {
     throw new Error('El tipo impositivo no es válido.')
   }
 
-  const netCents = Math.round(input.quantity * input.unitNetCents)
+  const netCents = Math.round(quantityThousandths * input.unitNetCents / 1_000)
   const taxCents = input.taxMode === 'taxable' ? Math.round(netCents * input.taxRateBps / 10_000) : 0
   return { netCents, taxCents, totalCents: netCents + taxCents }
 }

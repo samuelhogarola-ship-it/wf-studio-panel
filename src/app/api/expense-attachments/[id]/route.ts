@@ -1,4 +1,5 @@
 import { requireAdmin } from '@/lib/auth'
+import { contentDisposition } from '@/lib/billing/http'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -11,6 +12,5 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const { data: file, error: downloadError } = await db.storage.from('expense-attachments').download(data.storage_path)
   if (downloadError || !file) return new Response('No disponible', { status: 404 })
   const disposition = new URL(request.url).searchParams.has('download') ? 'attachment' : 'inline'
-  const safeName = data.original_name.replace(/["\r\n]/g, '_')
-  return new Response(file, { headers: { 'Content-Type': data.content_type, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': `${disposition}; filename="${safeName}"` } })
+  return new Response(file, { headers: { 'Content-Type': data.content_type, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': contentDisposition(disposition, data.original_name) } })
 }

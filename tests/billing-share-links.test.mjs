@@ -34,7 +34,7 @@ test('admin creates exactly seven-day shares and database receives only the dige
 })
 
 test('share schema closes revoked, expired and paid documents with one-document scope', async () => {
-  const sql = await source('supabase/migrations/202610270001_internal_billing_workspace.sql')
+  const sql = await source('supabase/migrations/202610270003_internal_billing_workspace.sql')
   assert.match(sql, /create table public\.billing_share_links/i)
   assert.match(sql, /token_hash text not null unique/i)
   assert.match(sql, /expires_at[\s\S]*interval '7 days'/i)
@@ -44,6 +44,25 @@ test('share schema closes revoked, expired and paid documents with one-document 
   assert.match(sql, /d\.status = 'issued'/i)
   assert.match(sql, /where s\.token_hash = p_token_hash/i)
   assert.match(sql, /billing_documents_client_read[\s\S]*status in \('issued', 'paid'\)/i)
+  assert.doesNotMatch(sql, /'document',\s*to_jsonb\(d\)/i)
+  assert.doesNotMatch(sql, /jsonb_agg\(to_jsonb\([lp]\)/i)
+  assert.match(sql, /p\.document_id = d\.id[\s\S]*p\.advance_invoice_id = d\.id/i)
+})
+
+test('share revocation failure is surfaced before revalidation', async () => {
+  const db = database({}, {}, { rpcs: {
+    revoke_billing_share: () => ({ data: null, error: { message: 'database failure' } }),
+  } })
+  const cacheCalls = []
+  const actions = loadProjectModule('src/lib/actions/billing-shares.ts', {
+    ...boundary(db).mocks,
+    'next/cache': { revalidatePath: path => cacheCalls.push(path) },
+  })
+  await assert.rejects(
+    actions.revokeBillingShareAction(form({ share_id: '11111111-1111-4111-8111-111111111111' })),
+    /enlace/i,
+  )
+  assert.deepEqual(cacheCalls, [])
 })
 
 test('public share and registered-client pages show document balance and active payment option', async () => {

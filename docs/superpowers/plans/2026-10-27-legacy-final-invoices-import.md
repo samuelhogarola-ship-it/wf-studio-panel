@@ -36,7 +36,7 @@
 
 **Files:**
 - Create: `tests/legacy-final-invoices-import.test.mjs`
-- Create: `supabase/migrations/202610270002_import_legacy_final_invoices.sql`
+- Create: `supabase/migrations/202610270004_import_legacy_final_invoices.sql`
 
 **Interfaces:**
 - Consumes: `public.invoices`, `public.billing_documents`, `public.billing_document_lines`, `public.billing_payments`, `public.billing_number_sequences`.
@@ -50,7 +50,7 @@ Assert that the migration adds a unique source link and review flag; inserts onl
 
 Run: `node --test tests/legacy-final-invoices-import.test.mjs`
 
-Expected: FAIL because `202610270002_import_legacy_final_invoices.sql` does not exist.
+Expected: FAIL because `202610270004_import_legacy_final_invoices.sql` does not exist.
 
 - [x] **Step 3: Implement the migration**
 
@@ -71,7 +71,7 @@ Expected: all tests pass.
 - [x] **Step 6: Commit the migration**
 
 ```bash
-git add supabase/migrations/202610270002_import_legacy_final_invoices.sql tests/legacy-final-invoices-import.test.mjs
+git add supabase/migrations/202610270004_import_legacy_final_invoices.sql tests/legacy-final-invoices-import.test.mjs
 git commit -m "feat: import legacy final invoices"
 ```
 

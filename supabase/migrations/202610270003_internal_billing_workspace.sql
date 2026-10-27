@@ -189,6 +189,13 @@ for each row execute function public.set_updated_at();
 create or replace function private.guard_billing_document_mutation()
 returns trigger language plpgsql set search_path = public as $$
 begin
+  if tg_op = 'DELETE' then
+    if old.status <> 'draft' then raise exception 'Issued billing documents are immutable'; end if;
+    return old;
+  end if;
+  if old.status <> 'draft' and new.status = 'draft' then
+    raise exception 'Issued billing documents cannot return to draft';
+  end if;
   if old.status <> 'draft' and (
     old.document_type is distinct from new.document_type or old.number is distinct from new.number
     or old.client_id is distinct from new.client_id or old.recipient_name is distinct from new.recipient_name
@@ -204,7 +211,7 @@ begin
 end;
 $$;
 
-create trigger billing_documents_immutable after update on public.billing_documents
+create trigger billing_documents_immutable before update or delete on public.billing_documents
 for each row execute function private.guard_billing_document_mutation();
 
 create or replace function private.guard_billing_line_mutation()
@@ -463,10 +470,26 @@ $$;
 create or replace function public.resolve_billing_share(p_token_hash text)
 returns jsonb language sql stable security definer set search_path = public as $$
   select jsonb_build_object(
-    'document', to_jsonb(d),
-    'lines', coalesce((select jsonb_agg(to_jsonb(l) order by l.sort_order) from public.billing_document_lines l where l.document_id = d.id), '[]'::jsonb),
-    'payments', coalesce((select jsonb_agg(to_jsonb(p) order by p.paid_on, p.created_at) from public.billing_payments p where p.document_id = d.id and p.reversed_at is null), '[]'::jsonb),
-    'paymentOption', to_jsonb(o)
+    'document', jsonb_build_object(
+      'id', d.id, 'document_type', d.document_type, 'number', d.number,
+      'status', d.status, 'recipient_name', d.recipient_name,
+      'recipient_company', d.recipient_company, 'title', d.title,
+      'document_date', d.document_date, 'due_date', d.due_date,
+      'net_cents', d.net_cents, 'tax_cents', d.tax_cents, 'total_cents', d.total_cents
+    ),
+    'lines', coalesce((select jsonb_agg(jsonb_build_object(
+      'id', l.id, 'description', l.description, 'quantity', l.quantity,
+      'unit_net_cents', l.unit_net_cents, 'tax_cents', l.tax_cents,
+      'total_cents', l.total_cents
+    ) order by l.sort_order) from public.billing_document_lines l where l.document_id = d.id), '[]'::jsonb),
+    'payments', coalesce((select jsonb_agg(jsonb_build_object(
+      'id', p.id, 'amount_cents', p.amount_cents, 'paid_on', p.paid_on,
+      'method', p.method
+    ) order by p.paid_on, p.created_at) from public.billing_payments p
+      where (p.document_id = d.id or p.advance_invoice_id = d.id) and p.reversed_at is null), '[]'::jsonb),
+    'paymentOption', case when o.id is null then null else jsonb_build_object(
+      'method', o.method, 'url', o.payment_url, 'instructions', o.instructions, 'active', o.active
+    ) end
   )
   from public.billing_share_links s
   join public.billing_documents d on d.id = s.document_id

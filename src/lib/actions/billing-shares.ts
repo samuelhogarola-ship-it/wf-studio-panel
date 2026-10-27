@@ -33,6 +33,7 @@ export async function revokeBillingShareAction(formData: FormData) {
   const shareId = z.string().uuid().safeParse(String(formData.get('share_id') ?? ''))
   if (!shareId.success) return
   const db = await createSupabaseServerClient()
-  await db.rpc('revoke_billing_share', { p_share_id: shareId.data })
+  const { error } = await db.rpc('revoke_billing_share', { p_share_id: shareId.data })
+  if (error) throw new Error('No se pudo revocar el enlace privado.')
   revalidatePath('/paneladmin/contabilidad')
 }

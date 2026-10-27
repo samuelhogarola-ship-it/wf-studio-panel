@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
-const migrationUrl = new URL('../supabase/migrations/202610270002_import_legacy_final_invoices.sql', import.meta.url)
+const migrationUrl = new URL('../supabase/migrations/202610270004_import_legacy_final_invoices.sql', import.meta.url)
 
 test('legacy invoices gain an idempotent provenance link and explicit tax-review state', async () => {
   const sql = await readFile(migrationUrl, 'utf8')
@@ -13,9 +13,10 @@ test('legacy invoices gain an idempotent provenance link and explicit tax-review
 
 test('the import preserves invoice snapshots and never creates proposals', async () => {
   const sql = await readFile(migrationUrl, 'utf8')
-  for (const sourceColumn of ['client_id', 'recipient_name', 'recipient_email', 'recipient_company', 'concept', 'notes', 'issued_at']) {
+  for (const sourceColumn of ['client_id', 'recipient_name', 'recipient_email', 'recipient_company', 'concept', 'issued_at']) {
     assert.match(sql, new RegExp(`i\\.${sourceColumn}`, 'i'))
   }
+  assert.doesNotMatch(sql, /concat_ws\([\s\S]*i\.notes/i)
   assert.match(sql, /insert into public\.billing_documents[\s\S]*?select\s+'invoice'/i)
   assert.doesNotMatch(sql, /(?:select|values)\s*\(?'proposal'[\s,]/i)
   assert.match(sql, /tax_breakdown_review_required[\s\S]*true/i)
@@ -44,7 +45,7 @@ test('invoice sequence is reserved from the greatest imported WF reference', asy
   const sql = await readFile(migrationUrl, 'utf8')
   assert.match(sql, /regexp_match\(number, '.*WF-/is)
   assert.match(sql, /billing_number_sequences[\s\S]*greatest/i)
-  assert.match(sql, /lpad\(next_number::text, 3, '0'\)/i)
+  assert.match(sql, /lpad\(next_number::text,\s*case when sequence_series = 'WF' then 3 else 4 end,\s*'0'\)/i)
 })
 
 test('Postgres imports and replays the legacy invoice set without duplicates', { skip: !process.env.WF_SUPPORT_TEST_DATABASE_URL }, async () => {

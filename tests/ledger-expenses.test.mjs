@@ -18,7 +18,7 @@ test('attachment validation accepts real PDF, JPEG, PNG and WebP signatures and 
 })
 
 test('expense schema records supplier, tax and deductible values with private attachment metadata', async () => {
-  const sql = await readFile(new URL('../supabase/migrations/202610270001_internal_billing_workspace.sql', import.meta.url), 'utf8')
+  const sql = await readFile(new URL('../supabase/migrations/202610270003_internal_billing_workspace.sql', import.meta.url), 'utf8')
   assert.match(sql, /create table public\.ledger_expenses/i)
   assert.match(sql, /supplier_name[\s\S]*supplier_tax_id[\s\S]*invoice_reference/i)
   assert.match(sql, /deductible_tax_cents/i)

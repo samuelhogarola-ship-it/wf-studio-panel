@@ -11,6 +11,8 @@ test('Spanish-compatible CSV uses semicolons, decimal commas, quotes and a UTF-8
   assert.match(output, /Concepto;Importe/)
   assert.match(output, /"Web ""Profesional""; completa";650,00/)
   assert.match(csv.createSpanishCsv(['Concepto'], [['=HYPERLINK("bad")']]), /'=HYPERLINK/)
+  assert.match(csv.createSpanishCsv(['Concepto'], [['\t=HYPERLINK("bad")']]), /'\t=HYPERLINK/)
+  assert.match(csv.createSpanishCsv(['Concepto'], [['\r=HYPERLINK("bad")']]), /'\r=HYPERLINK/)
 })
 
 test('month, quarter and year boundaries are exact calendar ranges', () => {

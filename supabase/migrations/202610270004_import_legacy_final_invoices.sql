@@ -116,11 +116,8 @@ with inserted as (
       when 'WF-2026-002' then 'Propuesta web profesional'
       else i.concept
     end,
-    case
-      when i.number in ('WF-2026-001', 'WF-2026-002') then i.notes
-      else concat_ws(E'\n\n', nullif(i.notes, ''),
-        'Importación histórica: desglose fiscal pendiente de revisar; el tipo técnico de la línea no implica exención ni no sujeción.')
-    end,
+    case when i.number in ('WF-2026-001', 'WF-2026-002') then null
+      else 'Importación histórica: desglose fiscal pendiente de revisar; el tipo técnico de la línea no implica exención ni no sujeción.' end,
     i.issued_at,
     case i.number when 'WF-2026-001' then 20000 when 'WF-2026-002' then 65000 else round(i.amount * 100)::bigint end,
     case i.number when 'WF-2026-001' then 4200 when 'WF-2026-002' then 13650 else 0 end,
@@ -313,7 +310,8 @@ begin
     where series = sequence_series and year = sequence_year for update;
   next_number := next_number + 1;
   update public.billing_number_sequences set last_number = next_number where series = sequence_series and year = sequence_year;
-  update public.billing_documents set number = prefix || sequence_year::text || '-' || lpad(next_number::text, 3, '0'),
+  update public.billing_documents set number = prefix || sequence_year::text || '-' ||
+      lpad(next_number::text, case when sequence_series = 'WF' then 3 else 4 end, '0'),
     status = 'issued', issued_at = timezone('utc', now()) where id = p_document_id returning * into saved;
   return saved;
 end;

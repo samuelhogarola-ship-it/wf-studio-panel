@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
-const migrationUrl = new URL('../supabase/migrations/202610270001_internal_billing_workspace.sql', import.meta.url)
+const migrationUrl = new URL('../supabase/migrations/202610270003_internal_billing_workspace.sql', import.meta.url)
 
 test('catalogue supports persistent editable products with nullable defaults', async () => {
   const sql = await readFile(migrationUrl, 'utf8')
@@ -23,6 +23,8 @@ test('documents use separate proposal and invoice sequences and immutable line s
   assert.match(sql, /create table public\.billing_number_sequences/i)
   assert.match(sql, /'PROP-'|'PROP' \|\|/i)
   assert.match(sql, /'WF-'|'WF' \|\|/i)
+  assert.match(sql, /billing_documents_immutable before update or delete/i)
+  assert.match(sql, /old\.status <> 'draft' and new\.status = 'draft'/i)
 })
 
 test('draft save derives totals from line snapshots and issue consumes the final number', async () => {

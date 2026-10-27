@@ -4,16 +4,19 @@ import { readFile } from 'node:fs/promises'
 
 import { loadProjectModule } from './helpers/project-harness.mjs'
 
-test('accounting pagination collects every database page in stable ranges', async () => {
+test('accounting pagination uses a stable cursor when rows are inserted between pages', async () => {
   const pagination = loadProjectModule('src/lib/supabase/pagination.ts')
-  const source = Array.from({ length: 1205 }, (_, index) => ({ id: index }))
-  const ranges = []
-  const rows = await pagination.collectAllRows(async (from, to) => {
-    ranges.push([from, to])
-    return { data: source.slice(from, to + 1), error: null }
-  })
-  assert.deepEqual(rows, source)
-  assert.deepEqual(ranges, [[0, 499], [500, 999], [1000, 1499]])
+  const original = Array.from({ length: 1_205 }, (_, index) => ({ id: String(index).padStart(4, '0') }))
+  const source = [...original]
+  let calls = 0
+  const rows = await pagination.collectAllRows(async (cursor, limit) => {
+    calls += 1
+    if (calls === 2) source.unshift({ id: '-001' })
+    const page = source.filter(row => cursor === null || row.id > cursor).slice(0, limit)
+    return { data: page, error: null }
+  }, row => row.id)
+  assert.deepEqual(rows, original)
+  assert.equal(calls, 3)
 })
 
 test('accounting queries filter dates in Postgres and paginate before rendering', async () => {
@@ -25,6 +28,7 @@ test('accounting queries filter dates in Postgres and paginate before rendering'
     assert.match(source, /collectAllRows/)
     assert.match(source, /\.gte\(/)
     assert.match(source, /\.lte\(/)
-    assert.match(source, /\.range\(/)
+    assert.match(source, /\.limit\(/)
+    assert.match(source, /\.or\(/)
   }
 })

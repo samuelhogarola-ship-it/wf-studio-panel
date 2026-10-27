@@ -62,4 +62,35 @@ test('document detail supports issue, printing and recorded balance', async () =
   assert.match(page, /window\.print|Imprimir/)
   assert.match(page, /PaymentPanel/)
   assert.match(page, /pendiente|balance/i)
+  assert.match(page, /safeParse/)
+})
+
+test('admin can revoke active shares and reverse recorded payments', async () => {
+  const [sharePanel, paymentPanel] = await Promise.all([
+    source('src/components/billing/share-panel.tsx'),
+    source('src/components/billing/payment-panel.tsx'),
+  ])
+  assert.match(sharePanel, /revokeBillingShareAction/)
+  assert.match(sharePanel, /share_id/)
+  assert.match(paymentPanel, /reverseBillingPaymentAction/)
+  assert.match(paymentPanel, /payment_id/)
+})
+
+test('failed catalogue deletion and document issue surface database errors', async () => {
+  for (const [rpc, action, field] of [
+    ['delete_billing_product', 'deleteBillingProductAction', 'id'],
+    ['issue_billing_document', 'issueBillingDocumentAction', 'document_id'],
+  ]) {
+    const db = database({}, {}, { rpcs: { [rpc]: () => ({ data: null, error: { message: 'database failure' } }) } })
+    const cacheCalls = []
+    const actions = loadProjectModule('src/lib/actions/billing-documents.ts', {
+      ...boundary(db).mocks,
+      'next/cache': { revalidatePath: path => cacheCalls.push(path) },
+    })
+    await assert.rejects(
+      actions[action](form({ [field]: '11111111-1111-4111-8111-111111111111' })),
+      /producto|documento/i,
+    )
+    assert.deepEqual(cacheCalls, [])
+  }
 })

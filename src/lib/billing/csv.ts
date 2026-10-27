@@ -2,7 +2,7 @@ const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Juli
 
 function csvCell(value: string | number | null | undefined) {
   let text = typeof value === 'number' ? (value / 100).toFixed(2).replace('.', ',') : String(value ?? '')
-  if (typeof value === 'string' && /^[\t ]*[=+\-@]/.test(text)) text = `'${text}`
+  if (typeof value === 'string' && /^\s*[=+\-@]/.test(text)) text = `'${text}`
   return /[;"\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
 }
 

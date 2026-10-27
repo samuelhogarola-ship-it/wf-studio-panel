@@ -48,7 +48,7 @@
 ### Task 2: Persistent catalogue and document database
 
 **Files:**
-- Create: `supabase/migrations/202610270001_internal_billing_workspace.sql`
+- Create: `supabase/migrations/202610270003_internal_billing_workspace.sql`
 - Modify: `src/lib/supabase/types.ts`
 - Test: `tests/internal-billing-migration.test.mjs`
 - Test: `tests/internal-billing-postgres.test.mjs`
@@ -65,7 +65,7 @@
 ### Task 3: Collections, advance invoices and payment activation
 
 **Files:**
-- Extend: `supabase/migrations/202610270001_internal_billing_workspace.sql`
+- Extend: `supabase/migrations/202610270003_internal_billing_workspace.sql`
 - Create: `src/lib/actions/billing-payments.ts`
 - Create: `src/lib/data/billing-payments.ts`
 - Test: `tests/billing-payments.test.mjs`
@@ -108,7 +108,7 @@
 ### Task 5: Client portal and seven-day private shares
 
 **Files:**
-- Extend: `supabase/migrations/202610270001_internal_billing_workspace.sql`
+- Extend: `supabase/migrations/202610270003_internal_billing_workspace.sql`
 - Create: `src/app/d/[token]/page.tsx`
 - Create: `src/lib/billing/share-token.ts`
 - Create: `src/lib/actions/billing-shares.ts`
@@ -130,7 +130,7 @@
 ### Task 6: Income ledger and period summaries
 
 **Files:**
-- Extend: `supabase/migrations/202610270001_internal_billing_workspace.sql`
+- Extend: `supabase/migrations/202610270003_internal_billing_workspace.sql`
 - Create: `src/lib/actions/ledger-income.ts`
 - Create: `src/lib/data/ledger.ts`
 - Create: `src/components/billing/income-form.tsx`
@@ -149,7 +149,7 @@
 ### Task 7: Expenses and private attachments
 
 **Files:**
-- Extend: `supabase/migrations/202610270001_internal_billing_workspace.sql`
+- Extend: `supabase/migrations/202610270003_internal_billing_workspace.sql`
 - Create: `src/lib/actions/ledger-expenses.ts`
 - Create: `src/lib/data/expense-attachments.ts`
 - Create: `src/app/api/expense-attachments/[id]/route.ts`

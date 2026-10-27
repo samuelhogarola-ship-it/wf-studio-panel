@@ -51,7 +51,7 @@ test('activates a manual HTTPS link, transfer or cash without provider lock-in',
 })
 
 test('database enforces balances, reversals and one advance invoice per proposal payment', async () => {
-  const sql = await readFile(new URL('../supabase/migrations/202610270001_internal_billing_workspace.sql', import.meta.url), 'utf8')
+  const sql = await readFile(new URL('../supabase/migrations/202610270003_internal_billing_workspace.sql', import.meta.url), 'utf8')
   assert.match(sql, /create table public\.billing_payments/i)
   assert.match(sql, /create table public\.billing_payment_options/i)
   assert.match(sql, /create or replace function public\.record_billing_payment/i)
@@ -60,4 +60,21 @@ test('database enforces balances, reversals and one advance invoice per proposal
   assert.match(sql, /create or replace function public\.reverse_billing_payment/i)
   assert.match(sql, /create or replace function public\.set_billing_payment_option/i)
   assert.match(sql, /p_url !~ '\^https:\/\/'/i)
+  assert.match(sql, /p\.document_id = d\.id[\s\S]*p\.advance_invoice_id = d\.id/i)
+})
+
+test('failed payment reversal is surfaced and does not revalidate', async () => {
+  const db = database({}, {}, { rpcs: {
+    reverse_billing_payment: () => ({ data: null, error: { message: 'database failure' } }),
+  } })
+  const cacheCalls = []
+  const actions = loadProjectModule('src/lib/actions/billing-payments.ts', {
+    ...boundary(db).mocks,
+    'next/cache': { revalidatePath: path => cacheCalls.push(path) },
+  })
+  await assert.rejects(
+    actions.reverseBillingPaymentAction(form({ payment_id: '11111111-1111-4111-8111-111111111111' })),
+    /cobro/i,
+  )
+  assert.deepEqual(cacheCalls, [])
 })

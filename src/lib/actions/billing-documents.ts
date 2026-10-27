@@ -70,7 +70,8 @@ export async function deleteBillingProductAction(formData: FormData) {
   const id = z.string().uuid().safeParse(String(formData.get('id') ?? ''))
   if (!id.success) return
   const db = await createSupabaseServerClient()
-  await db.rpc('delete_billing_product', { p_id: id.data })
+  const { error } = await db.rpc('delete_billing_product', { p_id: id.data })
+  if (error) throw new Error('No se pudo borrar el producto.')
   refresh()
 }
 
@@ -129,6 +130,7 @@ export async function issueBillingDocumentAction(formData: FormData) {
   const id = z.string().uuid().safeParse(String(formData.get('document_id') ?? ''))
   if (!id.success) return
   const db = await createSupabaseServerClient()
-  await db.rpc('issue_billing_document', { p_document_id: id.data })
+  const { error } = await db.rpc('issue_billing_document', { p_document_id: id.data })
+  if (error) throw new Error('No se pudo emitir el documento.')
   refresh()
 }
