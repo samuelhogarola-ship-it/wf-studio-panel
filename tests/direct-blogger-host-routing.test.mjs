@@ -46,7 +46,7 @@ function contradictoryPublicRequest(path, host, forwardedHost) {
 
 function loadMiddleware() {
   const updated = []
-  const module = loadProjectModule('middleware.ts', {
+  const module = loadProjectModule('src/middleware.ts', {
     '@/lib/supabase/middleware': {
       async updateSession(currentRequest) {
         updated.push(currentRequest.nextUrl.toString())

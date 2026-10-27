@@ -24,7 +24,7 @@ function hostRequest(path, host, cookie) {
 
 function loadMiddleware() {
   const passed = []
-  const module = loadProjectModule('middleware.ts', {
+  const module = loadProjectModule('src/middleware.ts', {
     '@/lib/supabase/middleware': {
       async updateSession(request) {
         passed.push(request.nextUrl.toString())
