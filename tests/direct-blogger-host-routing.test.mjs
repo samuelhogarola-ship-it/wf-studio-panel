@@ -24,6 +24,17 @@ function proxiedRequest(path, forwardedHost, forwardedProto = 'https') {
   }
 }
 
+function contradictoryPublicRequest(path, host, forwardedHost) {
+  return {
+    headers: new Headers({
+      host,
+      'x-forwarded-host': forwardedHost,
+      'x-forwarded-proto': 'https',
+    }),
+    nextUrl: new URL(`https://${host}${path}`),
+  }
+}
+
 function loadMiddleware() {
   const updated = []
   const module = loadProjectModule('middleware.ts', {
@@ -81,6 +92,17 @@ test('proxy host routing preserves portal access and owner-only admin isolation'
   assert.deepEqual(updated, ['http://wf-studio-panel:3000/acceso/blogger/sportmassagefuengirola'])
 })
 
+test('proxy headers cannot relabel the public admin host as the client portal', async () => {
+  const { middleware, updated } = loadMiddleware()
+  const response = await middleware(contradictoryPublicRequest(
+    '/acceso/blogger/sportmassagefuengirola',
+    ADMIN_HOST,
+    PORTAL_HOST,
+  ))
+  assert.equal(response.status, 404)
+  assert.deepEqual(updated, [])
+})
+
 test('direct session lookup rejects a valid bearer outside the portal host', async () => {
   let cookieReads = 0
   const module = loadProjectModule('src/lib/blogger/direct-access-server.ts', {
@@ -130,6 +152,27 @@ test('direct session lookup rejects ambiguous proxy hosts before reading the bea
         'x-forwarded-proto': 'https',
       }),
       cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
+    },
+  })
+  assert.equal(await module.getDirectBloggerSession(), null)
+  assert.equal(cookieReads, 0)
+})
+
+test('direct session lookup rejects a public admin host mislabeled as portal by forwarded headers', async () => {
+  let cookieReads = 0
+  const module = loadProjectModule('src/lib/blogger/direct-access-server.ts', {
+    'next/headers': {
+      headers: async () => new Headers({
+        host: ADMIN_HOST,
+        'x-forwarded-host': PORTAL_HOST,
+        'x-forwarded-proto': 'https',
+      }),
+      cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
+    },
+    '@/lib/blogger/direct-access.mjs': {
+      DIRECT_BLOGGER_COOKIE: '__Host-wf_blogger',
+      loadDirectBloggerSessionConfig: () => ({ sessionSecret: 'secret' }),
+      verifyDirectBloggerSession: () => ({ siteKey: 'sportmassagefuengirola' }),
     },
   })
   assert.equal(await module.getDirectBloggerSession(), null)

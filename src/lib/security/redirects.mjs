@@ -133,7 +133,24 @@ export function resolveRequestOrigin({
       ? forwardedProto.trim().toLowerCase()
       : "";
 
-  if (normalizedProto === "https" && normalizedHost && allowedHosts.includes(normalizedHost)) {
+  let requestUrl;
+  try {
+    requestUrl = new URL(requestOrigin);
+  } catch {
+    requestUrl = null;
+  }
+  const requestHost = requestUrl?.hostname.toLowerCase() ?? "";
+  if (requestUrl && allowedHosts.includes(requestHost)) {
+    return requestUrl.origin;
+  }
+  const trustedInternalOrigin = requestUrl?.protocol === "http:" && requestUrl.port === "3000" && (
+    requestHost === "localhost" ||
+    requestHost === "127.0.0.1" ||
+    requestHost === "0.0.0.0" ||
+    /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(requestHost)
+  );
+
+  if (trustedInternalOrigin && normalizedProto === "https" && normalizedHost && allowedHosts.includes(normalizedHost)) {
     return `https://${normalizedHost}`;
   }
 

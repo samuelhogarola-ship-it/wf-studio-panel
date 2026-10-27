@@ -11,8 +11,9 @@ export async function getDirectBloggerSession(siteKey = 'sportmassagefuengirola'
   try {
     const requestHeaders = await headers()
     const rawHost = requestHeaders.get('host')?.trim().toLowerCase() ?? ''
+    const internalPort = rawHost.endsWith(':3000')
     const requestOrigin = rawHost
-      ? `${rawHost.startsWith('localhost') || rawHost.startsWith('127.0.0.1') ? 'http' : 'https'}://${rawHost}`
+      ? `${internalPort || rawHost.startsWith('localhost') || rawHost.startsWith('127.0.0.1') ? 'http' : 'https'}://${rawHost}`
       : 'http://invalid.local'
     const hostname = new URL(resolveRequestOrigin({
       forwardedHost: requestHeaders.get('x-forwarded-host'),
