@@ -141,6 +141,40 @@ create table public.ledger_income (
 
 create index ledger_income_date_idx on public.ledger_income(occurred_on desc, source_mode, category);
 
+create table public.ledger_expenses (
+  id uuid primary key default gen_random_uuid(),
+  supplier_name text not null check (char_length(trim(supplier_name)) between 1 and 200),
+  supplier_tax_id text,
+  invoice_reference text,
+  category text not null check (char_length(trim(category)) between 1 and 120),
+  occurred_on date not null,
+  net_cents bigint not null check (net_cents >= 0),
+  tax_rate_bps integer not null check (tax_rate_bps between 0 and 10000),
+  tax_cents bigint not null check (tax_cents >= 0),
+  deductible_tax_cents bigint not null check (deductible_tax_cents between 0 and tax_cents),
+  total_cents bigint not null check (total_cents > 0 and total_cents = net_cents + tax_cents),
+  payment_method text not null check (payment_method in ('manual_link', 'transfer', 'cash', 'card', 'other')),
+  notes text,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now())
+);
+
+create index ledger_expenses_date_idx on public.ledger_expenses(occurred_on desc, category);
+
+create table public.ledger_expense_attachments (
+  id uuid primary key default gen_random_uuid(),
+  expense_id uuid not null references public.ledger_expenses(id) on delete cascade,
+  storage_path text not null unique,
+  original_name text not null,
+  content_type text not null check (content_type in ('application/pdf', 'image/jpeg', 'image/png', 'image/webp')),
+  size_bytes bigint not null check (size_bytes between 1 and 10485760),
+  created_at timestamptz not null default timezone('utc', now())
+);
+
+insert into storage.buckets(id, name, public, file_size_limit, allowed_mime_types)
+values ('expense-attachments', 'expense-attachments', false, 10485760, array['application/pdf','image/jpeg','image/png','image/webp'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
 drop trigger if exists set_billing_payment_options_updated_at on public.billing_payment_options;
 create trigger set_billing_payment_options_updated_at before update on public.billing_payment_options
 for each row execute function public.set_updated_at();
@@ -455,6 +489,32 @@ begin
 end;
 $$;
 
+create or replace function public.create_ledger_expense(
+  p_supplier_name text, p_supplier_tax_id text, p_invoice_reference text, p_category text, p_occurred_on date,
+  p_net_cents bigint, p_tax_rate_bps integer, p_tax_cents bigint, p_deductible_tax_cents bigint,
+  p_total_cents bigint, p_payment_method text, p_notes text, p_storage_path text,
+  p_original_name text, p_content_type text, p_size_bytes bigint
+)
+returns public.ledger_expenses
+language plpgsql security definer set search_path = public, private as $$
+declare saved public.ledger_expenses;
+begin
+  if not private.is_admin() then raise exception using errcode = '42501', message = 'Not authorized'; end if;
+  if p_net_cents < 0 or p_tax_cents < 0 or p_deductible_tax_cents < 0 or p_deductible_tax_cents > p_tax_cents
+    or p_total_cents <> p_net_cents + p_tax_cents or p_total_cents <= 0 then raise exception 'Invalid expense totals'; end if;
+  insert into public.ledger_expenses(supplier_name, supplier_tax_id, invoice_reference, category, occurred_on,
+    net_cents, tax_rate_bps, tax_cents, deductible_tax_cents, total_cents, payment_method, notes, created_by)
+  values (trim(p_supplier_name), nullif(trim(p_supplier_tax_id), ''), nullif(trim(p_invoice_reference), ''), trim(p_category), p_occurred_on,
+    p_net_cents, p_tax_rate_bps, p_tax_cents, p_deductible_tax_cents, p_total_cents, p_payment_method, nullif(trim(p_notes), ''), auth.uid())
+  returning * into saved;
+  if p_storage_path is not null then
+    insert into public.ledger_expense_attachments(expense_id, storage_path, original_name, content_type, size_bytes)
+    values (saved.id, p_storage_path, p_original_name, p_content_type, p_size_bytes);
+  end if;
+  return saved;
+end;
+$$;
+
 alter table public.billing_products enable row level security;
 alter table public.billing_documents enable row level security;
 alter table public.billing_document_lines enable row level security;
@@ -463,6 +523,8 @@ alter table public.billing_payments enable row level security;
 alter table public.billing_payment_options enable row level security;
 alter table public.billing_share_links enable row level security;
 alter table public.ledger_income enable row level security;
+alter table public.ledger_expenses enable row level security;
+alter table public.ledger_expense_attachments enable row level security;
 
 create policy billing_products_admin_all on public.billing_products for all to authenticated
 using (private.is_admin()) with check (private.is_admin());
@@ -490,6 +552,13 @@ create policy billing_share_links_admin_all on public.billing_share_links for al
 using (private.is_admin()) with check (private.is_admin());
 create policy ledger_income_admin_all on public.ledger_income for all to authenticated
 using (private.is_admin()) with check (private.is_admin());
+create policy ledger_expenses_admin_all on public.ledger_expenses for all to authenticated
+using (private.is_admin()) with check (private.is_admin());
+create policy ledger_expense_attachments_admin_all on public.ledger_expense_attachments for all to authenticated
+using (private.is_admin()) with check (private.is_admin());
+create policy expense_attachment_objects_admin_all on storage.objects for all to authenticated
+using (bucket_id = 'expense-attachments' and private.is_admin())
+with check (bucket_id = 'expense-attachments' and private.is_admin());
 
 revoke all on function public.save_billing_product(uuid, text, text, bigint, text, integer, boolean, integer) from public, anon;
 revoke all on function public.delete_billing_product(uuid) from public, anon;
@@ -502,6 +571,7 @@ revoke all on function public.create_billing_share(uuid, text, timestamptz) from
 revoke all on function public.revoke_billing_share(uuid) from public, anon;
 revoke all on function public.resolve_billing_share(text) from public;
 revoke all on function public.create_ledger_income(text, text, date, text, bigint, text, integer) from public, anon;
+revoke all on function public.create_ledger_expense(text, text, text, text, date, bigint, integer, bigint, bigint, bigint, text, text, text, text, text, bigint) from public, anon;
 grant execute on function public.save_billing_product(uuid, text, text, bigint, text, integer, boolean, integer) to authenticated;
 grant execute on function public.delete_billing_product(uuid) to authenticated;
 grant execute on function public.save_billing_document_draft(uuid, text, uuid, text, text, text, text, text, date, date, uuid, uuid, jsonb) to authenticated;
@@ -513,7 +583,9 @@ grant execute on function public.create_billing_share(uuid, text, timestamptz) t
 grant execute on function public.revoke_billing_share(uuid) to authenticated;
 grant execute on function public.resolve_billing_share(text) to anon, authenticated;
 grant execute on function public.create_ledger_income(text, text, date, text, bigint, text, integer) to authenticated;
+grant execute on function public.create_ledger_expense(text, text, text, text, date, bigint, integer, bigint, bigint, bigint, text, text, text, text, text, bigint) to authenticated;
 grant select on public.billing_products, public.billing_documents, public.billing_document_lines,
-  public.billing_payments, public.billing_payment_options, public.ledger_income to authenticated;
+  public.billing_payments, public.billing_payment_options, public.ledger_income,
+  public.ledger_expenses, public.ledger_expense_attachments to authenticated;
 
 commit;

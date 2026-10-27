@@ -117,6 +117,18 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      ledger_expenses: {
+        Row: { id: string; supplier_name: string; supplier_tax_id: string | null; invoice_reference: string | null; category: string; occurred_on: string; net_cents: number; tax_rate_bps: number; tax_cents: number; deductible_tax_cents: number; total_cents: number; payment_method: string; notes: string | null; created_by: string | null; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      ledger_expense_attachments: {
+        Row: { id: string; expense_id: string; storage_path: string; original_name: string; content_type: string; size_bytes: number; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: [{ foreignKeyName: "ledger_expense_attachments_expense_id_fkey"; columns: ["expense_id"]; isOneToOne: false; referencedRelation: "ledger_expenses"; referencedColumns: ["id"] }]
+      }
       activities: {
         Row: { activity_type: string; client_id: string; created_at: string; description: string | null; id: string; minutes_used: number; notify_client: boolean; pack_id: string; title: string; updated_at: string; work_date: string }
         Insert: { activity_type: string; client_id: string; created_at?: string; description?: string | null; id?: string; minutes_used: number; notify_client?: boolean; pack_id: string; title: string; updated_at?: string; work_date?: string }
@@ -224,6 +236,7 @@ export type Database = {
       revoke_billing_share: { Args: { p_share_id: string }; Returns: boolean }
       resolve_billing_share: { Args: { p_token_hash: string }; Returns: Json }
       create_ledger_income: { Args: { p_category: string; p_description: string; p_occurred_on: string; p_source_mode: string; p_net_cents: number; p_tax_mode: string; p_tax_rate_bps: number }; Returns: Database['public']['Tables']['ledger_income']['Row'] }
+      create_ledger_expense: { Args: { p_supplier_name: string; p_supplier_tax_id: string | null; p_invoice_reference: string | null; p_category: string; p_occurred_on: string; p_net_cents: number; p_tax_rate_bps: number; p_tax_cents: number; p_deductible_tax_cents: number; p_total_cents: number; p_payment_method: string; p_notes: string | null; p_storage_path: string | null; p_original_name: string | null; p_content_type: string | null; p_size_bytes: number | null }; Returns: Database['public']['Tables']['ledger_expenses']['Row'] }
       mark_message_read: { Args: { p_message_id: string }; Returns: undefined }
       create_invoice_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string }; Returns: { id: string; number: string }[] }
       issue_invoice_with_payment_link: { Args: { p_invoice_id: string; p_payment_url: string | null }; Returns: { id: string; number: string; status: string }[] }
