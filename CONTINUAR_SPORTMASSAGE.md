@@ -8,7 +8,7 @@ Conseguir una clave **gratuita** de DeepL para `info@webfuengirola.com`, configu
 
 Condiciones obligatorias:
 
-- Trabajar en segundo plano. **No abrir, mover ni enfocar ventanas del usuario.** La autorización anterior para mostrar Chrome quedó revocada.
+- Usar el navegador integrado de Codex para DeepL y el resto de la navegación, en segundo plano salvo cuando el titular deba completar un acceso. El usuario autorizó una excepción concreta: **usar únicamente la sesión de Coolify que ya tiene abierta en Safari**. No revisar otras pestañas, no usar Firefox ni reabrir Chrome.
 - **Nunca acceder a Proton Pass**, ni para buscar credenciales.
 - No contratar planes de pago, introducir tarjetas ni activar pruebas de planes de pago.
 - No publicar artículos de prueba. El usuario autorizó pruebas aisladas y borradores reversibles, pero hasta ahora no se han creado borradores en producción.
@@ -39,6 +39,17 @@ Esta rama contiene el código de main comprobado más esta guía; no introduce c
 - Desde Área Cliente: <https://portal.webfuengirola.com/cliente/proyectos/sportmassagefuengirola/blogger>.
 - Usuario de Blogger: `sportmassagefuengirola@gmail.com`. Contraseña excluida de Git.
 - Cuenta elegida para DeepL: `info@webfuengirola.com`. Es una cuenta distinta del acceso de la clienta al Blogger.
+- El usuario respondió que la cuenta DeepL ya existe y precisó después que **cree tener una cuenta o contraseña asociada a ese correo, pero no sabe dónde**. La existencia y el plan no se han verificado mediante acceso. Empezar por el inicio de sesión, sin repetir el registro ni crear otra cuenta por defecto. El correo es solo el identificador de la cuenta, no una contraseña ni una clave API.
+
+## Recomprobación en el nuevo ordenador — 27/10/2026
+
+- Las referencias remotas siguen en `main=bad6f51` y `codex/sportmassage-continuation-20261027=0279a54` antes de esta actualización documental. No se han mezclado cambios del otro fork de facturación.
+- La sesión de Coolify de Safari está autenticada en `http://srv1755854.hstgr.cloud:8000`. El acceso a la aplicación del Blogger es `/project/ne476syz0demj9ho5gqqohl6/environment/pkiafz0ad8tp582uecbbz23v/application/osmlaapxv7bkkrpgpzvkat4k`.
+- El panel confirma `Running (no healthcheck)` y el despliegue satisfactorio `7rody2ac8fxcgxotj9gf6i0x` del commit `bad6f5132a30d774669876217413b1c876f5be0e`.
+- La búsqueda `DEEPL` en las 80 variables del entorno devuelve cero coincidencias. La búsqueda `BLOGGER_GITHUB` confirma los nombres de las variables de repositorio, rama y token existentes, sin revelar sus valores. No se modificó ninguna variable ni se lanzó un despliegue.
+- No se encontró una dirección HTTPS de administración de Coolify: el campo URL de sus ajustes generales está vacío. No presentar el acceso HTTP como cifrado ni pedir contraseñas allí. Confirmar un canal cifrado antes de introducir una clave nueva.
+- El navegador integrado llega a `https://auth.deepl.com/login`, sin sesión iniciada. Se dejó preparado el correo indicado por el usuario; falta que el titular complete el acceso. No se obtuvo ni configuró una clave. No extraer contraseñas del llavero ni pedir secretos por chat.
+- En el checkout aislado se repitieron `npm test` (556 pruebas: 554 aprobadas, 2 omitidas, cero fallos), lint, typecheck, build y auditoría de producción (cero vulnerabilidades). Son comprobaciones locales; no equivalen a una traducción real ni a publicar en Hostinger.
 
 ## Estado de código y despliegue comprobado
 
@@ -97,16 +108,16 @@ Ejecutar typecheck y build secuencialmente: Next regenera `.next/types` y una ej
 - [Claves de la cuenta](https://app.deepl.com/en/your-account/keys).
 - [Instrucciones oficiales para crear una clave](https://support.deepl.com/hc/en-us/articles/360020695820-API-key-for-DeepL-API).
 
-Se intentó el formulario oficial con Developer seleccionado, el correo elegido y una contraseña aleatoria nueva. La petición quedó en `clearance.deepl.com`, con una comprobación humana. El usuario dijo que pulsarla no funcionaba. **No se confirmó la creación de la cuenta y no se obtuvo clave**; una contraseña provisional generada localmente no demuestra que la cuenta exista. No asumir que esa contraseña es válida ni pedir acceso a Proton Pass.
+Historial del intento anterior: se intentó el formulario oficial con Developer seleccionado, el correo elegido y una contraseña aleatoria nueva. La petición quedó en `clearance.deepl.com`, con una comprobación humana. El usuario dijo que pulsarla no funcionaba. Ese intento no confirmó un alta ni produjo una clave. **El usuario indica ahora que cree tener una cuenta asociada al correo**; comprobar primero su acceso, sin repetir el alta por defecto. No asumir que la contraseña provisional del intento anterior es válida ni pedir acceso a Proton Pass.
 
 También se probó la vía oficial alternativa: API Keys → `auth.deepl.com/login` → Crear una cuenta. Los campos cumplían la validación, pero el botón de crear cuenta permanecía deshabilitado y se cargaban comprobaciones de `clearance.deepl.com` y `challenges.cloudflare.com`. No se forzó el botón ni se resolvió/eludió el desafío. Esta vía tampoco produjo una clave.
 
-La página ofrece acceso con Google o Apple. Solo puede completarse con una sesión autorizada del titular; no se ha probado ese acceso ni debe presumirse que el correo elegido pertenece a Google Workspace. Si el usuario completa el alta desde su nuevo equipo o aporta acceso seguro a la cuenta, continuar con la creación/configuración de la clave. No reabrir ventanas del usuario por iniciativa propia.
+La página ofrece acceso con Google o Apple. Solo puede completarse con una sesión autorizada del titular; no se ha probado ese acceso ni debe presumirse que el correo elegido pertenece a Google Workspace. Cuando el titular complete el acceso a su cuenta existente, comprobar su plan y las claves disponibles antes de crear otra clave o modificar la configuración. No reabrir ventanas del usuario por iniciativa propia.
 
 ## Próximos pasos concretos
 
 1. Verificar main, CI y el despliegue actual mediante lecturas, sin modificar servicios que ya funcionan.
-2. Determinar si existe ya la cuenta elegida y obtener una clave del plan Developer gratuito mediante el acceso oficial autorizado. No comprar cuotas ni contratar planes para desbloquearla. Si continúa la comprobación humana, comunicar el bloqueo exacto.
+2. Pedir al titular que complete el acceso oficial con `info@webfuengirola.com` en el navegador integrado y comprobar entonces la cuenta, su plan y si ya tiene una clave utilizable gratuita. Si no recuerda el acceso, que utilice personalmente la recuperación oficial. No repetir el registro ni crear claves duplicadas innecesariamente. No comprar cuotas ni contratar planes para desbloquearla. Si continúa la comprobación humana, comunicar el bloqueo exacto.
 3. Guardar la clave de forma segura en `DEEPL_AUTH_KEY` del entorno de ejecución de Coolify, cifrada y oculta; preservar las demás variables. No subirla a Git. No usar `DEEPL_API_KEY`: el editor consulta `DEEPL_AUTH_KEY`.
 4. El código selecciona `https://api-free.deepl.com/v2/translate` para claves antiguas terminadas en `:fx`, y `https://api.deepl.com/v2/translate` para las actuales. Existe `DEEPL_API_URL` para indicar un endpoint oficial explícito si corresponde. Confirmar los datos oficiales del plan/clave real antes de configurar.
 5. Aplicar la configuración mediante despliegue del panel cuando sea necesario. Verificar que `translationAvailable` es verdadero y que el botón queda habilitado.
