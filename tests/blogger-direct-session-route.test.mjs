@@ -70,7 +70,7 @@ test('accepts Coolify internal request URLs when the browser origin is the fixed
     username: 'sportmassagefuengirola@gmail.com',
     password,
   })
-  const response = await POST(new Request('http://wf-studio-panel:3000/api/blogger/direct-session', {
+  const response = await POST(new Request('http://10.0.0.2/api/blogger/direct-session', {
     method: 'POST',
     body,
     headers: {

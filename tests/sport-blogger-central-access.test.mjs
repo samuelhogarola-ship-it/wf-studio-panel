@@ -122,7 +122,7 @@ test('Sport panel launch consumes one audience-bound ticket and establishes the 
       },
     },
   })
-  const response = await route.POST(new Request('http://wf-studio-panel:3000/api/tools/blogger/sportmassagefuengirola/launch', {
+  const response = await route.POST(new Request('http://10.0.0.2/api/tools/blogger/sportmassagefuengirola/launch', {
     method: 'POST',
     headers: {
       origin: 'https://portal.webfuengirola.com',

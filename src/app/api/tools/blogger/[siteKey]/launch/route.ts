@@ -8,7 +8,7 @@ import {
 } from '@/lib/blogger/direct-access.mjs'
 import { getAccessibleClientProject, getActiveClientCapability } from '@/lib/data/projects'
 import { validateProjectDestination } from '@/lib/projects/model.mjs'
-import { isTrustedInternalRequestOrigin, resolveRequestOrigin } from '@/lib/security/redirects.mjs'
+import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
 import { getSiteByKey, getBloggerHandoff } from '@/lib/sites/registry.mjs'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -125,16 +125,16 @@ export async function POST(
   const forwardedHost = request.headers.get('x-forwarded-host')
   const forwardedProto = request.headers.get('x-forwarded-proto')
   const rawOrigin = new URL(request.url).origin
+  const browserOrigin = request.headers.get('origin')
   const requestOrigin = resolveRequestOrigin({
     forwardedHost,
     forwardedProto,
     requestOrigin: rawOrigin,
-    fallbackOrigin: forwardedHost === null && forwardedProto === null && isTrustedInternalRequestOrigin(rawOrigin)
+    fallbackOrigin: forwardedHost === null && forwardedProto === null && browserOrigin === PORTAL_ORIGIN
       ? PORTAL_ORIGIN
       : undefined,
   })
-  const origin = request.headers.get('origin')
-  if (origin !== requestOrigin) return safeJson({ error: 'forbidden' }, 403)
+  if (browserOrigin !== requestOrigin) return safeJson({ error: 'forbidden' }, 403)
 
   const identity = await getOptionalIdentity()
   if (!identity || !['admin', 'client'].includes(identity.role)) {
