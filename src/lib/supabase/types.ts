@@ -69,6 +69,30 @@ export type Database = {
         Update: { title?: string; body?: string }
         Relationships: []
       }
+      billing_products: {
+        Row: { id: string; name: string; description: string | null; default_net_cents: number | null; tax_mode: string; tax_rate_bps: number; active: boolean; sort_order: number; created_at: string; updated_at: string }
+        Insert: { id?: string; name: string; description?: string | null; default_net_cents?: number | null; tax_mode?: string; tax_rate_bps?: number; active?: boolean; sort_order?: number; created_at?: string; updated_at?: string }
+        Update: { name?: string; description?: string | null; default_net_cents?: number | null; tax_mode?: string; tax_rate_bps?: number; active?: boolean; sort_order?: number; updated_at?: string }
+        Relationships: []
+      }
+      billing_documents: {
+        Row: { id: string; document_type: string; number: string | null; status: string; client_id: string | null; recipient_name: string; recipient_email: string; recipient_company: string | null; title: string; notes: string | null; document_date: string; due_date: string | null; source_proposal_id: string | null; parent_invoice_id: string | null; net_cents: number; tax_cents: number; total_cents: number; issued_at: string | null; created_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; document_type: string; number?: string | null; status?: string; client_id?: string | null; recipient_name: string; recipient_email: string; recipient_company?: string | null; title: string; notes?: string | null; document_date?: string; due_date?: string | null; source_proposal_id?: string | null; parent_invoice_id?: string | null; net_cents?: number; tax_cents?: number; total_cents?: number; issued_at?: string | null; created_by?: string | null; created_at?: string; updated_at?: string }
+        Update: { document_type?: string; number?: string | null; status?: string; client_id?: string | null; recipient_name?: string; recipient_email?: string; recipient_company?: string | null; title?: string; notes?: string | null; document_date?: string; due_date?: string | null; source_proposal_id?: string | null; parent_invoice_id?: string | null; net_cents?: number; tax_cents?: number; total_cents?: number; issued_at?: string | null; updated_at?: string }
+        Relationships: [{ foreignKeyName: "billing_documents_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
+      }
+      billing_document_lines: {
+        Row: { id: string; document_id: string; product_id: string | null; product_name: string | null; description: string; quantity: number; unit_net_cents: number; tax_mode: string; tax_rate_bps: number; net_cents: number; tax_cents: number; total_cents: number; sort_order: number; created_at: string }
+        Insert: { id?: string; document_id: string; product_id?: string | null; product_name?: string | null; description: string; quantity: number; unit_net_cents: number; tax_mode: string; tax_rate_bps: number; net_cents: number; tax_cents: number; total_cents: number; sort_order?: number; created_at?: string }
+        Update: never
+        Relationships: [{ foreignKeyName: "billing_document_lines_document_id_fkey"; columns: ["document_id"]; isOneToOne: false; referencedRelation: "billing_documents"; referencedColumns: ["id"] }]
+      }
+      billing_number_sequences: {
+        Row: { series: string; year: number; last_number: number }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       activities: {
         Row: { activity_type: string; client_id: string; created_at: string; description: string | null; id: string; minutes_used: number; notify_client: boolean; pack_id: string; title: string; updated_at: string; work_date: string }
         Insert: { activity_type: string; client_id: string; created_at?: string; description?: string | null; id?: string; minutes_used: number; notify_client?: boolean; pack_id: string; title: string; updated_at?: string; work_date?: string }
@@ -165,6 +189,10 @@ export type Database = {
       }
     }
     Functions: {
+      save_billing_product: { Args: { p_id: string | null; p_name: string; p_description: string | null; p_default_net_cents: number | null; p_tax_mode: string; p_tax_rate_bps: number; p_active: boolean; p_sort_order: number }; Returns: Database['public']['Tables']['billing_products']['Row'] }
+      delete_billing_product: { Args: { p_id: string }; Returns: boolean }
+      save_billing_document_draft: { Args: { p_id: string | null; p_document_type: string; p_client_id: string | null; p_recipient_name: string; p_recipient_email: string; p_recipient_company: string | null; p_title: string; p_notes: string | null; p_document_date: string; p_due_date: string | null; p_source_proposal_id: string | null; p_parent_invoice_id: string | null; p_lines: Json }; Returns: Database['public']['Tables']['billing_documents']['Row'] }
+      issue_billing_document: { Args: { p_document_id: string }; Returns: Database['public']['Tables']['billing_documents']['Row'] }
       mark_message_read: { Args: { p_message_id: string }; Returns: undefined }
       create_invoice_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string }; Returns: { id: string; number: string }[] }
       issue_invoice_with_payment_link: { Args: { p_invoice_id: string; p_payment_url: string | null }; Returns: { id: string; number: string; status: string }[] }
