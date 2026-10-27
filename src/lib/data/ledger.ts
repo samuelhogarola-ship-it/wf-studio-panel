@@ -1,17 +1,20 @@
 import 'server-only'
 
 import { requireAdmin } from '@/lib/auth'
+import { collectAllRows } from '@/lib/supabase/pagination'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export async function getLedgerSummary({ from, to }: { from: string; to: string }) {
   await requireAdmin()
   const db = await createSupabaseServerClient()
-  const [{ data }, { data: expenseData }] = await Promise.all([
-    db.from('ledger_income').select('*').order('occurred_on', { ascending: false }),
-    db.from('ledger_expenses').select('*').order('occurred_on', { ascending: false }),
+  const [income, expenses] = await Promise.all([
+    collectAllRows((start, end) => db.from('ledger_income').select('*')
+      .gte('occurred_on', from).lte('occurred_on', to)
+      .order('occurred_on', { ascending: false }).order('id').range(start, end)),
+    collectAllRows((start, end) => db.from('ledger_expenses').select('*')
+      .gte('occurred_on', from).lte('occurred_on', to)
+      .order('occurred_on', { ascending: false }).order('id').range(start, end)),
   ])
-  const income = (data ?? []).filter(entry => entry.occurred_on >= from && entry.occurred_on <= to)
-  const expenses = (expenseData ?? []).filter(entry => entry.occurred_on >= from && entry.occurred_on <= to)
   return {
     from, to, income, expenses,
     individualTotal: income.filter(entry => entry.source_mode === 'individual').reduce((sum, entry) => sum + entry.total_cents, 0),

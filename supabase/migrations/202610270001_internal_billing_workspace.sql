@@ -212,6 +212,12 @@ returns trigger language plpgsql set search_path = public as $$
 declare target_document_id uuid := coalesce(new.document_id, old.document_id);
 begin
   if exists (select 1 from public.billing_documents where id = target_document_id and status <> 'draft') then
+    if tg_op = 'UPDATE'
+      and old.product_id is not null
+      and new.product_id is null
+      and (to_jsonb(old) - 'product_id') = (to_jsonb(new) - 'product_id') then
+      return new;
+    end if;
     raise exception 'Issued billing document lines are immutable';
   end if;
   return case when tg_op = 'DELETE' then old else new end;
