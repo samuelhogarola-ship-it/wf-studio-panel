@@ -7,8 +7,8 @@ const siteKey = 'sportmassagefuengirola'
 const sportProject = { ...project, slug: siteKey, domain: 'sportmassagefuengirola.com', name: 'Sport Massage' }
 const activeCapability = { ...capability, state: 'active', launch_url: null, validated_at: null, metadata: {} }
 
-function setup({ currentProject = sportProject, currentCapability = activeCapability, currentClient = client, email = client.email } = {}) {
-  const identity = { userId: 'sport-user', email, role: 'client', client: currentClient }
+function setup({ currentProject = sportProject, currentCapability = activeCapability, currentClient = client, email = client.email, role = 'client' } = {}) {
+  const identity = { userId: 'sport-user', email, role, ...(role === 'client' ? { client: currentClient } : {}) }
   const db = database({ clients: [currentClient], client_projects: [currentProject], project_capabilities: [currentCapability] })
   // Keep real pages, registry, authorization, project filtering and editor routing.
   // Replace only the authenticated session and remote Supabase I/O.
@@ -43,11 +43,17 @@ test('Sport client surfaces expose no Blogger entry while the administrator edit
   const portalPage = load('src/app/cliente/(protected)/proyectos/[slug]/blogger/page.tsx').default
   await assert.rejects(() => portalPage({ params: Promise.resolve({ slug: siteKey }) }), { message: '404' })
 
-  const authorization = await load('src/lib/blogger/legacy-authorize.ts').authorizeSportBlogger()
-  assert.equal(authorization.identity.userId, 'sport-user')
-  assert.equal(authorization.project.client_id, client.id)
+  const callsBeforeLegacyAuthorization = db.calls.length
+  await assert.rejects(
+    () => load('src/lib/blogger/legacy-authorize.ts').authorizeSportBlogger(),
+    error => error.status === 403,
+  )
+  assert.equal(db.calls.length, callsBeforeLegacyAuthorization, 'a client must be rejected before legacy Blogger data is queried')
+
+  const adminSetup = setup({ role: 'admin', email: 'owner@example.test' })
+  const authorization = await adminSetup.load('src/lib/blogger/legacy-authorize.ts').authorizeSportBlogger()
+  assert.equal(authorization.identity.role, 'admin')
   assert.equal(authorization.site.key, siteKey)
-  assert.ok(db.calls.every(call => call.operation === 'select'), 'entry must not create tickets or another authentication session')
 })
 
 test('Sport portal and editor API deny foreign, revoked or mismatched assignments', async () => {

@@ -15,13 +15,15 @@ export async function middleware(request: NextRequest) {
 
   // Only apply domain routing in production (known hosts)
   const isKnownHost = host === ADMIN_HOST || host === PORTAL_HOST
+  const isLegacyBloggerAsset = pathname === '/blogger' || pathname.startsWith('/blogger/')
+  const isLegacyBloggerApi = pathname === '/api/posts' || pathname.startsWith('/api/posts/') || pathname === '/api/build'
 
   if (isKnownHost) {
     if (host === ADMIN_HOST && pathname.startsWith('/cliente') && !hasSupportRoutingHint) {
       return new NextResponse(null, { status: 404 })
     }
 
-    if (host === ADMIN_HOST && (pathname.startsWith('/acceso/blogger') || pathname.startsWith('/blogger'))) {
+    if (host === ADMIN_HOST && pathname.startsWith('/acceso/blogger')) {
       return new NextResponse(null, { status: 404 })
     }
 
@@ -37,7 +39,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // portal.webfuengirola.com: /paneladmin/* does not exist here
-    if (host === PORTAL_HOST && pathname.startsWith('/paneladmin')) {
+    if (host === PORTAL_HOST && (pathname.startsWith('/paneladmin') || isLegacyBloggerAsset || isLegacyBloggerApi)) {
       return new NextResponse(null, { status: 404 })
     }
 
@@ -49,7 +51,12 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return updateSession(request, host === ADMIN_HOST ? { requiredAuthenticatedRole: 'admin' } : undefined)
+  return updateSession(request, host === ADMIN_HOST
+    ? {
+        requiredAuthenticatedRole: 'admin',
+        ...(isLegacyBloggerAsset ? { requireAuthentication: true } : {}),
+      }
+    : undefined)
 }
 
 export const config = {

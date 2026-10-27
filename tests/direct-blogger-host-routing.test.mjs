@@ -32,20 +32,35 @@ function loadMiddleware() {
   return { middleware: module.middleware, updated }
 }
 
-test('admin host rejects direct Blogger pages independently of support routing hints', async () => {
+test('admin host removes the obsolete direct entry but preserves admin-only Blogger assets', async () => {
   const { middleware, updated } = loadMiddleware()
-  const destination = '%2Facceso%2Fblogger%2Fsportmassagefuengirola'
-  const denied = [
-    '/acceso/blogger/sportmassagefuengirola',
+  assert.equal((await middleware(request('/acceso/blogger/sportmassagefuengirola', ADMIN_HOST, [{
+    name: '__Host-wf_support_preview',
+    value: 'forged-client-value',
+  }]))).status, 404)
+
+  const allowed = [
     '/blogger/index.html',
     '/blogger/editor/index.html?siteKey=sportmassagefuengirola',
   ]
-  for (const path of denied) {
-    assert.equal((await middleware(request(path, ADMIN_HOST, [{
-      name: '__Host-wf_support_preview',
-      value: 'forged-client-value',
-    }]))).status, 404, path)
-  }
+  for (const path of allowed) assert.equal((await middleware(request(path))).status, 204, path)
+  assert.deepEqual(updated, allowed.map(path => ({
+    url: `https://${ADMIN_HOST}${path}`,
+    options: { requiredAuthenticatedRole: 'admin', requireAuthentication: true },
+  })))
+})
+
+test('portal host rejects legacy Blogger assets and every legacy mutation prefix', async () => {
+  const { middleware, updated } = loadMiddleware()
+  for (const path of [
+    '/blogger/index.html',
+    '/blogger/editor/index.html?siteKey=sportmassagefuengirola',
+    '/api/posts',
+    '/api/posts/example',
+    '/api/posts/example/images/photo.webp',
+    '/api/posts/example/translations',
+    '/api/build',
+  ]) assert.equal((await middleware(request(path, PORTAL_HOST))).status, 404, path)
   assert.deepEqual(updated, [])
 })
 

@@ -7,28 +7,41 @@ import {
   sanitizeInternalRedirect,
 } from '@/lib/security/redirects.mjs'
 
-function getAppBaseUrl(request: NextRequest, requestUrl: URL) {
+const KNOWN_APP_HOSTS = ['admin.webfuengirola.com', 'portal.webfuengirola.com'] as const
+
+function getCanonicalRequestHost(request: NextRequest, requestUrl: URL) {
+  const headerHost = request.headers.get('host')?.split(',')[0]?.trim().toLowerCase() ?? ''
+  const normalizedHeaderHost = headerHost.replace(/:\d+$/, '')
+  if (KNOWN_APP_HOSTS.includes(normalizedHeaderHost as typeof KNOWN_APP_HOSTS[number])) {
+    return normalizedHeaderHost
+  }
+  const urlHost = requestUrl.hostname.toLowerCase()
+  return KNOWN_APP_HOSTS.includes(urlHost as typeof KNOWN_APP_HOSTS[number]) ? urlHost : null
+}
+
+function getAppBaseUrl(requestUrl: URL, canonicalHost: string | null) {
+  if (canonicalHost) return `https://${canonicalHost}`
   return resolveRequestOrigin({
-    forwardedHost: request.headers.get('x-forwarded-host'),
-    forwardedProto: request.headers.get('x-forwarded-proto'),
+    forwardedHost: null,
+    forwardedProto: null,
     requestOrigin: requestUrl.origin,
     fallbackOrigin: process.env.APP_URL,
-    allowedHosts: ['admin.webfuengirola.com', 'portal.webfuengirola.com'],
+    allowedHosts: [...KNOWN_APP_HOSTS],
   })
 }
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url)
   const code = requestUrl.searchParams.get('code')
-  const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host') ?? ''
-  const isAdminHost = host.startsWith('admin.')
+  const canonicalHost = getCanonicalRequestHost(request, requestUrl)
+  const isAdminHost = canonicalHost === 'admin.webfuengirola.com'
   const next = isAdminHost
     ? sanitizeInternalRedirect(requestUrl.searchParams.get('next'), {
         fallback: '/paneladmin/inicio',
         allowedPrefixes: ['/paneladmin'],
       })
     : sanitizeClientDestination(requestUrl.searchParams.get('next'))
-  const appUrl = getAppBaseUrl(request, requestUrl)
+  const appUrl = getAppBaseUrl(requestUrl, canonicalHost)
   const successUrl = new URL(next, appUrl)
   const successResponse = NextResponse.redirect(successUrl)
 

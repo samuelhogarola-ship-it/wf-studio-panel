@@ -15,7 +15,7 @@ function request(path = '/api/posts') {
   }
 }
 
-function loadSessionMiddleware(role) {
+function loadSessionMiddleware(role, { authenticated = true } = {}) {
   let signedOut = 0
   const module = loadProjectModule('src/lib/supabase/middleware.ts', {
     '@/lib/env': { getPublicEnv: () => ({ supabaseUrl: 'https://supabase.example', supabaseKey: 'public-key' }) },
@@ -24,7 +24,9 @@ function loadSessionMiddleware(role) {
       createServerClient(_url, _key, options) {
         return {
           auth: {
-            async getUser() { return { data: { user: { id: 'user-client', email: 'client@example.test' } } } },
+            async getUser() {
+              return { data: { user: authenticated ? { id: 'user-client', email: 'client@example.test' } : null } }
+            },
             async signOut() {
               signedOut += 1
               options.cookies.setAll([{ name: 'sb-session', value: '', options: { path: '/', maxAge: 0 } }])
@@ -68,6 +70,17 @@ test('admin-host session middleware preserves an administrator session', async (
   const response = await session.updateSession(request('/paneladmin/inicio'), { requiredAuthenticatedRole: 'admin' })
 
   assert.equal(response.status, 200)
+  assert.equal(session.signedOut(), 0)
+})
+
+test('admin-only static Blogger assets are non-discoverable without a session', async () => {
+  const session = loadSessionMiddleware(null, { authenticated: false })
+  const response = await session.updateSession(request('/blogger/index.html'), {
+    requiredAuthenticatedRole: 'admin',
+    requireAuthentication: true,
+  })
+
+  assert.equal(response.status, 404)
   assert.equal(session.signedOut(), 0)
 })
 
@@ -155,5 +168,35 @@ test('admin callback retains an administrator exchange', async () => {
   const response = await setup.route.GET(new Request(url, { headers: { host: 'admin.webfuengirola.com' } }))
 
   assert.equal(response.headers.get('location'), 'https://admin.webfuengirola.com/paneladmin/inicio')
+  assert.equal(setup.signedOut(), 0)
+})
+
+test('admin callback ignores a conflicting forwarded portal host and still rejects a client exchange', async () => {
+  const setup = loadCallback('client')
+  const url = new URL('https://admin.webfuengirola.com/auth/callback?code=valid&next=%2Fpaneladmin%2Finicio')
+  const response = await setup.route.GET(new Request(url, {
+    headers: {
+      host: 'admin.webfuengirola.com',
+      'x-forwarded-host': 'portal.webfuengirola.com',
+      'x-forwarded-proto': 'https',
+    },
+  }))
+
+  assert.equal(response.headers.get('location'), 'https://admin.webfuengirola.com/paneladmin?error=unauthorized')
+  assert.equal(setup.signedOut(), 1)
+})
+
+test('portal callback ignores a conflicting forwarded admin host', async () => {
+  const setup = loadCallback('client')
+  const url = new URL('https://portal.webfuengirola.com/auth/callback?code=valid&next=%2Fpaneladmin%2Finicio')
+  const response = await setup.route.GET(new Request(url, {
+    headers: {
+      host: 'portal.webfuengirola.com',
+      'x-forwarded-host': 'admin.webfuengirola.com',
+      'x-forwarded-proto': 'https',
+    },
+  }))
+
+  assert.equal(response.headers.get('location'), 'https://portal.webfuengirola.com/cliente/dashboard')
   assert.equal(setup.signedOut(), 0)
 })

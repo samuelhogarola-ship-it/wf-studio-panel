@@ -7,6 +7,7 @@ import type { Database } from '@/lib/supabase/types'
 
 type SessionUpdateOptions = {
   requiredAuthenticatedRole?: 'admin'
+  requireAuthentication?: boolean
 }
 
 export async function updateSession(request: NextRequest, options: SessionUpdateOptions = {}) {
@@ -38,6 +39,10 @@ export async function updateSession(request: NextRequest, options: SessionUpdate
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  if (!user && options.requireAuthentication) {
+    return new NextResponse(null, { status: 404 })
+  }
 
   if (user && options.requiredAuthenticatedRole) {
     const { data: profile } = await supabase

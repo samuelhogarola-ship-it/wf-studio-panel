@@ -9,11 +9,15 @@ function denied() {
   return Object.assign(new Error('No tienes acceso a este Blogger.'), { status: 403 })
 }
 
-export async function authorizeBloggerSite(siteKey: string) {
+export async function authorizeBloggerSite(
+  siteKey: string,
+  options: { allowedRoles?: Array<'client' | 'admin'> } = {},
+) {
   const identity = await getOptionalIdentity()
   if (!identity) throw Object.assign(new Error('Inicia sesión para usar Blogger.'), { status: 401 })
+  const allowedRoles = options.allowedRoles ?? ['client', 'admin']
+  if ((identity.role !== 'client' && identity.role !== 'admin') || !allowedRoles.includes(identity.role)) throw denied()
   const site = getBloggerSite(siteKey)
-  if (!['client', 'admin'].includes(identity.role)) throw denied()
 
   const db = getSupabaseAdminClient()
   let clientId: string | null = null
