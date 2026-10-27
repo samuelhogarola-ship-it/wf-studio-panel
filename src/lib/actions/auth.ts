@@ -35,6 +35,18 @@ export async function adminLoginAction(_prevState: AuthFormState, formData: Form
     return { error: 'No se pudo iniciar sesión. Revisa el email y la contraseña.' }
   }
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const { data: profile } = user
+    ? await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+    : { data: null }
+
+  if (profile?.role !== 'admin') {
+    await supabase.auth.signOut()
+    return { error: 'No se pudo iniciar sesión. Revisa el email y la contraseña.' }
+  }
+
   redirect('/paneladmin/inicio')
 }
 

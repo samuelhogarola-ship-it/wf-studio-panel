@@ -43,6 +43,18 @@ export async function GET(request: NextRequest) {
     if (code) {
       const supabase = createSupabaseRouteClient(request, successResponse)
       await supabase.auth.exchangeCodeForSession(code)
+      if (isAdminHost) {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        const { data: profile } = user
+          ? await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle()
+          : { data: null }
+        if (profile?.role !== 'admin') {
+          await supabase.auth.signOut()
+          successResponse.headers.set('location', new URL('/paneladmin?error=unauthorized', appUrl).toString())
+        }
+      }
     }
   } catch (error) {
     console.error('[auth/callback] exchangeCodeForSession failed', {
