@@ -123,6 +123,24 @@ create table public.billing_share_links (
 
 create index billing_share_links_document_idx on public.billing_share_links(document_id, expires_at desc);
 
+create table public.ledger_income (
+  id uuid primary key default gen_random_uuid(),
+  category text not null check (char_length(trim(category)) between 1 and 120),
+  description text not null check (char_length(trim(description)) between 1 and 1000),
+  occurred_on date not null,
+  source_mode text not null check (source_mode in ('individual', 'monthly_summary')),
+  net_cents bigint not null check (net_cents > 0),
+  tax_mode text not null check (tax_mode in ('taxable', 'exempt', 'non_taxable')),
+  tax_rate_bps integer not null check (tax_rate_bps between 0 and 10000),
+  tax_cents bigint not null check (tax_cents >= 0),
+  total_cents bigint not null check (total_cents = net_cents + tax_cents),
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  check ((tax_mode = 'taxable') or (tax_rate_bps = 0 and tax_cents = 0))
+);
+
+create index ledger_income_date_idx on public.ledger_income(occurred_on desc, source_mode, category);
+
 drop trigger if exists set_billing_payment_options_updated_at on public.billing_payment_options;
 create trigger set_billing_payment_options_updated_at before update on public.billing_payment_options
 for each row execute function public.set_updated_at();
@@ -417,6 +435,26 @@ returns jsonb language sql stable security definer set search_path = public as $
   limit 1
 $$;
 
+create or replace function public.create_ledger_income(
+  p_category text, p_description text, p_occurred_on date, p_source_mode text,
+  p_net_cents bigint, p_tax_mode text, p_tax_rate_bps integer
+)
+returns public.ledger_income
+language plpgsql security definer set search_path = public, private as $$
+declare saved public.ledger_income; effective_rate integer; calculated_tax bigint;
+begin
+  if not private.is_admin() then raise exception using errcode = '42501', message = 'Not authorized'; end if;
+  if p_source_mode not in ('individual', 'monthly_summary') or p_tax_mode not in ('taxable', 'exempt', 'non_taxable')
+    or p_net_cents <= 0 or p_tax_rate_bps not between 0 and 10000 then raise exception 'Invalid income'; end if;
+  effective_rate := case when p_tax_mode = 'taxable' then p_tax_rate_bps else 0 end;
+  calculated_tax := round(p_net_cents * effective_rate / 10000.0);
+  insert into public.ledger_income(category, description, occurred_on, source_mode, net_cents, tax_mode, tax_rate_bps, tax_cents, total_cents, created_by)
+  values (trim(p_category), trim(p_description), p_occurred_on, p_source_mode, p_net_cents, p_tax_mode, effective_rate, calculated_tax, p_net_cents + calculated_tax, auth.uid())
+  returning * into saved;
+  return saved;
+end;
+$$;
+
 alter table public.billing_products enable row level security;
 alter table public.billing_documents enable row level security;
 alter table public.billing_document_lines enable row level security;
@@ -424,6 +462,7 @@ alter table public.billing_number_sequences enable row level security;
 alter table public.billing_payments enable row level security;
 alter table public.billing_payment_options enable row level security;
 alter table public.billing_share_links enable row level security;
+alter table public.ledger_income enable row level security;
 
 create policy billing_products_admin_all on public.billing_products for all to authenticated
 using (private.is_admin()) with check (private.is_admin());
@@ -449,6 +488,8 @@ using (active and exists (select 1 from public.billing_documents d where d.id = 
   and d.client_id = private.current_portal_client_id() and d.status in ('issued', 'paid')));
 create policy billing_share_links_admin_all on public.billing_share_links for all to authenticated
 using (private.is_admin()) with check (private.is_admin());
+create policy ledger_income_admin_all on public.ledger_income for all to authenticated
+using (private.is_admin()) with check (private.is_admin());
 
 revoke all on function public.save_billing_product(uuid, text, text, bigint, text, integer, boolean, integer) from public, anon;
 revoke all on function public.delete_billing_product(uuid) from public, anon;
@@ -460,6 +501,7 @@ revoke all on function public.set_billing_payment_option(uuid, text, text, text,
 revoke all on function public.create_billing_share(uuid, text, timestamptz) from public, anon;
 revoke all on function public.revoke_billing_share(uuid) from public, anon;
 revoke all on function public.resolve_billing_share(text) from public;
+revoke all on function public.create_ledger_income(text, text, date, text, bigint, text, integer) from public, anon;
 grant execute on function public.save_billing_product(uuid, text, text, bigint, text, integer, boolean, integer) to authenticated;
 grant execute on function public.delete_billing_product(uuid) to authenticated;
 grant execute on function public.save_billing_document_draft(uuid, text, uuid, text, text, text, text, text, date, date, uuid, uuid, jsonb) to authenticated;
@@ -470,7 +512,8 @@ grant execute on function public.set_billing_payment_option(uuid, text, text, te
 grant execute on function public.create_billing_share(uuid, text, timestamptz) to authenticated;
 grant execute on function public.revoke_billing_share(uuid) to authenticated;
 grant execute on function public.resolve_billing_share(text) to anon, authenticated;
+grant execute on function public.create_ledger_income(text, text, date, text, bigint, text, integer) to authenticated;
 grant select on public.billing_products, public.billing_documents, public.billing_document_lines,
-  public.billing_payments, public.billing_payment_options to authenticated;
+  public.billing_payments, public.billing_payment_options, public.ledger_income to authenticated;
 
 commit;

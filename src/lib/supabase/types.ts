@@ -111,6 +111,12 @@ export type Database = {
         Update: { revoked_at?: string | null }
         Relationships: [{ foreignKeyName: "billing_share_links_document_id_fkey"; columns: ["document_id"]; isOneToOne: false; referencedRelation: "billing_documents"; referencedColumns: ["id"] }]
       }
+      ledger_income: {
+        Row: { id: string; category: string; description: string; occurred_on: string; source_mode: string; net_cents: number; tax_mode: string; tax_rate_bps: number; tax_cents: number; total_cents: number; created_by: string | null; created_at: string }
+        Insert: { id?: string; category: string; description: string; occurred_on: string; source_mode: string; net_cents: number; tax_mode: string; tax_rate_bps: number; tax_cents: number; total_cents: number; created_by?: string | null; created_at?: string }
+        Update: never
+        Relationships: []
+      }
       activities: {
         Row: { activity_type: string; client_id: string; created_at: string; description: string | null; id: string; minutes_used: number; notify_client: boolean; pack_id: string; title: string; updated_at: string; work_date: string }
         Insert: { activity_type: string; client_id: string; created_at?: string; description?: string | null; id?: string; minutes_used: number; notify_client?: boolean; pack_id: string; title: string; updated_at?: string; work_date?: string }
@@ -217,6 +223,7 @@ export type Database = {
       create_billing_share: { Args: { p_document_id: string; p_token_hash: string; p_expires_at: string }; Returns: Database['public']['Tables']['billing_share_links']['Row'] }
       revoke_billing_share: { Args: { p_share_id: string }; Returns: boolean }
       resolve_billing_share: { Args: { p_token_hash: string }; Returns: Json }
+      create_ledger_income: { Args: { p_category: string; p_description: string; p_occurred_on: string; p_source_mode: string; p_net_cents: number; p_tax_mode: string; p_tax_rate_bps: number }; Returns: Database['public']['Tables']['ledger_income']['Row'] }
       mark_message_read: { Args: { p_message_id: string }; Returns: undefined }
       create_invoice_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string }; Returns: { id: string; number: string }[] }
       issue_invoice_with_payment_link: { Args: { p_invoice_id: string; p_payment_url: string | null }; Returns: { id: string; number: string; status: string }[] }
