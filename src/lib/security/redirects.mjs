@@ -132,8 +132,7 @@ export function resolveRequestOrigin({
     typeof forwardedProto === "string" && !forwardedProto.includes(",")
       ? forwardedProto.trim().toLowerCase()
       : "";
-  const hasForwardedHost =
-    typeof forwardedHost === "string" && forwardedHost.trim().length > 0;
+  const hasForwardedHost = forwardedHost !== null && forwardedHost !== undefined;
 
   let requestUrl;
   try {

@@ -148,15 +148,23 @@ test("resolveRequestOrigin restores HTTPS only when the proxy confirms the same 
     }),
     "https://portal.webfuengirola.com",
   );
-  assert.equal(
-    resolveRequestOrigin({
-      forwardedHost: "admin.webfuengirola.com",
-      forwardedProto: "https",
-      requestOrigin: "http://portal.webfuengirola.com",
-      allowedHosts: ["admin.webfuengirola.com", "portal.webfuengirola.com"],
-    }),
-    "http://portal.webfuengirola.com",
-  );
+  for (const forwardedHost of [
+    "admin.webfuengirola.com",
+    "",
+    "   ",
+    "portal.webfuengirola.com, admin.webfuengirola.com",
+  ]) {
+    assert.equal(
+      resolveRequestOrigin({
+        forwardedHost,
+        forwardedProto: "https",
+        requestOrigin: "http://portal.webfuengirola.com",
+        allowedHosts: ["admin.webfuengirola.com", "portal.webfuengirola.com"],
+      }),
+      "http://portal.webfuengirola.com",
+      forwardedHost,
+    );
+  }
 });
 
 test("resolveRequestOrigin falls back to configured origin when proxy headers are missing", () => {
