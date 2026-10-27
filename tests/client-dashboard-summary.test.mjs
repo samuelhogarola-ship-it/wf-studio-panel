@@ -1,7 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import React from 'react'
+import { act } from 'react'
+import { createRoot } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { JSDOM } from 'jsdom'
 
 import {
   loadProjectModule,
@@ -12,6 +15,7 @@ import {
 } from './helpers/project-harness.mjs'
 
 const componentPath = 'src/components/client/rotating-analytics-summary.tsx'
+const scrollResetPath = 'src/components/client/dashboard-scroll-reset.tsx'
 const dashboardPath = 'src/app/cliente/(protected)/dashboard/page.tsx'
 
 test('rotator advances after six seconds and manual controls wrap in both directions', () => {
@@ -80,17 +84,150 @@ test('analytics summary renders one public metric with accessible controls and a
   const { RotatingAnalyticsSummary } = loadProjectModule(componentPath)
   const html = renderToStaticMarkup(React.createElement(RotatingAnalyticsSummary, {
     intervalMs: 6_000,
-    summaries: [{ projectSlug: 'mi-web', projectName: 'Mi Web', pageviews: 120, visitors: 80, visits: 95 }],
+    locale: 'en',
+    summaries: [{
+      projectSlug: 'sportmassagefuengirola',
+      projectName: 'Sport Massage',
+      pageviews: 120,
+      visitors: 80,
+      visits: 95,
+      languageTrafficTotal: 100,
+      languages: [
+        { code: 'es', label: 'Español', value: 60, color: '#ef4444' },
+        { code: 'en', label: 'English', value: 30, color: '#22c55e' },
+        { code: 'fi', label: 'Suomi', value: 10, color: '#3b82f6' },
+      ],
+    }],
   }))
 
-  assert.match(html, /Mi Web/)
-  assert.match(html, /Páginas vistas/)
+  assert.match(html, /Sport Massage/)
+  assert.match(html, /Page views/)
   assert.match(html, />120</)
-  assert.match(html, /href="\/cliente\/proyectos\/mi-web\/estadisticas"/)
-  for (const label of ['Métrica anterior', 'Pausar rotación', 'Métrica siguiente']) {
+  assert.match(html, /href="\/cliente\/proyectos\/sportmassagefuengirola\/estadisticas"/)
+  assert.match(html, /Traffic by page language/)
+  assert.match(html, /Based on the language version recorded by the website\./)
+  assert.match(html, /Spanish[^]*60/)
+  assert.match(html, /English[^]*30/)
+  assert.match(html, /Finnish[^]*10/)
+  assert.match(html, /background-color:#ef4444[^]*width:60%/)
+  assert.match(html, /background-color:#22c55e[^]*width:30%/)
+  assert.match(html, /background-color:#3b82f6[^]*width:10%/)
+  for (const label of ['Previous metric', 'Pause rotation', 'Next metric']) {
     assert.match(html, new RegExp(`aria-label="${label}"`))
   }
   assert.doesNotMatch(html, /registry|UMAMI|credential|endpoint/i)
+})
+
+test('analytics language diagram keeps an honest empty state', () => {
+  const { RotatingAnalyticsSummary } = loadProjectModule(componentPath)
+  const html = renderToStaticMarkup(React.createElement(RotatingAnalyticsSummary, {
+    summaries: [{
+      projectSlug: 'mi-web', projectName: 'Mi Web', pageviews: 1, visitors: 1, visits: 1,
+      languageTrafficTotal: 0, languages: [],
+    }],
+  }))
+
+  assert.match(html, /Todavía no hay datos del idioma de las páginas/)
+})
+
+test('top-three language percentages retain all tracked languages as the denominator', () => {
+  const { RotatingAnalyticsSummary } = loadProjectModule(componentPath)
+  const html = renderToStaticMarkup(React.createElement(RotatingAnalyticsSummary, {
+    locale: 'en',
+    summaries: [{
+      projectSlug: 'four-languages', projectName: 'Four Languages',
+      pageviews: 1, visitors: 1, visits: 1, languageTrafficTotal: 100,
+      languages: [
+        { code: 'es', label: 'Español', value: 40, color: '#ef4444' },
+        { code: 'en', label: 'English', value: 30, color: '#22c55e' },
+        { code: 'fi', label: 'Suomi', value: 20, color: '#3b82f6' },
+      ],
+    }],
+  }))
+
+  assert.match(html, /background-color:#ef4444[^]*width:40%/)
+  assert.match(html, /background-color:#22c55e[^]*width:30%/)
+  assert.match(html, /background-color:#3b82f6[^]*width:20%/)
+  assert.doesNotMatch(html, /44%|33%|22%/)
+})
+
+test('dashboard scroll reset keeps a 390px post-login viewport at the top after restoration', async () => {
+  const previousWindow = globalThis.window
+  const previousDocument = globalThis.document
+  const previousActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT
+  const dom = new JSDOM('<div id="root"></div>', { url: 'https://portal.example.test/cliente/dashboard' })
+  Object.defineProperty(dom.window, 'innerWidth', { configurable: true, value: 390 })
+  const calls = []
+  dom.window.scrollTo = (...args) => calls.push(args)
+  let animationFrame
+  dom.window.requestAnimationFrame = (callback) => {
+    animationFrame = callback
+    return 7
+  }
+  dom.window.cancelAnimationFrame = () => {}
+  dom.window.matchMedia = (query) => ({
+    matches: query === '(max-width: 1023px)',
+    media: query,
+    onchange: null,
+    addListener() {},
+    removeListener() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent() { return false },
+  })
+
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+
+  try {
+    const { DashboardScrollReset } = loadProjectModule(scrollResetPath)
+    const root = createRoot(dom.window.document.getElementById('root'))
+    await act(async () => root.render(React.createElement(DashboardScrollReset)))
+    assert.deepEqual(calls, [[0, 0]])
+    await act(async () => animationFrame())
+    assert.deepEqual(calls, [[0, 0], [0, 0]])
+    await act(async () => root.unmount())
+  } finally {
+    globalThis.window = previousWindow
+    globalThis.document = previousDocument
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment
+    dom.window.close()
+  }
+})
+
+test('Sport Massage dashboard passes its forced English locale to analytics', async () => {
+  let localeReads = 0
+  const Page = loadProjectModule(dashboardPath, {
+    '@/lib/data/projects': {
+      getClientPortalContext: async () => ({
+        client,
+        projects: [{ slug: 'sportmassagefuengirola', domain: 'sportmassagefuengirola.com' }],
+      }),
+    },
+    '@/lib/data/client': {
+      getClientDashboardData: async () => ({
+        notifications: [], messages: [], reports: [], closedPacks: [], pendingItems: [],
+        hoursPacks: [], activities: [], summaryMap: new Map(), unreadMessageCount: 0,
+      }),
+      getClientFacturasData: async () => [],
+    },
+    '@/lib/analytics/client-summary': { getClientAnalyticsSummaries: async () => [] },
+    '@/lib/locale': { getLocale: async () => { localeReads += 1; return 'es' } },
+    '@/components/client/rotating-analytics-summary': {
+      RotatingAnalyticsSummary: ({ locale }) => React.createElement('section', { 'data-analytics-locale': locale }),
+    },
+    '@/components/client/dashboard-scroll-reset': { DashboardScrollReset: () => null },
+  }).default
+
+  const html = renderToStaticMarkup(await Page())
+
+  assert.match(html, /data-analytics-locale="en"/)
+  for (const value of ['Hello, Ana', 'Updates', 'Messages', 'Reports', 'No active services yet.', 'Recent activity']) {
+    assert.match(html, new RegExp(value.replace('.', '\\.')))
+  }
+  assert.doesNotMatch(html, /Hola,|Novedades|Mensajes|Informes|Actividad reciente/)
+  assert.equal(localeReads, 0)
 })
 
 test('shared dashboard keeps existing content and separates notifications, messages and reports', async () => {
@@ -116,6 +253,9 @@ test('shared dashboard keeps existing content and separates notifications, messa
     },
     '@/lib/auth': { requireClientAccess: async () => ({ userId: 'session-client', email: client.email, role: 'client', client }) },
     '@/lib/supabase/server': { createSupabaseServerClient: async () => db },
+    '@/components/client/dashboard-scroll-reset': {
+      DashboardScrollReset: () => React.createElement('span', { 'data-dashboard-scroll-reset': 'mounted' }),
+    },
   }
   const Page = loadProjectModule(dashboardPath, mocks).default
   const html = renderToStaticMarkup(await Page())
@@ -123,6 +263,7 @@ test('shared dashboard keeps existing content and separates notifications, messa
   for (const value of ['Hola, Ana', 'Novedades', 'Nueva entrega', 'Estadísticas', 'Mensajes', 'Mensaje privado', 'Informes', 'Informe mensual', 'Actividad reciente']) {
     assert.match(html, new RegExp(value))
   }
+  assert.match(html, /data-dashboard-scroll-reset="mounted"/)
   for (const href of ['/cliente/mensajeria', '/cliente/informes', '/cliente/servicios?new=1']) {
     assert.match(html, new RegExp(`href="${href.replace('?', '\\?')}"`))
   }

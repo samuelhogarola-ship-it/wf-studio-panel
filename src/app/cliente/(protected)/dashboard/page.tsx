@@ -1,8 +1,11 @@
 import Link from 'next/link'
+import { DashboardScrollReset } from '@/components/client/dashboard-scroll-reset'
 import { RotatingAnalyticsSummary } from '@/components/client/rotating-analytics-summary'
 import { getClientAnalyticsSummaries } from '@/lib/analytics/client-summary'
 import { getClientDashboardData, getClientFacturasData } from '@/lib/data/client'
 import { getClientPortalContext } from '@/lib/data/projects'
+import { clientDashboardHomeTranslations, type Locale } from '@/lib/i18n'
+import { getLocale } from '@/lib/locale'
 import { formatDate, formatDuration } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -25,6 +28,12 @@ function isExpired(renewalDate: string | null) {
 
 export default async function ClientDashboardPage() {
   const context = await getClientPortalContext()
+  const isSportMassage = context.projects.some((project) => (
+    project.slug === 'sportmassagefuengirola' || project.domain === 'sportmassagefuengirola.com'
+  ))
+  const locale: Locale = isSportMassage ? 'en' : await getLocale()
+  const copy = clientDashboardHomeTranslations[locale]
+  const numberLocale = locale === 'en' ? 'en-GB' : 'es-ES'
   const [data, invoices, analyticsSummaries] = await Promise.all([
     getClientDashboardData(context.client.id),
     getClientFacturasData(context.client.id),
@@ -38,18 +47,19 @@ export default async function ClientDashboardPage() {
 
   return (
     <>
+      <DashboardScrollReset />
       <div className="mb-8">
         <h1 className="text-2xl font-black tracking-tight text-foreground">
-          Hola, {context.client.name}
+          {copy.greeting}, {context.client.name}
         </h1>
-        <p className="mt-1 text-slate-500">Estado de tus servicios con WF-Studio.</p>
+        <p className="mt-1 text-slate-500">{copy.status}</p>
       </div>
 
       <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <section aria-labelledby="news-heading" className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 id="news-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Novedades</h2>
+          <h2 id="news-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{copy.news}</h2>
           {data.notifications.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">No hay novedades disponibles todavía.</p>
+            <p className="mt-4 text-sm text-slate-500">{copy.noNews}</p>
           ) : (
             <ul className="mt-3 space-y-3">
               {data.notifications.slice(0, 3).map((notification) => (
@@ -62,32 +72,32 @@ export default async function ClientDashboardPage() {
           )}
         </section>
 
-        <RotatingAnalyticsSummary summaries={analyticsSummaries} intervalMs={6000} />
+        <RotatingAnalyticsSummary summaries={analyticsSummaries} intervalMs={6000} locale={locale} />
 
         <section aria-labelledby="messages-heading" className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 id="messages-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Mensajes</h2>
+          <h2 id="messages-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{copy.messages}</h2>
           {data.messages.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">No tienes mensajes recibidos.</p>
+            <p className="mt-4 text-sm text-slate-500">{copy.noMessages}</p>
           ) : (
             <>
               <p className="mt-4 text-sm font-semibold text-foreground">{data.messages[0].subject}</p>
-              <p className="mt-1 text-xs text-slate-500">{data.unreadMessageCount} sin leer</p>
+              <p className="mt-1 text-xs text-slate-500">{data.unreadMessageCount} {copy.unread}</p>
             </>
           )}
-          <Link href="/cliente/mensajeria" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">Ver mensajes →</Link>
+          <Link href="/cliente/mensajeria" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">{copy.viewMessages}</Link>
         </section>
 
         <section aria-labelledby="reports-heading" className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 id="reports-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Informes</h2>
+          <h2 id="reports-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{copy.reports}</h2>
           {data.reports.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">Todavía no hay informes disponibles.</p>
+            <p className="mt-4 text-sm text-slate-500">{copy.noReports}</p>
           ) : (
             <>
               <p className="mt-4 text-sm font-semibold text-foreground">{data.reports[0].title}</p>
-              <p className="mt-1 text-xs text-slate-500">{data.reports.length === 1 ? '1 informe reciente' : `${data.reports.length} informes recientes`}</p>
+              <p className="mt-1 text-xs text-slate-500">{data.reports.length === 1 ? `1 ${copy.recentReport}` : `${data.reports.length} ${copy.recentReports}`}</p>
             </>
           )}
-          <Link href="/cliente/informes" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">Ver informes →</Link>
+          <Link href="/cliente/informes" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">{copy.viewReports}</Link>
         </section>
       </div>
 
@@ -106,9 +116,9 @@ export default async function ClientDashboardPage() {
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-sky-900">
-                  {pendingItems.length === 1 ? 'Tienes 1 dato pendiente por enviar' : `Tienes ${pendingItems.length} datos pendientes por enviar`}
+                  {pendingItems.length === 1 ? copy.onePendingItem : `${pendingItems.length} ${copy.pendingItems}`}
                 </p>
-                <p className="text-sm text-sky-700">Ver checklist →</p>
+                <p className="text-sm text-sky-700">{copy.viewChecklist}</p>
               </div>
             </Link>
           )}
@@ -125,10 +135,10 @@ export default async function ClientDashboardPage() {
               <div className="flex-1">
                 <p className="font-semibold text-amber-900">
                   {pendingInvoices.length === 1
-                    ? `1 factura pendiente · ${pendingTotal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}`
-                    : `${pendingInvoices.length} facturas pendientes · ${pendingTotal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}`}
+                    ? `1 ${copy.onePendingInvoice} · ${pendingTotal.toLocaleString(numberLocale, { style: 'currency', currency: 'EUR' })}`
+                    : `${pendingInvoices.length} ${copy.pendingInvoices} · ${pendingTotal.toLocaleString(numberLocale, { style: 'currency', currency: 'EUR' })}`}
                 </p>
-                <p className="text-sm text-amber-700">Ver facturas →</p>
+                <p className="text-sm text-amber-700">{copy.viewInvoices}</p>
               </div>
             </Link>
           )}
@@ -140,8 +150,8 @@ export default async function ClientDashboardPage() {
                 </svg>
               </div>
               <div>
-                <p className="font-semibold text-red-900">{pack.name} · Expirado el {formatDate(pack.renewal_date!)}</p>
-                <p className="text-sm text-red-700">Contacta con el estudio para renovar.</p>
+                <p className="font-semibold text-red-900">{pack.name} · {copy.expiredOn} {formatDate(pack.renewal_date!, locale)}</p>
+                <p className="text-sm text-red-700">{copy.renewContact}</p>
               </div>
             </div>
           ))}
@@ -151,7 +161,7 @@ export default async function ClientDashboardPage() {
       {/* Hours bonos */}
       {data.hoursPacks.length > 0 && (
         <section className="mb-8">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Bonos de horas</h2>
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{copy.hourPacks}</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {data.hoursPacks.map((pack) => {
               const summary = data.summaryMap.get(pack.id)
@@ -164,19 +174,19 @@ export default async function ClientDashboardPage() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <p className="font-bold text-foreground">{pack.name}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">Bono de horas</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{copy.hourPack}</p>
                     </div>
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Activo</span>
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">{copy.active}</span>
                   </div>
                   <div>
                     <div className="flex justify-between text-sm mb-1.5">
-                      <span className="text-slate-500">Usadas: <span className="font-semibold text-foreground">{formatDuration(used)}</span></span>
-                      <span className="text-slate-500">Restantes: <span className={`font-semibold ${remaining === 0 ? 'text-red-600' : 'text-brand'}`}>{formatDuration(remaining)}</span></span>
+                      <span className="text-slate-500">{copy.used}: <span className="font-semibold text-foreground">{formatDuration(used)}</span></span>
+                      <span className="text-slate-500">{copy.remaining}: <span className={`font-semibold ${remaining === 0 ? 'text-red-600' : 'text-brand'}`}>{formatDuration(remaining)}</span></span>
                     </div>
                     <div className="h-2.5 w-full rounded-full bg-slate-100">
                       <div className={`h-2.5 rounded-full transition-all ${pct >= 90 ? 'bg-red-400' : pct >= 70 ? 'bg-amber-400' : 'bg-brand'}`} style={{ width: `${pct}%` }} />
                     </div>
-                    <p className="mt-1 text-right text-xs text-slate-400">{pct}% consumido de {formatDuration(total)}</p>
+                    <p className="mt-1 text-right text-xs text-slate-400">{pct}% {copy.consumedOf} {formatDuration(total)}</p>
                   </div>
                 </div>
               )
@@ -188,7 +198,7 @@ export default async function ClientDashboardPage() {
       {/* Active services (non-hours) */}
       {data.closedPacks.filter((p) => !isExpired(p.renewal_date)).length > 0 && (
         <section className="mb-8">
-          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Servicios activos</h2>
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{copy.activeServices}</h2>
           <div className="grid gap-3">
             {data.closedPacks.filter((p) => !isExpired(p.renewal_date)).map((pack) => (
               <div key={pack.id} className="rounded-2xl border border-slate-200 bg-white px-6 py-4 flex items-center justify-between gap-4">
@@ -197,8 +207,8 @@ export default async function ClientDashboardPage() {
                   {pack.notes && <p className="mt-0.5 text-sm text-slate-500 line-clamp-1">{pack.notes}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">Activo</span>
-                  {pack.renewal_date && <span className="text-xs text-slate-400 hidden sm:block">Renueva {formatDate(pack.renewal_date)}</span>}
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">{copy.active}</span>
+                  {pack.renewal_date && <span className="text-xs text-slate-400 hidden sm:block">{copy.renews} {formatDate(pack.renewal_date, locale)}</span>}
                 </div>
               </div>
             ))}
@@ -208,9 +218,9 @@ export default async function ClientDashboardPage() {
 
       {data.hoursPacks.length === 0 && data.closedPacks.length === 0 && (
         <div className="mb-8 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
-          <p className="text-slate-400 mb-3">Aún no tienes ningún servicio activo.</p>
+          <p className="text-slate-400 mb-3">{copy.noServices}</p>
           <Link href="/cliente/servicios?new=1" className="text-sm font-semibold text-brand hover:underline">
-            Solicitar un servicio →
+            {copy.requestService}
           </Link>
         </div>
       )}
@@ -218,16 +228,16 @@ export default async function ClientDashboardPage() {
       {/* Recent activity */}
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Actividad reciente</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{copy.recentActivity}</h2>
           {data.activities.length > 0 && (
             <Link href="/cliente/historial" className="text-xs font-semibold text-brand hover:underline">
-              Ver todo →
+              {copy.viewAll}
             </Link>
           )}
         </div>
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
           {data.activities.length === 0 ? (
-            <p className="px-6 py-10 text-sm text-center text-slate-400">Aún no hay actividad registrada.</p>
+            <p className="px-6 py-10 text-sm text-center text-slate-400">{copy.noActivity}</p>
           ) : (
             <div className="divide-y divide-slate-100">
               {data.activities.map((activity) => (
@@ -246,7 +256,7 @@ export default async function ClientDashboardPage() {
                   </div>
                   <div className="shrink-0 text-right">
                     {activity.minutes_used > 0 && <p className="font-semibold text-foreground">{formatDuration(activity.minutes_used)}</p>}
-                    <p className="text-xs text-slate-400">{formatDate(activity.work_date)}</p>
+                    <p className="text-xs text-slate-400">{formatDate(activity.work_date, locale)}</p>
                   </div>
                 </div>
               ))}

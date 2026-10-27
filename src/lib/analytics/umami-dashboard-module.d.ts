@@ -91,5 +91,6 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
     fetchImpl?: typeof fetch
     timeoutMs?: number
     summaryOnly?: boolean
+    includeContentLanguages?: boolean
   }): Promise<AnalyticsDashboard | AnalyticsConfigurationError>
 }

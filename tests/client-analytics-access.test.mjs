@@ -297,6 +297,17 @@ test('home analytics summaries query only valid active tools and expose public v
         visitors: { value: 123 },
         visits: { value: 210 },
       },
+      metrics: {
+        languages: [{ x: 'ru-RU', y: 999 }],
+        contentLanguageEvents: [
+          { x: 'page-language:es-ES', y: 4 },
+          { x: 'page-language:es-MX', y: 3 },
+          { x: 'page-language:en-US', y: 5 },
+          { x: 'page-language:fi', y: 2 },
+          { x: 'page-language:de-DE', y: 8 },
+          { x: 'unrelated-event', y: 999 },
+        ],
+      },
     }
   }
   const { getClientAnalyticsSummaries } = loadProjectModule('src/lib/analytics/client-summary.ts', {
@@ -315,9 +326,56 @@ test('home analytics summaries query only valid active tools and expose public v
 
   const summaries = await getClientAnalyticsSummaries(projects, { fetchDashboard })
 
-  assert.deepEqual(calls, [{ projectKey: 'webfuengirola', summaryOnly: true }])
-  assert.deepEqual(summaries, [{ projectSlug: 'my-site', projectName: 'My Site', pageviews: 321, visitors: 123, visits: 210 }])
+  assert.deepEqual(calls, [{ projectKey: 'webfuengirola', summaryOnly: true, includeContentLanguages: true }])
+  assert.deepEqual(summaries, [{
+    projectSlug: 'my-site',
+    projectName: 'My Site',
+    pageviews: 321,
+    visitors: 123,
+    visits: 210,
+    languageTrafficTotal: 22,
+    languages: [
+      { code: 'de', label: 'Deutsch', value: 8, color: '#ef4444' },
+      { code: 'es', label: 'Español', value: 7, color: '#22c55e' },
+      { code: 'en', label: 'English', value: 5, color: '#3b82f6' },
+    ],
+  }])
   assert.doesNotMatch(JSON.stringify(summaries), /webfuengirola|secret-registry-key|website-id|UMAMI|credential/i)
+})
+
+test('Sport Massage language summary keeps Spanish red, English green and Finnish blue', async () => {
+  const { getClientAnalyticsSummaries } = loadProjectModule('src/lib/analytics/client-summary.ts', {
+    '@/lib/data/projects': { getCapabilityConfigurationIssue: () => null },
+  })
+  const sport = {
+    ...configuredProject,
+    slug: 'sportmassagefuengirola',
+    name: 'Sport Massage',
+    domain: 'sportmassagefuengirola.com',
+    analytics_registry_key: 'sportmassagefuengirola',
+    capabilities: [activeAnalytics],
+  }
+
+  const summaries = await getClientAnalyticsSummaries([sport], {
+    fetchDashboard: async () => ({
+      ...analyticsResult('sportmassagefuengirola'),
+      summary: {},
+      metrics: {
+        contentLanguageEvents: [
+          { x: 'page-language:de-DE', y: 100 },
+          { x: 'page-language:en-US', y: 3 },
+          { x: 'page-language:es-ES', y: 4 },
+        ],
+      },
+    }),
+  })
+
+  assert.deepEqual(summaries[0].languages, [
+    { code: 'es', label: 'Español', value: 4, color: '#ef4444' },
+    { code: 'en', label: 'English', value: 3, color: '#22c55e' },
+    { code: 'fi', label: 'Suomi', value: 0, color: '#3b82f6' },
+  ])
+  assert.equal(summaries[0].languageTrafficTotal, 7)
 })
 
 test('home analytics summaries isolate project failures and return an empty safe result on total failure', async () => {
@@ -341,7 +399,15 @@ test('home analytics summaries isolate project failures and return an empty safe
       } }
     },
   })
-  assert.deepEqual(partial, [{ projectSlug: 'second-site', projectName: 'Second Site', pageviews: 40, visitors: 25, visits: 30 }])
+  assert.deepEqual(partial, [{
+    projectSlug: 'second-site',
+    projectName: 'Second Site',
+    pageviews: 40,
+    visitors: 25,
+    visits: 30,
+    languageTrafficTotal: 0,
+    languages: [],
+  }])
   assert.doesNotMatch(JSON.stringify(partial), /umami|secret|registry/i)
 
   const empty = await getClientAnalyticsSummaries([first, second], {

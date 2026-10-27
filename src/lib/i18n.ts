@@ -27,6 +27,78 @@ export const clientPortalTranslations = {
   },
 } as const
 
+export const clientAnalyticsTranslations = {
+  es: {
+    heading: 'Estadísticas',
+    pageviews: 'Páginas vistas',
+    visitors: 'Visitantes',
+    visits: 'Visitas',
+    period: '30 días',
+    empty: 'Todavía no hay estadísticas disponibles para tus webs.',
+    websites: 'Ver webs →',
+    previous: 'Métrica anterior',
+    next: 'Métrica siguiente',
+    pause: 'Pausar rotación',
+    pauseText: 'Pausar',
+    resume: 'Reanudar rotación',
+    resumeText: 'Reanudar',
+    reducedMotion: 'Rotación desactivada por movimiento reducido',
+    reducedMotionText: 'Movimiento reducido',
+    detail: 'Ver detalle →',
+    pageLanguage: 'Tráfico por idioma de las páginas',
+    pageLanguageEmpty: 'Todavía no hay datos del idioma de las páginas.',
+    pageLanguageNote: 'Basado en la versión de idioma registrada por la web.',
+  },
+  en: {
+    heading: 'Statistics',
+    pageviews: 'Page views',
+    visitors: 'Visitors',
+    visits: 'Visits',
+    period: '30 days',
+    empty: 'No statistics are available for your websites yet.',
+    websites: 'View websites →',
+    previous: 'Previous metric',
+    next: 'Next metric',
+    pause: 'Pause rotation',
+    pauseText: 'Pause',
+    resume: 'Resume rotation',
+    resumeText: 'Resume',
+    reducedMotion: 'Rotation disabled due to reduced motion',
+    reducedMotionText: 'Reduced motion',
+    detail: 'View details →',
+    pageLanguage: 'Traffic by page language',
+    pageLanguageEmpty: 'No page-language data is available yet.',
+    pageLanguageNote: 'Based on the language version recorded by the website.',
+  },
+} as const
+
+export const clientDashboardHomeTranslations = {
+  es: {
+    greeting: 'Hola', status: 'Estado de tus servicios con WF-Studio.',
+    news: 'Novedades', noNews: 'No hay novedades disponibles todavía.',
+    messages: 'Mensajes', noMessages: 'No tienes mensajes recibidos.', unread: 'sin leer', viewMessages: 'Ver mensajes →',
+    reports: 'Informes', noReports: 'Todavía no hay informes disponibles.', recentReport: 'informe reciente', recentReports: 'informes recientes', viewReports: 'Ver informes →',
+    onePendingItem: 'Tienes 1 dato pendiente por enviar', pendingItems: 'datos pendientes por enviar', viewChecklist: 'Ver checklist →',
+    onePendingInvoice: 'factura pendiente', pendingInvoices: 'facturas pendientes', viewInvoices: 'Ver facturas →',
+    expiredOn: 'Expirado el', renewContact: 'Contacta con el estudio para renovar.',
+    hourPacks: 'Bonos de horas', hourPack: 'Bono de horas', active: 'Activo', used: 'Usadas', remaining: 'Restantes', consumedOf: 'consumido de',
+    activeServices: 'Servicios activos', renews: 'Renueva', noServices: 'Aún no tienes ningún servicio activo.', requestService: 'Solicitar un servicio →',
+    recentActivity: 'Actividad reciente', viewAll: 'Ver todo →', noActivity: 'Aún no hay actividad registrada.',
+  },
+  en: {
+    greeting: 'Hello', status: 'Status of your WF-Studio services.',
+    news: 'Updates', noNews: 'No updates are available yet.',
+    messages: 'Messages', noMessages: 'You have no received messages.', unread: 'unread', viewMessages: 'View messages →',
+    reports: 'Reports', noReports: 'No reports are available yet.', recentReport: 'recent report', recentReports: 'recent reports', viewReports: 'View reports →',
+    onePendingItem: 'You have 1 pending item to send', pendingItems: 'pending items to send', viewChecklist: 'View checklist →',
+    onePendingInvoice: 'pending invoice', pendingInvoices: 'pending invoices', viewInvoices: 'View invoices →',
+    expiredOn: 'Expired on', renewContact: 'Contact the studio to renew.',
+    hourPacks: 'Hour packs', hourPack: 'Hour pack', active: 'Active', used: 'Used', remaining: 'Remaining', consumedOf: 'used out of',
+    activeServices: 'Active services', renews: 'Renews', noServices: 'No active services yet.', requestService: 'Request a service →',
+    recentActivity: 'Recent activity', viewAll: 'View all →', noActivity: 'No activity has been recorded yet.',
+  },
+} as const
+
 export const supportPreviewTranslations = {
   es: {
     viewAs: 'Ver como',

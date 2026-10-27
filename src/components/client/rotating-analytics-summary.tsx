@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useReducer } from 'react'
 
+import { LanguageTrafficChart } from '@/components/client/language-traffic-chart'
 import type { ClientAnalyticsSummary } from '@/lib/analytics/client-summary'
+import { clientAnalyticsTranslations, type Locale } from '@/lib/i18n'
 
 export const DEFAULT_ROTATION_INTERVAL_MS = 6_000
 
@@ -40,15 +42,16 @@ function rotationPaused(state: RotatorState) {
   return state.manualPaused || state.hoverPaused || state.focusPaused || state.reducedMotion
 }
 
-export function getRotationControlState(state: RotatorState) {
+export function getRotationControlState(state: RotatorState, locale: Locale = 'es') {
+  const copy = clientAnalyticsTranslations[locale]
   if (state.reducedMotion) return {
     disabled: true,
-    label: 'Rotación desactivada por movimiento reducido',
-    text: 'Movimiento reducido',
+    label: copy.reducedMotion,
+    text: copy.reducedMotionText,
   }
   return state.manualPaused
-    ? { disabled: false, label: 'Reanudar rotación', text: 'Reanudar' }
-    : { disabled: false, label: 'Pausar rotación', text: 'Pausar' }
+    ? { disabled: false, label: copy.resume, text: copy.resumeText }
+    : { disabled: false, label: copy.pause, text: copy.pauseText }
 }
 
 export function reduceRotatorState(state: RotatorState, action: RotatorAction): RotatorState {
@@ -82,24 +85,28 @@ export function reduceRotatorState(state: RotatorState, action: RotatorAction): 
 type RotatingAnalyticsSummaryProps = {
   summaries: readonly ClientAnalyticsSummary[]
   intervalMs?: number
+  locale?: Locale
 }
 
 export function RotatingAnalyticsSummary({
   summaries,
   intervalMs = DEFAULT_ROTATION_INTERVAL_MS,
+  locale = 'es',
 }: RotatingAnalyticsSummaryProps) {
+  const copy = clientAnalyticsTranslations[locale]
+  const numberLocale = locale === 'en' ? 'en-GB' : 'es-ES'
   const metrics = useMemo(() => summaries.flatMap((summary) => [
-    { ...summary, label: 'Páginas vistas', value: summary.pageviews },
-    { ...summary, label: 'Visitantes', value: summary.visitors },
-    { ...summary, label: 'Visitas', value: summary.visits },
-  ]), [summaries])
+    { ...summary, label: copy.pageviews, value: summary.pageviews },
+    { ...summary, label: copy.visitors, value: summary.visitors },
+    { ...summary, label: copy.visits, value: summary.visits },
+  ]), [copy, summaries])
   const [state, dispatch] = useReducer(
     reduceRotatorState,
     metrics.length,
     (itemCount) => createRotatorState(itemCount, false),
   )
   const paused = rotationPaused(state)
-  const rotationControl = getRotationControlState(state)
+  const rotationControl = getRotationControlState(state, locale)
 
   useEffect(() => {
     dispatch({ type: 'sync-items', itemCount: metrics.length })
@@ -125,9 +132,9 @@ export function RotatingAnalyticsSummary({
   if (metrics.length === 0) {
     return (
       <section aria-labelledby="analytics-summary-heading" className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 id="analytics-summary-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Estadísticas</h2>
-        <p className="mt-4 text-sm text-slate-500">Todavía no hay estadísticas disponibles para tus webs.</p>
-        <Link href="/cliente/proyectos" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">Ver webs →</Link>
+        <h2 id="analytics-summary-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{copy.heading}</h2>
+        <p className="mt-4 text-sm text-slate-500">{copy.empty}</p>
+        <Link href="/cliente/proyectos" className="mt-4 inline-block text-sm font-semibold text-brand hover:underline">{copy.websites}</Link>
       </section>
     )
   }
@@ -148,18 +155,19 @@ export function RotatingAnalyticsSummary({
     >
       <div className="flex items-start justify-between gap-4">
         <div aria-live="polite" aria-atomic="true">
-          <h2 id="analytics-summary-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Estadísticas</h2>
+          <h2 id="analytics-summary-heading" className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{copy.heading}</h2>
           <p className="mt-3 text-sm font-semibold text-slate-600">{metric.projectName}</p>
-          <p className="mt-1 text-3xl font-black text-foreground">{metric.value.toLocaleString('es-ES')}</p>
+          <p className="mt-1 text-3xl font-black text-foreground">{metric.value.toLocaleString(numberLocale)}</p>
           <p className="text-sm text-slate-500">{metric.label}</p>
         </div>
-        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">30 días</span>
+        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">{copy.period}</span>
       </div>
+      <LanguageTrafficChart languages={metric.languages} total={metric.languageTrafficTotal} locale={locale} />
       <div className="mt-4 flex items-center gap-2">
-        <button type="button" aria-label="Métrica anterior" onClick={() => dispatch({ type: 'previous', itemCount: metrics.length })} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">←</button>
+        <button type="button" aria-label={copy.previous} onClick={() => dispatch({ type: 'previous', itemCount: metrics.length })} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">←</button>
         <button type="button" aria-label={rotationControl.label} disabled={rotationControl.disabled} onClick={() => dispatch({ type: 'set-manual-paused', paused: !state.manualPaused })} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">{rotationControl.text}</button>
-        <button type="button" aria-label="Métrica siguiente" onClick={() => dispatch({ type: 'next', itemCount: metrics.length })} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">→</button>
-        <Link href={`/cliente/proyectos/${encodeURIComponent(metric.projectSlug)}/estadisticas`} className="ml-auto text-xs font-semibold text-brand hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">Ver detalle →</Link>
+        <button type="button" aria-label={copy.next} onClick={() => dispatch({ type: 'next', itemCount: metrics.length })} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">→</button>
+        <Link href={`/cliente/proyectos/${encodeURIComponent(metric.projectSlug)}/estadisticas`} className="ml-auto text-xs font-semibold text-brand hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">{copy.detail}</Link>
       </div>
     </section>
   )

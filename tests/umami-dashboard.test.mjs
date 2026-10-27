@@ -520,6 +520,50 @@ test('summary refresh skips dimension requests and uses the exact event count', 
   assert.deepEqual(requestedMetricTypes, [])
 })
 
+test('summary refresh can opt into only the complete content-language event dimension', async () => {
+  const requestedMetrics = []
+  const fetchImpl = async (input) => {
+    const url = new URL(String(input))
+    if (url.pathname === '/api/auth/login') return jsonResponse({ token: 'token' })
+    if (url.pathname.endsWith('/active')) return jsonResponse({ visitors: 2 })
+    if (url.pathname.endsWith('/events/stats')) return jsonResponse({ data: { events: 4 } })
+    if (url.pathname.endsWith('/stats')) {
+      return jsonResponse({ pageviews: 20, visitors: 8, visits: 10, bounces: 4, totaltime: 300 })
+    }
+    if (url.pathname.endsWith('/pageviews')) return jsonResponse({ pageviews: [], sessions: [] })
+    if (url.pathname.endsWith('/metrics')) {
+      requestedMetrics.push({
+        type: url.searchParams.get('type'),
+        limit: url.searchParams.get('limit'),
+      })
+      return jsonResponse([{ x: 'page-language:es-ES', y: 12 }, { x: 'page-language:en-US', y: 5 }])
+    }
+    return jsonResponse({ message: 'not found' }, 404)
+  }
+
+  const dashboard = await fetchUmamiDashboard({
+    projectKey: 'superentrenador',
+    period: 'live',
+    summaryOnly: true,
+    includeContentLanguages: true,
+    env: {
+      STAT_REPORT_UMAMI_URL: 'https://analytics.example.com',
+      STAT_REPORT_UMAMI_PASSWORD: 'secret',
+      STAT_REPORT_UMAMI_WEBSITE_ID_SUPERENTRENADOR: 'super-id',
+    },
+    fetchImpl,
+  })
+
+  assert.equal(dashboard.status, 'ok')
+  assert.deepEqual(dashboard.metrics, {
+    contentLanguageEvents: [
+      { x: 'page-language:es-ES', y: 12 },
+      { x: 'page-language:en-US', y: 5 },
+    ],
+  })
+  assert.deepEqual(requestedMetrics, [{ type: 'event', limit: '500' }])
+})
+
 test('summary refresh preserves complete dimensions and session availability', () => {
   const current = {
     status: 'ok',
