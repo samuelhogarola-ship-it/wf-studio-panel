@@ -141,6 +141,13 @@ export function resolveRequestOrigin({
   }
   const requestHost = requestUrl?.hostname.toLowerCase() ?? "";
   if (requestUrl && allowedHosts.includes(requestHost)) {
+    if (
+      requestUrl.protocol === "http:" &&
+      normalizedProto === "https" &&
+      normalizedHost === requestHost
+    ) {
+      return `https://${requestHost}`;
+    }
     return requestUrl.origin;
   }
   const trustedInternalOrigin = isTrustedInternalRequestOrigin(requestUrl?.origin);

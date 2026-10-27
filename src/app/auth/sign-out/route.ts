@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   }
   const formData = await request.formData()
   const redirectTarget = formData.get('redirect') === 'admin' ? '/paneladmin' : '/cliente'
-  const response = NextResponse.redirect(new URL(redirectTarget, appUrl))
+  const response = NextResponse.redirect(new URL(redirectTarget, appUrl), 303)
   response.cookies.set(DIRECT_BLOGGER_COOKIE, '', {
     httpOnly: true,
     secure: true,
