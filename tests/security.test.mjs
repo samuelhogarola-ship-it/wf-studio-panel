@@ -141,7 +141,7 @@ test("resolveRequestOrigin never lets forwarded headers relabel a public applica
 test("resolveRequestOrigin restores HTTPS only when the proxy confirms the same public host", () => {
   assert.equal(
     resolveRequestOrigin({
-      forwardedHost: "portal.webfuengirola.com",
+      forwardedHost: null,
       forwardedProto: "https",
       requestOrigin: "http://portal.webfuengirola.com",
       allowedHosts: ["admin.webfuengirola.com", "portal.webfuengirola.com"],

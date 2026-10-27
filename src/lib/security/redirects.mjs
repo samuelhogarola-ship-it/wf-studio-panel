@@ -132,6 +132,8 @@ export function resolveRequestOrigin({
     typeof forwardedProto === "string" && !forwardedProto.includes(",")
       ? forwardedProto.trim().toLowerCase()
       : "";
+  const hasForwardedHost =
+    typeof forwardedHost === "string" && forwardedHost.trim().length > 0;
 
   let requestUrl;
   try {
@@ -144,7 +146,7 @@ export function resolveRequestOrigin({
     if (
       requestUrl.protocol === "http:" &&
       normalizedProto === "https" &&
-      normalizedHost === requestHost
+      (!hasForwardedHost || normalizedHost === requestHost)
     ) {
       return `https://${requestHost}`;
     }

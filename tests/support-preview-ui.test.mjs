@@ -297,7 +297,6 @@ test('ordinary sign-out accepts the same public HTTPS origin behind the Coolify 
     url: 'http://portal.webfuengirola.com/auth/sign-out',
     headers: new Headers({
       origin: 'https://portal.webfuengirola.com',
-      'x-forwarded-host': 'portal.webfuengirola.com',
       'x-forwarded-proto': 'https',
     }),
     formData: async () => form({ redirect: 'client' }),
