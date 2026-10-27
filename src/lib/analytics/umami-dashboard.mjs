@@ -387,7 +387,7 @@ export async function fetchUmamiDashboard({
   fetchImpl = fetch,
   timeoutMs = 8_000,
   summaryOnly = false,
-  includeLanguages = false,
+  includeContentLanguages = false,
 }) {
   const project = getAnalyticsProject(projectKey, env)
   const isAgama = project.source === 'agama'
@@ -436,18 +436,19 @@ export async function fetchUmamiDashboard({
     fetchEventSummary({ baseUrl, websiteId, token, range, fetchImpl, timeoutMs }),
   ])
   const metricsPromise = summaryOnly
-    ? includeLanguages
+    ? includeContentLanguages
       ? fetchMetric({
           baseUrl,
           websiteId,
           token,
           range,
-          types: METRIC_TYPES.languages,
+          types: METRIC_TYPES.events,
           fetchImpl,
           timeoutMs,
+          limit: 500,
         })
-        .then((languages) => ({ languages }))
-        .catch(() => ({ languages: [] }))
+        .then((contentLanguageEvents) => ({ contentLanguageEvents }))
+        .catch(() => ({ contentLanguageEvents: [] }))
       : Promise.resolve({})
     : Promise.allSettled([
         fetchMetric({ baseUrl, websiteId, token, range, types: ['url', 'path'], fetchImpl, timeoutMs }),

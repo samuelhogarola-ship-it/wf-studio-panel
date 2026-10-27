@@ -84,6 +84,7 @@ test('analytics summary renders one public metric with accessible controls and a
   const { RotatingAnalyticsSummary } = loadProjectModule(componentPath)
   const html = renderToStaticMarkup(React.createElement(RotatingAnalyticsSummary, {
     intervalMs: 6_000,
+    locale: 'en',
     summaries: [{
       projectSlug: 'sportmassagefuengirola',
       projectName: 'Sport Massage',
@@ -99,17 +100,18 @@ test('analytics summary renders one public metric with accessible controls and a
   }))
 
   assert.match(html, /Sport Massage/)
-  assert.match(html, /Páginas vistas/)
+  assert.match(html, /Page views/)
   assert.match(html, />120</)
   assert.match(html, /href="\/cliente\/proyectos\/sportmassagefuengirola\/estadisticas"/)
-  assert.match(html, /Tráfico por idioma/)
-  assert.match(html, /Español[^]*60/)
+  assert.match(html, /Traffic by page language/)
+  assert.match(html, /Based on the language version recorded by the website\./)
+  assert.match(html, /Spanish[^]*60/)
   assert.match(html, /English[^]*30/)
-  assert.match(html, /Suomi[^]*10/)
+  assert.match(html, /Finnish[^]*10/)
   assert.match(html, /background-color:#ef4444[^]*width:60%/)
   assert.match(html, /background-color:#22c55e[^]*width:30%/)
   assert.match(html, /background-color:#3b82f6[^]*width:10%/)
-  for (const label of ['Métrica anterior', 'Pausar rotación', 'Métrica siguiente']) {
+  for (const label of ['Previous metric', 'Pause rotation', 'Next metric']) {
     assert.match(html, new RegExp(`aria-label="${label}"`))
   }
   assert.doesNotMatch(html, /registry|UMAMI|credential|endpoint/i)
@@ -123,16 +125,23 @@ test('analytics language diagram keeps an honest empty state', () => {
     }],
   }))
 
-  assert.match(html, /Todavía no hay tráfico por idioma/)
+  assert.match(html, /Todavía no hay datos del idioma de las páginas/)
 })
 
-test('dashboard scroll reset moves a mobile viewport to the top after mount', async () => {
+test('dashboard scroll reset keeps a 390px post-login viewport at the top after restoration', async () => {
   const previousWindow = globalThis.window
   const previousDocument = globalThis.document
   const previousActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT
   const dom = new JSDOM('<div id="root"></div>', { url: 'https://portal.example.test/cliente/dashboard' })
+  Object.defineProperty(dom.window, 'innerWidth', { configurable: true, value: 390 })
   const calls = []
   dom.window.scrollTo = (...args) => calls.push(args)
+  let animationFrame
+  dom.window.requestAnimationFrame = (callback) => {
+    animationFrame = callback
+    return 7
+  }
+  dom.window.cancelAnimationFrame = () => {}
   dom.window.matchMedia = (query) => ({
     matches: query === '(max-width: 1023px)',
     media: query,
@@ -153,6 +162,8 @@ test('dashboard scroll reset moves a mobile viewport to the top after mount', as
     const root = createRoot(dom.window.document.getElementById('root'))
     await act(async () => root.render(React.createElement(DashboardScrollReset)))
     assert.deepEqual(calls, [[0, 0]])
+    await act(async () => animationFrame())
+    assert.deepEqual(calls, [[0, 0], [0, 0]])
     await act(async () => root.unmount())
   } finally {
     globalThis.window = previousWindow
@@ -160,6 +171,40 @@ test('dashboard scroll reset moves a mobile viewport to the top after mount', as
     globalThis.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment
     dom.window.close()
   }
+})
+
+test('Sport Massage dashboard passes its forced English locale to analytics', async () => {
+  let localeReads = 0
+  const Page = loadProjectModule(dashboardPath, {
+    '@/lib/data/projects': {
+      getClientPortalContext: async () => ({
+        client,
+        projects: [{ slug: 'sportmassagefuengirola', domain: 'sportmassagefuengirola.com' }],
+      }),
+    },
+    '@/lib/data/client': {
+      getClientDashboardData: async () => ({
+        notifications: [], messages: [], reports: [], closedPacks: [], pendingItems: [],
+        hoursPacks: [], activities: [], summaryMap: new Map(), unreadMessageCount: 0,
+      }),
+      getClientFacturasData: async () => [],
+    },
+    '@/lib/analytics/client-summary': { getClientAnalyticsSummaries: async () => [] },
+    '@/lib/locale': { getLocale: async () => { localeReads += 1; return 'es' } },
+    '@/components/client/rotating-analytics-summary': {
+      RotatingAnalyticsSummary: ({ locale }) => React.createElement('section', { 'data-analytics-locale': locale }),
+    },
+    '@/components/client/dashboard-scroll-reset': { DashboardScrollReset: () => null },
+  }).default
+
+  const html = renderToStaticMarkup(await Page())
+
+  assert.match(html, /data-analytics-locale="en"/)
+  for (const value of ['Hello, Ana', 'Updates', 'Messages', 'Reports', 'No active services yet.', 'Recent activity']) {
+    assert.match(html, new RegExp(value.replace('.', '\\.')))
+  }
+  assert.doesNotMatch(html, /Hola,|Novedades|Mensajes|Informes|Actividad reciente/)
+  assert.equal(localeReads, 0)
 })
 
 test('shared dashboard keeps existing content and separates notifications, messages and reports', async () => {

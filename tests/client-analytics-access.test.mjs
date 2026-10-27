@@ -298,12 +298,14 @@ test('home analytics summaries query only valid active tools and expose public v
         visits: { value: 210 },
       },
       metrics: {
-        languages: [
-          { x: 'es-ES', y: 4 },
-          { x: 'es-MX', y: 3 },
-          { x: 'en-US', y: 5 },
-          { x: 'fi', y: 2 },
-          { x: 'de-DE', y: 8 },
+        languages: [{ x: 'ru-RU', y: 999 }],
+        contentLanguageEvents: [
+          { x: 'page-language:es-ES', y: 4 },
+          { x: 'page-language:es-MX', y: 3 },
+          { x: 'page-language:en-US', y: 5 },
+          { x: 'page-language:fi', y: 2 },
+          { x: 'page-language:de-DE', y: 8 },
+          { x: 'unrelated-event', y: 999 },
         ],
       },
     }
@@ -324,7 +326,7 @@ test('home analytics summaries query only valid active tools and expose public v
 
   const summaries = await getClientAnalyticsSummaries(projects, { fetchDashboard })
 
-  assert.deepEqual(calls, [{ projectKey: 'webfuengirola', summaryOnly: true, includeLanguages: true }])
+  assert.deepEqual(calls, [{ projectKey: 'webfuengirola', summaryOnly: true, includeContentLanguages: true }])
   assert.deepEqual(summaries, [{
     projectSlug: 'my-site',
     projectName: 'My Site',
@@ -358,10 +360,10 @@ test('Sport Massage language summary keeps Spanish red, English green and Finnis
       ...analyticsResult('sportmassagefuengirola'),
       summary: {},
       metrics: {
-        languages: [
-          { x: 'de-DE', y: 100 },
-          { x: 'en-US', y: 3 },
-          { x: 'es-ES', y: 4 },
+        contentLanguageEvents: [
+          { x: 'page-language:de-DE', y: 100 },
+          { x: 'page-language:en-US', y: 3 },
+          { x: 'page-language:es-ES', y: 4 },
         ],
       },
     }),

@@ -24,7 +24,7 @@ type SummaryDashboard = Awaited<ReturnType<typeof fetchUmamiDashboard>>
 type SummaryFetcher = (options: {
   projectKey: string
   summaryOnly: true
-  includeLanguages: true
+  includeContentLanguages: true
 }) => Promise<SummaryDashboard>
 
 type ClientAnalyticsSummaryOptions = {
@@ -55,6 +55,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
   zh: '中文',
 }
 const SPORT_LANGUAGE_CODES = ['es', 'en', 'fi'] as const
+const CONTENT_LANGUAGE_EVENT_PREFIX = 'page-language:'
 
 function normalizeLanguageCode(value: unknown) {
   if (typeof value !== 'string') return null
@@ -91,6 +92,14 @@ export function buildClientLanguageTraffic(
   }))
 }
 
+function contentLanguageRows(rows: readonly { x?: unknown; y?: unknown }[]) {
+  return rows.flatMap((row) => (
+    typeof row.x === 'string' && row.x.startsWith(CONTENT_LANGUAGE_EVENT_PREFIX)
+      ? [{ x: row.x.slice(CONTENT_LANGUAGE_EVENT_PREFIX.length), y: row.y }]
+      : []
+  ))
+}
+
 export async function getClientAnalyticsSummaries(
   projects: readonly ProjectWithCapabilities[],
   { fetchDashboard = fetchUmamiDashboard }: ClientAnalyticsSummaryOptions = {},
@@ -111,7 +120,7 @@ export async function getClientAnalyticsSummaries(
     const dashboard = await fetchDashboard({
       projectKey: project.analytics_registry_key!,
       summaryOnly: true,
-      includeLanguages: true,
+      includeContentLanguages: true,
     })
     if (dashboard.status !== 'ok') return null
     const isSportMassage = project.slug === 'sportmassagefuengirola' ||
@@ -123,7 +132,9 @@ export async function getClientAnalyticsSummaries(
       visitors: publicMetricValue(dashboard.summary.visitors?.value),
       visits: publicMetricValue(dashboard.summary.visits?.value),
       languages: buildClientLanguageTraffic(
-        Array.isArray(dashboard.metrics?.languages) ? dashboard.metrics.languages : [],
+        contentLanguageRows(Array.isArray(dashboard.metrics?.contentLanguageEvents)
+          ? dashboard.metrics.contentLanguageEvents
+          : []),
         isSportMassage ? SPORT_LANGUAGE_CODES : undefined,
       ),
     }

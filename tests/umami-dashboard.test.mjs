@@ -520,8 +520,8 @@ test('summary refresh skips dimension requests and uses the exact event count', 
   assert.deepEqual(requestedMetricTypes, [])
 })
 
-test('summary refresh can opt into only the language dimension', async () => {
-  const requestedMetricTypes = []
+test('summary refresh can opt into only the complete content-language event dimension', async () => {
+  const requestedMetrics = []
   const fetchImpl = async (input) => {
     const url = new URL(String(input))
     if (url.pathname === '/api/auth/login') return jsonResponse({ token: 'token' })
@@ -532,8 +532,11 @@ test('summary refresh can opt into only the language dimension', async () => {
     }
     if (url.pathname.endsWith('/pageviews')) return jsonResponse({ pageviews: [], sessions: [] })
     if (url.pathname.endsWith('/metrics')) {
-      requestedMetricTypes.push(url.searchParams.get('type'))
-      return jsonResponse([{ x: 'es-ES', y: 12 }, { x: 'en-US', y: 5 }])
+      requestedMetrics.push({
+        type: url.searchParams.get('type'),
+        limit: url.searchParams.get('limit'),
+      })
+      return jsonResponse([{ x: 'page-language:es-ES', y: 12 }, { x: 'page-language:en-US', y: 5 }])
     }
     return jsonResponse({ message: 'not found' }, 404)
   }
@@ -542,7 +545,7 @@ test('summary refresh can opt into only the language dimension', async () => {
     projectKey: 'superentrenador',
     period: 'live',
     summaryOnly: true,
-    includeLanguages: true,
+    includeContentLanguages: true,
     env: {
       STAT_REPORT_UMAMI_URL: 'https://analytics.example.com',
       STAT_REPORT_UMAMI_PASSWORD: 'secret',
@@ -553,9 +556,12 @@ test('summary refresh can opt into only the language dimension', async () => {
 
   assert.equal(dashboard.status, 'ok')
   assert.deepEqual(dashboard.metrics, {
-    languages: [{ x: 'es-ES', y: 12 }, { x: 'en-US', y: 5 }],
+    contentLanguageEvents: [
+      { x: 'page-language:es-ES', y: 12 },
+      { x: 'page-language:en-US', y: 5 },
+    ],
   })
-  assert.deepEqual(requestedMetricTypes, ['language'])
+  assert.deepEqual(requestedMetrics, [{ type: 'event', limit: '500' }])
 })
 
 test('summary refresh preserves complete dimensions and session availability', () => {

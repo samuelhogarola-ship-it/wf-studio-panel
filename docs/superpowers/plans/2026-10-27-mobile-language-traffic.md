@@ -4,7 +4,7 @@
 
 **Goal:** Open the client dashboard at the top and show an accessible top-three language traffic diagram for each website.
 
-**Architecture:** Extend the existing Umami summary fetch with an opt-in language dimension, aggregate it into a public project summary, and render it inside the existing rotating analytics card. Reset scroll with a dashboard-scoped client component.
+**Architecture:** Extend the existing Umami summary fetch with an opt-in content-language event dimension, aggregate the explicit `page-language:<code>` contract into a public project summary, and render it inside the existing rotating analytics card. Reset scroll with a dashboard-scoped client component.
 
 **Tech Stack:** Next.js 15, React 19, TypeScript, Tailwind CSS, Node test runner.
 
@@ -27,7 +27,7 @@
 
 ---
 
-### Task 1: Opt-in Umami language summary
+### Task 1: Opt-in Umami page-language summary
 
 **Files:**
 - Modify: `src/lib/analytics/umami-dashboard.mjs`
@@ -35,9 +35,9 @@
 - Test: `tests/umami-dashboard.test.mjs`
 
 **Interfaces:**
-- Produces: `fetchUmamiDashboard({ includeLanguages?: boolean })`; with `summaryOnly: true`, `metrics.languages` is populated only when opted in.
+- Produces: `fetchUmamiDashboard({ includeContentLanguages?: boolean })`; with `summaryOnly: true`, `metrics.contentLanguageEvents` is populated only when opted in.
 
-- [x] Write a failing test proving summary-only fetches exactly the language dimension when opted in and none otherwise.
+- [x] Write a failing test proving summary-only fetches exactly the complete event-name dimension when opted in and none otherwise.
 - [x] Run the focused test and confirm the missing option fails.
 - [x] Implement the minimal opt-in request and type declaration.
 - [x] Run the focused test and confirm it passes.
@@ -49,7 +49,7 @@
 - Test: `tests/client-analytics-access.test.mjs`
 
 **Interfaces:**
-- Consumes: `metrics.languages` from Task 1.
+- Consumes: `metrics.contentLanguageEvents` from Task 1 and filters the `page-language:` contract.
 - Produces: `ClientAnalyticsSummary.languages: { code; label; value; color }[]`.
 
 - [x] Write failing tests for regional aggregation, general top-three ranking, and fixed Sport ES/EN/FI output.

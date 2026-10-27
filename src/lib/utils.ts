@@ -18,10 +18,10 @@ export function formatDuration(minutes: number | string | null | undefined): str
 // Backwards-compat alias
 export const formatHours = formatDuration
 
-export function formatDate(value: string | null | undefined) {
-  if (!value) return 'Sin fecha'
+export function formatDate(value: string | null | undefined, locale: 'es' | 'en' = 'es') {
+  if (!value) return locale === 'en' ? 'No date' : 'Sin fecha'
 
-  return new Intl.DateTimeFormat('es-ES', {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'es-ES', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
