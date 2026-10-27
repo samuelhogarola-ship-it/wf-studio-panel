@@ -58,7 +58,25 @@ test('admin host is owner-only and rejects all direct-client Blogger entry paths
   ]
 
   for (const path of denied) assert.equal((await middleware(request(path))).status, 404, path)
+  assert.equal((await middleware(request('/acceso/blogger/sportmassagefuengirola', `${ADMIN_HOST}:443`))).status, 404)
   assert.deepEqual(updated, [])
+})
+
+test('direct session lookup rejects a valid bearer outside the portal host', async () => {
+  let cookieReads = 0
+  const module = loadProjectModule('src/lib/blogger/direct-access-server.ts', {
+    'next/headers': {
+      headers: async () => new Headers({ host: ADMIN_HOST }),
+      cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
+    },
+    '@/lib/blogger/direct-access.mjs': {
+      DIRECT_BLOGGER_COOKIE: '__Host-wf_sport_blogger',
+      loadDirectBloggerConfig: () => ({ sessionSecret: 'secret' }),
+      verifyDirectBloggerSession: () => ({ siteKey: 'sportmassagefuengirola' }),
+    },
+  })
+  assert.equal(await module.getDirectBloggerSession(), null)
+  assert.equal(cookieReads, 0)
 })
 
 test('admin auth callback still permits the existing administrator panel destination', async () => {

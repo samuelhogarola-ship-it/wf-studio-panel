@@ -109,14 +109,13 @@ test('direct credential session opens the existing editor and exposes Sign out',
   assert.doesNotMatch(html, /admin\.webfuengirola\.com|paneladmin/)
 })
 
-test('authorized Sofia resolves the Sport Massage editor in the client-safe shell', async () => {
+test('an ordinary Sofia panel session still requires the independent Blogger credential', async () => {
   const { Page } = setup({ identity: identities.sofia, authorizedSites: ['sportmassagefuengirola'] })
   const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }))
 
-  assert.match(html, /Sport Massage Fuengirola/)
-  assert.match(html, /src="\/blogger\/index\.html"/)
-  assert.match(html, /href="\/cliente"[^>]*>Home</)
-  assert.doesNotMatch(html, /paneladmin|Proyectos|Clientes|Configuración/)
+  assert.match(html, /Access Blogger/)
+  assert.match(html, /type="password"/)
+  assert.doesNotMatch(html, /src="\/blogger\/index\.html"|paneladmin/)
 })
 
 test('authorized aGama client receives only the exact aGama editor', async () => {
@@ -128,13 +127,11 @@ test('authorized aGama client receives only the exact aGama editor', async () =>
   assert.doesNotMatch(html, /sportmassagefuengirola|\/blogger\/index\.html"/)
 })
 
-test('a client cannot guess another site direct route', async () => {
+test('a client cannot use its ordinary session to guess the Sport editor', async () => {
   const { Page } = setup({ identity: identities.agama, authorizedSites: ['agama'] })
-
-  await assert.rejects(
-    () => Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }),
-    { message: '404' },
-  )
+  const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }))
+  assert.match(html, /Access Blogger/)
+  assert.doesNotMatch(html, /src="\/blogger\/index\.html"/)
 })
 
 test('administrator direct access succeeds only for the exact active Blogger project', async () => {

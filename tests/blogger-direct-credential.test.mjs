@@ -21,6 +21,8 @@ test('direct Blogger session is signed, site-bound, expiring and invalidated by 
   const token = direct.createDirectBloggerSession({ secret, now, ttlMs: 8 * 60 * 60 * 1000 })
   assert.deepEqual(direct.verifyDirectBloggerSession(token, { secret, now: now + 1_000 }), {
     siteKey: 'sportmassagefuengirola',
+    audience: 'portal.webfuengirola.com',
+    scope: 'sport-blogger:legacy',
     expiresAt: now + 8 * 60 * 60 * 1000,
   })
   assert.equal(direct.verifyDirectBloggerSession(`${token}x`, { secret, now }), null)

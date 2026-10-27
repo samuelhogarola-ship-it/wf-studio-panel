@@ -4,6 +4,8 @@ import { promisify } from 'node:util'
 export const DIRECT_BLOGGER_COOKIE = '__Host-wf_sport_blogger'
 export const DIRECT_BLOGGER_SITE_KEY = 'sportmassagefuengirola'
 export const DIRECT_BLOGGER_USERNAME = 'sportmassagefuengirola@gmail.com'
+export const DIRECT_BLOGGER_AUDIENCE = 'portal.webfuengirola.com'
+export const DIRECT_BLOGGER_SCOPE = 'sport-blogger:legacy'
 
 const HASH_PREFIX = 'scrypt$v1'
 const SCRYPT_OPTIONS = Object.freeze({ N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 })
@@ -58,7 +60,13 @@ export function createDirectBloggerSession({ secret, now = Date.now(), ttlMs = 8
   if (!strong(secret) || !Number.isSafeInteger(now) || !Number.isSafeInteger(ttlMs) || ttlMs < 1 || ttlMs > 24 * 60 * 60 * 1000) {
     throw new Error('Direct Blogger session configuration is invalid')
   }
-  const payload = Buffer.from(JSON.stringify({ v: 1, siteKey: DIRECT_BLOGGER_SITE_KEY, expiresAt: now + ttlMs })).toString('base64url')
+  const payload = Buffer.from(JSON.stringify({
+    v: 1,
+    siteKey: DIRECT_BLOGGER_SITE_KEY,
+    audience: DIRECT_BLOGGER_AUDIENCE,
+    scope: DIRECT_BLOGGER_SCOPE,
+    expiresAt: now + ttlMs,
+  })).toString('base64url')
   const signature = createHmac('sha256', secret).update(payload).digest('base64url')
   return `${payload}.${signature}`
 }
@@ -71,7 +79,9 @@ export function verifyDirectBloggerSession(token, { secret, now = Date.now() }) 
   if (!safeEqual(signature, expected)) return null
   try {
     const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
-    if (claims?.v !== 1 || claims.siteKey !== DIRECT_BLOGGER_SITE_KEY || !Number.isSafeInteger(claims.expiresAt) || claims.expiresAt <= now) return null
-    return { siteKey: claims.siteKey, expiresAt: claims.expiresAt }
+    if (claims?.v !== 1 || claims.siteKey !== DIRECT_BLOGGER_SITE_KEY ||
+      claims.audience !== DIRECT_BLOGGER_AUDIENCE || claims.scope !== DIRECT_BLOGGER_SCOPE ||
+      !Number.isSafeInteger(claims.expiresAt) || claims.expiresAt <= now) return null
+    return { siteKey: claims.siteKey, audience: claims.audience, scope: claims.scope, expiresAt: claims.expiresAt }
   } catch { return null }
 }

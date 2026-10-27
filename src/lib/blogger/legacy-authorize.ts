@@ -1,6 +1,7 @@
 import { authorizeBloggerSite } from '@/lib/blogger/authorize'
 import { getDirectBloggerSession } from '@/lib/blogger/direct-access-server'
 import { getBloggerSite } from '@/lib/blogger/sites.mjs'
+import { getOptionalIdentity } from '@/lib/auth'
 
 const SPORT_MASSAGE_SITE_KEY = 'sportmassagefuengirola'
 
@@ -18,6 +19,10 @@ export async function authorizeSportBlogger() {
       project: null,
       capability: null,
     }
+  }
+  const identity = await getOptionalIdentity()
+  if (identity?.role !== 'admin') {
+    throw Object.assign(new Error('Blogger access denied'), { status: identity ? 403 : 401 })
   }
   return authorizeBloggerSite(SPORT_MASSAGE_SITE_KEY)
 }

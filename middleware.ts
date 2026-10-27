@@ -9,7 +9,7 @@ const ADMIN_HOST = 'admin.webfuengirola.com'
 const PORTAL_HOST = 'portal.webfuengirola.com'
 
 export async function middleware(request: NextRequest) {
-  const host = request.headers.get('host') ?? ''
+  const host = (request.headers.get('host') ?? '').trim().toLowerCase().split(':')[0]
   const pathname = request.nextUrl.pathname
   const hasSupportRoutingHint = Boolean(request.cookies?.get(SUPPORT_COOKIE_NAME)?.value)
 

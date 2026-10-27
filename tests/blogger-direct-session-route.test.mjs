@@ -64,3 +64,44 @@ test('logout clears only the direct Blogger session and returns to the neutral r
   assert.match(response.headers.get('set-cookie'), /__Host-wf_sport_blogger=;/)
   assert.match(response.headers.get('set-cookie'), /Max-Age=0/i)
 })
+
+test('login rejects oversized bodies before password verification', async () => {
+  let passwordChecks = 0
+  const { POST } = loadProjectModule(routePath, {
+    '@/lib/blogger/direct-access.mjs': {
+      DIRECT_BLOGGER_COOKIE: '__Host-wf_sport_blogger',
+      loadDirectBloggerConfig: () => ({ username: 'sportmassagefuengirola@gmail.com', passwordHash: 'unused', sessionSecret: 'unused' }),
+      verifyDirectBloggerPassword: async () => { passwordChecks += 1; return false },
+      createDirectBloggerSession: () => 'unused',
+    },
+  })
+  const response = await POST(new Request('https://portal.webfuengirola.com/api/blogger/direct-session', {
+    method: 'POST',
+    body: `action=login&password=${'x'.repeat(5_000)}`,
+    headers: { origin: 'https://portal.webfuengirola.com', 'content-type': 'application/x-www-form-urlencoded' },
+  }))
+  assert.equal(response.status, 413)
+  assert.equal(passwordChecks, 0)
+})
+
+test('login rate limits repeated password work per proxy-confirmed client', async () => {
+  let passwordChecks = 0
+  const { POST } = loadProjectModule(routePath, {
+    '@/lib/blogger/direct-access.mjs': {
+      DIRECT_BLOGGER_COOKIE: '__Host-wf_sport_blogger',
+      loadDirectBloggerConfig: () => ({ username: 'sportmassagefuengirola@gmail.com', passwordHash: 'unused', sessionSecret: 'unused' }),
+      verifyDirectBloggerPassword: async () => { passwordChecks += 1; return false },
+      createDirectBloggerSession: () => 'unused',
+    },
+  })
+  const attempt = () => {
+    const request = formRequest({ action: 'login', username: 'sportmassagefuengirola@gmail.com', password: 'wrong' })
+    request.headers.set('x-real-ip', '203.0.113.25')
+    return POST(request)
+  }
+  for (let index = 0; index < 10; index += 1) assert.equal((await attempt()).status, 303)
+  const blocked = await attempt()
+  assert.equal(blocked.status, 429)
+  assert.equal(blocked.headers.get('retry-after'), '300')
+  assert.equal(passwordChecks, 10)
+})

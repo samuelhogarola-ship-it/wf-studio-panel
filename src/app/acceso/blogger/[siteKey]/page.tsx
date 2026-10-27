@@ -18,12 +18,13 @@ export default async function DirectBloggerPage({
   searchParams?: Promise<{ error?: string }>
 }) {
   const [{ siteKey }, query] = await Promise.all([params, searchParams])
-  const identity = await getOptionalIdentity()
-  const directSession = siteKey === 'sportmassagefuengirola' && !identity ? await getDirectBloggerSession() : null
-  if (!identity && !directSession) {
-    if (siteKey !== 'sportmassagefuengirola') notFound()
+  const sportMassage = siteKey === 'sportmassagefuengirola'
+  const directSession = sportMassage ? await getDirectBloggerSession() : null
+  if (sportMassage && !directSession) {
     return <DirectBloggerLogin invalid={query?.error === 'invalid'} />
   }
+  const identity = sportMassage ? null : await getOptionalIdentity()
+  if (!sportMassage && !identity) notFound()
 
   let authorization
   try {
