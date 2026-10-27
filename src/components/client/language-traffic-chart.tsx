@@ -3,10 +3,11 @@ import { clientAnalyticsTranslations, type Locale } from '@/lib/i18n'
 
 type LanguageTrafficChartProps = {
   languages: readonly ClientLanguageTraffic[]
+  total: number
   locale?: Locale
 }
 
-export function LanguageTrafficChart({ languages, locale = 'es' }: LanguageTrafficChartProps) {
+export function LanguageTrafficChart({ languages, total, locale = 'es' }: LanguageTrafficChartProps) {
   const copy = clientAnalyticsTranslations[locale]
   const displayNames = new Intl.DisplayNames([locale], { type: 'language' })
   const numberLocale = locale === 'en' ? 'en-GB' : 'es-ES'
@@ -18,8 +19,6 @@ export function LanguageTrafficChart({ languages, locale = 'es' }: LanguageTraff
       </div>
     )
   }
-
-  const total = languages.reduce((sum, language) => sum + language.value, 0)
 
   return (
     <div className="mt-5 border-t border-slate-100 pt-4">

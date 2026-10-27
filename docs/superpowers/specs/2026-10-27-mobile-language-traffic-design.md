@@ -29,4 +29,3 @@ The client dashboard must start at the top after login on mobile and expose a co
 ## Approach
 
 The server analytics facade gains an explicit `includeContentLanguages` option used only by the client dashboard summary. It fetches the complete event-name dimension, accepts only `page-language:<code>` events emitted by each website, and the public summary aggregates and sanitizes those rows. The existing rotating analytics card renders the compact diagram for the currently selected project in the portal locale. A dashboard-only client component resets the real window scroll position immediately and again on the next animation frame, avoiding behavior changes on other portal pages and winning over post-login scroll restoration.
-

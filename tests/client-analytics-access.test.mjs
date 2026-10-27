@@ -333,6 +333,7 @@ test('home analytics summaries query only valid active tools and expose public v
     pageviews: 321,
     visitors: 123,
     visits: 210,
+    languageTrafficTotal: 22,
     languages: [
       { code: 'de', label: 'Deutsch', value: 8, color: '#ef4444' },
       { code: 'es', label: 'Español', value: 7, color: '#22c55e' },
@@ -374,6 +375,7 @@ test('Sport Massage language summary keeps Spanish red, English green and Finnis
     { code: 'en', label: 'English', value: 3, color: '#22c55e' },
     { code: 'fi', label: 'Suomi', value: 0, color: '#3b82f6' },
   ])
+  assert.equal(summaries[0].languageTrafficTotal, 7)
 })
 
 test('home analytics summaries isolate project failures and return an empty safe result on total failure', async () => {
@@ -403,6 +405,7 @@ test('home analytics summaries isolate project failures and return an empty safe
     pageviews: 40,
     visitors: 25,
     visits: 30,
+    languageTrafficTotal: 0,
     languages: [],
   }])
   assert.doesNotMatch(JSON.stringify(partial), /umami|secret|registry/i)

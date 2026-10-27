@@ -91,6 +91,7 @@ test('analytics summary renders one public metric with accessible controls and a
       pageviews: 120,
       visitors: 80,
       visits: 95,
+      languageTrafficTotal: 100,
       languages: [
         { code: 'es', label: 'Español', value: 60, color: '#ef4444' },
         { code: 'en', label: 'English', value: 30, color: '#22c55e' },
@@ -121,11 +122,33 @@ test('analytics language diagram keeps an honest empty state', () => {
   const { RotatingAnalyticsSummary } = loadProjectModule(componentPath)
   const html = renderToStaticMarkup(React.createElement(RotatingAnalyticsSummary, {
     summaries: [{
-      projectSlug: 'mi-web', projectName: 'Mi Web', pageviews: 1, visitors: 1, visits: 1, languages: [],
+      projectSlug: 'mi-web', projectName: 'Mi Web', pageviews: 1, visitors: 1, visits: 1,
+      languageTrafficTotal: 0, languages: [],
     }],
   }))
 
   assert.match(html, /Todavía no hay datos del idioma de las páginas/)
+})
+
+test('top-three language percentages retain all tracked languages as the denominator', () => {
+  const { RotatingAnalyticsSummary } = loadProjectModule(componentPath)
+  const html = renderToStaticMarkup(React.createElement(RotatingAnalyticsSummary, {
+    locale: 'en',
+    summaries: [{
+      projectSlug: 'four-languages', projectName: 'Four Languages',
+      pageviews: 1, visitors: 1, visits: 1, languageTrafficTotal: 100,
+      languages: [
+        { code: 'es', label: 'Español', value: 40, color: '#ef4444' },
+        { code: 'en', label: 'English', value: 30, color: '#22c55e' },
+        { code: 'fi', label: 'Suomi', value: 20, color: '#3b82f6' },
+      ],
+    }],
+  }))
+
+  assert.match(html, /background-color:#ef4444[^]*width:40%/)
+  assert.match(html, /background-color:#22c55e[^]*width:30%/)
+  assert.match(html, /background-color:#3b82f6[^]*width:20%/)
+  assert.doesNotMatch(html, /44%|33%|22%/)
 })
 
 test('dashboard scroll reset keeps a 390px post-login viewport at the top after restoration', async () => {

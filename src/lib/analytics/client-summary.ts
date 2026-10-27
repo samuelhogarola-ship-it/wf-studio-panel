@@ -11,6 +11,7 @@ export type ClientAnalyticsSummary = {
   visitors: number
   visits: number
   languages: ClientLanguageTraffic[]
+  languageTrafficTotal: number
 }
 
 export type ClientLanguageTraffic = {
@@ -63,10 +64,10 @@ function normalizeLanguageCode(value: unknown) {
   return /^[a-z]{2,3}$/.test(code) ? code : null
 }
 
-export function buildClientLanguageTraffic(
+function buildClientLanguageTrafficSummary(
   rows: readonly { x?: unknown; y?: unknown }[],
   fixedCodes?: readonly string[],
-): ClientLanguageTraffic[] {
+) {
   const totals = new Map<string, number>()
   rows.forEach((row) => {
     const code = normalizeLanguageCode(row?.x)
@@ -84,12 +85,24 @@ export function buildClientLanguageTraffic(
       .slice(0, 3)
       .map(([code]) => code)
 
-  return codes.map((code, index) => ({
-    code,
-    label: LANGUAGE_LABELS[code] || code.toUpperCase(),
-    value: totals.get(code) || 0,
-    color: LANGUAGE_COLORS[index] || LANGUAGE_COLORS[LANGUAGE_COLORS.length - 1],
-  }))
+  return {
+    languages: codes.map((code, index) => ({
+      code,
+      label: LANGUAGE_LABELS[code] || code.toUpperCase(),
+      value: totals.get(code) || 0,
+      color: LANGUAGE_COLORS[index] || LANGUAGE_COLORS[LANGUAGE_COLORS.length - 1],
+    })),
+    languageTrafficTotal: fixedCodes
+      ? fixedCodes.reduce((sum, code) => sum + (totals.get(code) || 0), 0)
+      : [...totals.values()].reduce((sum, value) => sum + value, 0),
+  }
+}
+
+export function buildClientLanguageTraffic(
+  rows: readonly { x?: unknown; y?: unknown }[],
+  fixedCodes?: readonly string[],
+): ClientLanguageTraffic[] {
+  return buildClientLanguageTrafficSummary(rows, fixedCodes).languages
 }
 
 function contentLanguageRows(rows: readonly { x?: unknown; y?: unknown }[]) {
@@ -125,18 +138,19 @@ export async function getClientAnalyticsSummaries(
     if (dashboard.status !== 'ok') return null
     const isSportMassage = project.slug === 'sportmassagefuengirola' ||
       project.domain === 'sportmassagefuengirola.com'
+    const contentLanguages = buildClientLanguageTrafficSummary(
+      contentLanguageRows(Array.isArray(dashboard.metrics?.contentLanguageEvents)
+        ? dashboard.metrics.contentLanguageEvents
+        : []),
+      isSportMassage ? SPORT_LANGUAGE_CODES : undefined,
+    )
     return {
       projectSlug: project.slug,
       projectName: project.name,
       pageviews: publicMetricValue(dashboard.summary.pageviews?.value),
       visitors: publicMetricValue(dashboard.summary.visitors?.value),
       visits: publicMetricValue(dashboard.summary.visits?.value),
-      languages: buildClientLanguageTraffic(
-        contentLanguageRows(Array.isArray(dashboard.metrics?.contentLanguageEvents)
-          ? dashboard.metrics.contentLanguageEvents
-          : []),
-        isSportMassage ? SPORT_LANGUAGE_CODES : undefined,
-      ),
+      ...contentLanguages,
     }
   }))
 

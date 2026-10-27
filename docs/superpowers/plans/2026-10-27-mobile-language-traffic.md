@@ -84,4 +84,3 @@
 - [x] Run `npm run typecheck`.
 - [x] Run `npm run build`.
 - [x] Run `git diff --check` and review the diff against the spec.
-
