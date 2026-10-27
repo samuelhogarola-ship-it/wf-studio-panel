@@ -6,6 +6,7 @@ import { loadProjectModule } from './helpers/project-harness.mjs'
 
 const routePath = 'src/app/api/blogger/direct-session/route.ts'
 const password = 'Sport-Blogger-Only-2026!'
+const customOrigin = 'https://blogger.sportmassagefuengirola.com'
 const oldEnv = { ...process.env }
 
 async function configuredRoute() {
@@ -61,6 +62,50 @@ test('accepts the public portal host reported by the trusted reverse proxy', asy
   assert.equal(response.status, 303)
   assert.equal(response.headers.get('location'), 'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola')
   assert.match(response.headers.get('set-cookie'), /__Host-wf_blogger=/)
+})
+
+test('custom Sport host creates a host-only session and returns to its clean root', async () => {
+  const { POST } = await configuredRoute()
+  const response = await POST(formRequest({
+    action: 'login',
+    username: 'sportmassagefuengirola@gmail.com',
+    password,
+  }, customOrigin))
+  assert.equal(response.status, 303)
+  assert.equal(response.headers.get('location'), `${customOrigin}/`)
+  assert.match(response.headers.get('set-cookie'), /__Host-wf_blogger=/)
+  assert.doesNotMatch(response.headers.get('set-cookie'), /Domain=/i)
+})
+
+test('Coolify proxy preserves the custom Sport origin for login and generic errors', async () => {
+  const { POST } = await configuredRoute()
+  const body = new URLSearchParams({
+    action: 'login',
+    username: 'sportmassagefuengirola@gmail.com',
+    password: 'wrong',
+  })
+  const response = await POST(new Request('http://wf-studio-panel:3000/api/blogger/direct-session', {
+    method: 'POST',
+    body,
+    headers: {
+      origin: customOrigin,
+      'content-type': 'application/x-www-form-urlencoded',
+      'x-forwarded-host': 'blogger.sportmassagefuengirola.com',
+      'x-forwarded-proto': 'https',
+    },
+  }))
+  assert.equal(response.status, 303)
+  assert.equal(response.headers.get('location'), `${customOrigin}/?error=invalid`)
+  assert.equal(response.headers.get('set-cookie'), null)
+})
+
+test('custom Sport logout clears its host-only session and remains on the branded root', async () => {
+  const { POST } = await configuredRoute()
+  const response = await POST(formRequest({ action: 'logout' }, customOrigin))
+  assert.equal(response.status, 303)
+  assert.equal(response.headers.get('location'), `${customOrigin}/`)
+  assert.match(response.headers.get('set-cookie'), /__Host-wf_blogger=;/)
+  assert.match(response.headers.get('set-cookie'), /Max-Age=0/i)
 })
 
 test('accepts Coolify internal request URLs when the browser origin is the fixed client portal', async () => {

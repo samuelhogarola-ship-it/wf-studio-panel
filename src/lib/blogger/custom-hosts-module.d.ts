@@ -1,7 +1,7 @@
 declare module '@/lib/blogger/custom-hosts.mjs' {
-  import type { SiteManifestEntry } from '@/lib/sites/manifest'
+  import type { RegisteredSite } from '@/lib/sites/registry.mjs'
 
-  export function createCustomBloggerHostMap(sites: readonly SiteManifestEntry[]): Map<string, SiteManifestEntry>
-  export function getCustomBloggerOrigin(site: SiteManifestEntry): string | null
-  export function getCustomBloggerSiteByHost(hostname: string): SiteManifestEntry | null
+  export function createCustomBloggerHostMap(sites: readonly RegisteredSite[]): Map<string, RegisteredSite>
+  export function getCustomBloggerOrigin(site: RegisteredSite): string | null
+  export function getCustomBloggerSiteByHost(hostname: string): RegisteredSite | null
 }

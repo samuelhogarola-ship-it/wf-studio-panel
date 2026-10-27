@@ -6,13 +6,19 @@ import {
   loadDirectBloggerConfig,
   verifyDirectBloggerPassword,
 } from '@/lib/blogger/direct-access.mjs'
+import { getCustomBloggerOrigin, getCustomBloggerSiteByHost } from '@/lib/blogger/custom-hosts.mjs'
 import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
 import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
+import { getSiteByKey } from '@/lib/sites/registry.mjs'
 
 export const runtime = 'nodejs'
 
 const DESTINATION = '/acceso/blogger/sportmassagefuengirola'
 const PORTAL_ORIGIN = 'https://portal.webfuengirola.com'
+const SPORT_BLOGGER_SITE_KEY = 'sportmassagefuengirola'
+const SPORT_BLOGGER_ORIGIN = getCustomBloggerOrigin(getSiteByKey(SPORT_BLOGGER_SITE_KEY))
+const SPORT_BLOGGER_HOST = SPORT_BLOGGER_ORIGIN ? new URL(SPORT_BLOGGER_ORIGIN).hostname : ''
+const ALLOWED_HOSTS = ['admin.webfuengirola.com', 'portal.webfuengirola.com', ...(SPORT_BLOGGER_HOST ? [SPORT_BLOGGER_HOST] : [])]
 const SESSION_TTL_SECONDS = 8 * 60 * 60
 const MAX_BODY_BYTES = 4_096
 const ATTEMPT_WINDOW_MS = 5 * 60 * 1000
@@ -20,11 +26,20 @@ const MAX_ATTEMPTS = 10
 const attempts = new Map<string, { count: number; resetAt: number }>()
 
 function allowedHost(url: URL) {
-  return url.hostname === 'portal.webfuengirola.com' || url.hostname === 'localhost' || url.hostname === '127.0.0.1'
+  const customSite = getCustomBloggerSiteByHost(url.hostname)
+  return url.hostname === 'portal.webfuengirola.com' || url.hostname === 'localhost' || url.hostname === '127.0.0.1' ||
+    customSite?.key === SPORT_BLOGGER_SITE_KEY
 }
 
-function redirect(url: URL, destination = DESTINATION) {
-  return new NextResponse(null, { status: 303, headers: { location: new URL(destination, url.origin).toString() } })
+function destinationFor(url: URL, error?: string) {
+  const destination = getCustomBloggerSiteByHost(url.hostname)?.key === SPORT_BLOGGER_SITE_KEY ? '/' : DESTINATION
+  const target = new URL(destination, url.origin)
+  if (error) target.searchParams.set('error', error)
+  return target
+}
+
+function redirect(url: URL, error?: string) {
+  return new NextResponse(null, { status: 303, headers: { location: destinationFor(url, error).toString() } })
 }
 
 function clientKey(request: Request) {
@@ -77,19 +92,21 @@ export async function POST(request: Request) {
   const requestUrl = new URL(request.url)
   const forwardedHost = request.headers.get('x-forwarded-host')
   const forwardedProto = request.headers.get('x-forwarded-proto')
-  const fallbackOrigin = request.headers.get('origin') === PORTAL_ORIGIN
-    ? PORTAL_ORIGIN
+  const browserOrigin = request.headers.get('origin')
+  const fallbackOrigin = browserOrigin === PORTAL_ORIGIN || (SPORT_BLOGGER_ORIGIN !== null && browserOrigin === SPORT_BLOGGER_ORIGIN)
+    ? browserOrigin
     : undefined
   const origin = resolveRequestOrigin({
     forwardedHost,
     forwardedProto,
     requestOrigin: requestUrl.origin,
     fallbackOrigin,
+    allowedHosts: ALLOWED_HOSTS,
   })
   const url = new URL(`${requestUrl.pathname}${requestUrl.search}`, origin)
   if (!allowedHost(url)) return new NextResponse(null, { status: 404 })
   try {
-    assertTrustedMutation(request, { fallbackOrigin })
+    assertTrustedMutation(request, { fallbackOrigin, allowedHosts: ALLOWED_HOSTS })
   } catch (error) {
     return NextResponse.json({ error: 'forbidden' }, { status: (error as { status?: number }).status ?? 403 })
   }
@@ -120,7 +137,7 @@ export async function POST(request: Request) {
     const username = String(form.get('username') ?? '').trim().toLowerCase()
     const password = String(form.get('password') ?? '')
     const passwordValid = await verifyDirectBloggerPassword(password, config.passwordHash)
-    if (username !== config.username || !passwordValid) return redirect(url, `${DESTINATION}?error=invalid`)
+    if (username !== config.username || !passwordValid) return redirect(url, 'invalid')
     attempts.delete(key)
 
     const response = redirect(url)

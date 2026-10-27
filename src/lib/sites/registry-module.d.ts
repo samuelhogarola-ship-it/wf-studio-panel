@@ -18,6 +18,7 @@ declare module "@/lib/sites/registry.mjs" {
     blogger: {
       enabled: boolean;
       runtime?: 'central-multisite' | 'central-legacy' | 'external';
+      customOrigin?: string;
       url?: string;
       apiBase?: string;
       buildEndpoint?: string;

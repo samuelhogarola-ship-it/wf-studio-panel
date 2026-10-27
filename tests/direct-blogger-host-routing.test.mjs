@@ -5,6 +5,7 @@ import { loadProjectModule } from './helpers/project-harness.mjs'
 
 const ADMIN_HOST = 'admin.webfuengirola.com'
 const PORTAL_HOST = 'portal.webfuengirola.com'
+const SPORT_BLOGGER_HOST = 'blogger.sportmassagefuengirola.com'
 
 function request(path, host = ADMIN_HOST) {
   return {
@@ -58,6 +59,65 @@ test('neutral portal host admits the exact direct Blogger entry and existing edi
     `https://${PORTAL_HOST}/blogger/index.html`,
     `https://${PORTAL_HOST}/api/posts`,
   ])
+})
+
+test('Sport custom host rewrites its clean root to the exact tenant entry', async () => {
+  const { middleware, updated } = loadMiddleware()
+  const response = await middleware({ ...request('/', SPORT_BLOGGER_HOST), method: 'GET' })
+  assert.equal(response.status, 200)
+  assert.equal(
+    response.headers.get('x-middleware-rewrite'),
+    `https://${SPORT_BLOGGER_HOST}/acceso/blogger/sportmassagefuengirola`,
+  )
+  assert.deepEqual(updated, [])
+})
+
+test('Sport custom host exposes only its required Blogger runtime surface', async () => {
+  const { middleware, updated } = loadMiddleware()
+  const allowed = [
+    '/blogger/index.html',
+    '/blogger/styles.css',
+    '/blogger/app.js',
+    '/api/posts',
+    '/api/posts/article-slug',
+    '/api/posts/article-slug/images',
+    '/api/build',
+    '/api/blogger/direct-session',
+    `/api/blogger/handoff?code=${'A'.repeat(43)}`,
+  ]
+  for (const path of allowed) {
+    const response = await middleware({ ...request(path, SPORT_BLOGGER_HOST), method: path.includes('/handoff') ? 'GET' : 'POST' })
+    assert.notEqual(response.status, 404, path)
+  }
+  assert.deepEqual(updated, allowed.map(path => `https://${SPORT_BLOGGER_HOST}${path}`))
+})
+
+test('Sport custom host denies panels, auth, analytics and every alternate tenant route', async () => {
+  const { middleware, updated } = loadMiddleware()
+  const denied = [
+    '/cliente',
+    '/cliente/dashboard',
+    '/paneladmin',
+    '/auth/callback',
+    '/api/analytics/sportmassagefuengirola',
+    '/acceso/blogger/sportmassagefuengirola',
+    '/acceso/blogger/personaltrainerfuengirola',
+    '/api/blogger/personaltrainerfuengirola/posts',
+    '/api/tool-launch/exchange',
+  ]
+  for (const path of denied) {
+    assert.equal((await middleware({ ...request(path, SPORT_BLOGGER_HOST), method: 'GET' })).status, 404, path)
+  }
+  assert.deepEqual(updated, [])
+})
+
+test('Coolify proxy reports the exact Sport custom host without accepting ambiguous hosts', async () => {
+  const { middleware, updated } = loadMiddleware()
+  const accepted = await middleware({ ...proxiedRequest('/', SPORT_BLOGGER_HOST), method: 'GET' })
+  assert.equal(accepted.status, 200)
+  assert.match(accepted.headers.get('x-middleware-rewrite') ?? '', /\/acceso\/blogger\/sportmassagefuengirola$/)
+  assert.equal((await middleware({ ...proxiedRequest('/', `${SPORT_BLOGGER_HOST}, ${PORTAL_HOST}`), method: 'GET' })).status, 404)
+  assert.deepEqual(updated, [])
 })
 
 test('admin host is owner-only and rejects all direct-client Blogger entry paths', async () => {
@@ -150,6 +210,28 @@ test('direct session lookup accepts the strict public portal origin reported by 
       headers: async () => new Headers({
         host: 'wf-studio-panel:3000',
         'x-forwarded-host': PORTAL_HOST,
+        'x-forwarded-proto': 'https',
+      }),
+      cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
+    },
+    '@/lib/blogger/direct-access.mjs': {
+      DIRECT_BLOGGER_COOKIE: '__Host-wf_blogger',
+      loadDirectBloggerSessionConfig: () => ({ sessionSecret: 'secret' }),
+      verifyDirectBloggerSession: () => expected,
+    },
+  })
+  assert.deepEqual(await module.getDirectBloggerSession(), expected)
+  assert.equal(cookieReads, 1)
+})
+
+test('direct session lookup accepts the exact mapped Sport custom host', async () => {
+  let cookieReads = 0
+  const expected = { siteKey: 'sportmassagefuengirola', source: 'direct' }
+  const module = loadProjectModule('src/lib/blogger/direct-access-server.ts', {
+    'next/headers': {
+      headers: async () => new Headers({
+        host: 'wf-studio-panel:3000',
+        'x-forwarded-host': SPORT_BLOGGER_HOST,
         'x-forwarded-proto': 'https',
       }),
       cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
