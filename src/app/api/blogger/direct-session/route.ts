@@ -7,11 +7,12 @@ import {
   verifyDirectBloggerPassword,
 } from '@/lib/blogger/direct-access.mjs'
 import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
-import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
+import { isTrustedInternalRequestOrigin, resolveRequestOrigin } from '@/lib/security/redirects.mjs'
 
 export const runtime = 'nodejs'
 
 const DESTINATION = '/acceso/blogger/sportmassagefuengirola'
+const PORTAL_ORIGIN = 'https://portal.webfuengirola.com'
 const SESSION_TTL_SECONDS = 8 * 60 * 60
 const MAX_BODY_BYTES = 4_096
 const ATTEMPT_WINDOW_MS = 5 * 60 * 1000
@@ -74,15 +75,21 @@ async function readForm(request: Request) {
 
 export async function POST(request: Request) {
   const requestUrl = new URL(request.url)
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const fallbackOrigin = forwardedHost === null && forwardedProto === null && isTrustedInternalRequestOrigin(requestUrl.origin)
+    ? PORTAL_ORIGIN
+    : undefined
   const origin = resolveRequestOrigin({
-    forwardedHost: request.headers.get('x-forwarded-host'),
-    forwardedProto: request.headers.get('x-forwarded-proto'),
+    forwardedHost,
+    forwardedProto,
     requestOrigin: requestUrl.origin,
+    fallbackOrigin,
   })
   const url = new URL(`${requestUrl.pathname}${requestUrl.search}`, origin)
   if (!allowedHost(url)) return new NextResponse(null, { status: 404 })
   try {
-    assertTrustedMutation(request)
+    assertTrustedMutation(request, { fallbackOrigin })
   } catch (error) {
     return NextResponse.json({ error: 'forbidden' }, { status: (error as { status?: number }).status ?? 403 })
   }
