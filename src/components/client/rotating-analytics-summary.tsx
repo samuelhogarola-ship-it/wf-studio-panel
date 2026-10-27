@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useReducer } from 'react'
 
+import { LanguageTrafficChart } from '@/components/client/language-traffic-chart'
 import type { ClientAnalyticsSummary } from '@/lib/analytics/client-summary'
 
 export const DEFAULT_ROTATION_INTERVAL_MS = 6_000
@@ -155,6 +156,7 @@ export function RotatingAnalyticsSummary({
         </div>
         <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">30 días</span>
       </div>
+      <LanguageTrafficChart languages={metric.languages} />
       <div className="mt-4 flex items-center gap-2">
         <button type="button" aria-label="Métrica anterior" onClick={() => dispatch({ type: 'previous', itemCount: metrics.length })} className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">←</button>
         <button type="button" aria-label={rotationControl.label} disabled={rotationControl.disabled} onClick={() => dispatch({ type: 'set-manual-paused', paused: !state.manualPaused })} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand">{rotationControl.text}</button>

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { DashboardScrollReset } from '@/components/client/dashboard-scroll-reset'
 import { RotatingAnalyticsSummary } from '@/components/client/rotating-analytics-summary'
 import { getClientAnalyticsSummaries } from '@/lib/analytics/client-summary'
 import { getClientDashboardData, getClientFacturasData } from '@/lib/data/client'
@@ -38,6 +39,7 @@ export default async function ClientDashboardPage() {
 
   return (
     <>
+      <DashboardScrollReset />
       <div className="mb-8">
         <h1 className="text-2xl font-black tracking-tight text-foreground">
           Hola, {context.client.name}

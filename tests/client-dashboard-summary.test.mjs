@@ -1,7 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import React from 'react'
+import { act } from 'react'
+import { createRoot } from 'react-dom/client'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { JSDOM } from 'jsdom'
 
 import {
   loadProjectModule,
@@ -12,6 +15,7 @@ import {
 } from './helpers/project-harness.mjs'
 
 const componentPath = 'src/components/client/rotating-analytics-summary.tsx'
+const scrollResetPath = 'src/components/client/dashboard-scroll-reset.tsx'
 const dashboardPath = 'src/app/cliente/(protected)/dashboard/page.tsx'
 
 test('rotator advances after six seconds and manual controls wrap in both directions', () => {
@@ -80,17 +84,82 @@ test('analytics summary renders one public metric with accessible controls and a
   const { RotatingAnalyticsSummary } = loadProjectModule(componentPath)
   const html = renderToStaticMarkup(React.createElement(RotatingAnalyticsSummary, {
     intervalMs: 6_000,
-    summaries: [{ projectSlug: 'mi-web', projectName: 'Mi Web', pageviews: 120, visitors: 80, visits: 95 }],
+    summaries: [{
+      projectSlug: 'sportmassagefuengirola',
+      projectName: 'Sport Massage',
+      pageviews: 120,
+      visitors: 80,
+      visits: 95,
+      languages: [
+        { code: 'es', label: 'Español', value: 60, color: '#ef4444' },
+        { code: 'en', label: 'English', value: 30, color: '#22c55e' },
+        { code: 'fi', label: 'Suomi', value: 10, color: '#3b82f6' },
+      ],
+    }],
   }))
 
-  assert.match(html, /Mi Web/)
+  assert.match(html, /Sport Massage/)
   assert.match(html, /Páginas vistas/)
   assert.match(html, />120</)
-  assert.match(html, /href="\/cliente\/proyectos\/mi-web\/estadisticas"/)
+  assert.match(html, /href="\/cliente\/proyectos\/sportmassagefuengirola\/estadisticas"/)
+  assert.match(html, /Tráfico por idioma/)
+  assert.match(html, /Español[^]*60/)
+  assert.match(html, /English[^]*30/)
+  assert.match(html, /Suomi[^]*10/)
+  assert.match(html, /background-color:#ef4444[^]*width:60%/)
+  assert.match(html, /background-color:#22c55e[^]*width:30%/)
+  assert.match(html, /background-color:#3b82f6[^]*width:10%/)
   for (const label of ['Métrica anterior', 'Pausar rotación', 'Métrica siguiente']) {
     assert.match(html, new RegExp(`aria-label="${label}"`))
   }
   assert.doesNotMatch(html, /registry|UMAMI|credential|endpoint/i)
+})
+
+test('analytics language diagram keeps an honest empty state', () => {
+  const { RotatingAnalyticsSummary } = loadProjectModule(componentPath)
+  const html = renderToStaticMarkup(React.createElement(RotatingAnalyticsSummary, {
+    summaries: [{
+      projectSlug: 'mi-web', projectName: 'Mi Web', pageviews: 1, visitors: 1, visits: 1, languages: [],
+    }],
+  }))
+
+  assert.match(html, /Todavía no hay tráfico por idioma/)
+})
+
+test('dashboard scroll reset moves a mobile viewport to the top after mount', async () => {
+  const previousWindow = globalThis.window
+  const previousDocument = globalThis.document
+  const previousActEnvironment = globalThis.IS_REACT_ACT_ENVIRONMENT
+  const dom = new JSDOM('<div id="root"></div>', { url: 'https://portal.example.test/cliente/dashboard' })
+  const calls = []
+  dom.window.scrollTo = (...args) => calls.push(args)
+  dom.window.matchMedia = (query) => ({
+    matches: query === '(max-width: 1023px)',
+    media: query,
+    onchange: null,
+    addListener() {},
+    removeListener() {},
+    addEventListener() {},
+    removeEventListener() {},
+    dispatchEvent() { return false },
+  })
+
+  globalThis.window = dom.window
+  globalThis.document = dom.window.document
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true
+
+  try {
+    const { DashboardScrollReset } = loadProjectModule(scrollResetPath)
+    const root = createRoot(dom.window.document.getElementById('root'))
+    await act(async () => root.render(React.createElement(DashboardScrollReset)))
+    assert.deepEqual(calls, [[0, 0]])
+    await act(async () => root.unmount())
+  } finally {
+    globalThis.window = previousWindow
+    globalThis.document = previousDocument
+    globalThis.IS_REACT_ACT_ENVIRONMENT = previousActEnvironment
+    dom.window.close()
+  }
 })
 
 test('shared dashboard keeps existing content and separates notifications, messages and reports', async () => {
@@ -116,6 +185,9 @@ test('shared dashboard keeps existing content and separates notifications, messa
     },
     '@/lib/auth': { requireClientAccess: async () => ({ userId: 'session-client', email: client.email, role: 'client', client }) },
     '@/lib/supabase/server': { createSupabaseServerClient: async () => db },
+    '@/components/client/dashboard-scroll-reset': {
+      DashboardScrollReset: () => React.createElement('span', { 'data-dashboard-scroll-reset': 'mounted' }),
+    },
   }
   const Page = loadProjectModule(dashboardPath, mocks).default
   const html = renderToStaticMarkup(await Page())
@@ -123,6 +195,7 @@ test('shared dashboard keeps existing content and separates notifications, messa
   for (const value of ['Hola, Ana', 'Novedades', 'Nueva entrega', 'Estadísticas', 'Mensajes', 'Mensaje privado', 'Informes', 'Informe mensual', 'Actividad reciente']) {
     assert.match(html, new RegExp(value))
   }
+  assert.match(html, /data-dashboard-scroll-reset="mounted"/)
   for (const href of ['/cliente/mensajeria', '/cliente/informes', '/cliente/servicios?new=1']) {
     assert.match(html, new RegExp(`href="${href.replace('?', '\\?')}"`))
   }
