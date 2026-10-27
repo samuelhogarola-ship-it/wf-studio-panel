@@ -22,6 +22,8 @@ test("Blogger previews are sandboxed documents instead of same-origin HTML sinks
 
 test("Next config emits restrictive browser security headers", () => {
   assert.match(nextConfig, /Content-Security-Policy/);
+  assert.match(nextConfig, /formSources[^\n]*blogger\.sportmassagefuengirola\.com/);
+  assert.match(nextConfig, /form-action \$\{formSources\.join/);
   assert.match(nextConfig, /object-src ['"]none/);
   assert.match(nextConfig, /frame-ancestors ['"]self/);
   assert.match(nextConfig, /samuelcoachdealeman\.com/);

@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   buildCanonicalAppUrl,
   getProtectedArea,
+  hasConsistentForwardedOrigin,
   resolveRequestOrigin,
   sanitizeClientDestination,
   sanitizeInternalRedirect,
@@ -155,6 +156,23 @@ test("resolveRequestOrigin never lets forwarded headers relabel a public applica
     }),
     "https://portal.webfuengirola.com",
   );
+});
+
+test("forwarded origin consistency rejects ambiguous and contradictory public hosts", () => {
+  const input = {
+    requestOrigin: "https://blogger.sportmassagefuengirola.com",
+    allowedHosts: ["blogger.sportmassagefuengirola.com", "portal.webfuengirola.com"],
+  };
+  assert.equal(hasConsistentForwardedOrigin({ ...input, forwardedHost: null, forwardedProto: null }), true);
+  assert.equal(hasConsistentForwardedOrigin({ ...input, forwardedHost: "blogger.sportmassagefuengirola.com", forwardedProto: "https" }), true);
+  for (const [forwardedHost, forwardedProto] of [
+    ["portal.webfuengirola.com", "https"],
+    ["blogger.sportmassagefuengirola.com, portal.webfuengirola.com", "https"],
+    ["blogger.sportmassagefuengirola.com", "http"],
+    ["blogger.sportmassagefuengirola.com", null],
+  ]) {
+    assert.equal(hasConsistentForwardedOrigin({ ...input, forwardedHost, forwardedProto }), false);
+  }
 });
 
 test("resolveRequestOrigin restores HTTPS only when the proxy confirms the same public host", () => {

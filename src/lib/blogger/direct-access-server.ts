@@ -6,7 +6,7 @@ import {
   verifyDirectBloggerSession,
 } from '@/lib/blogger/direct-access.mjs'
 import { getCustomBloggerSiteByHost } from '@/lib/blogger/custom-hosts.mjs'
-import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
+import { hasConsistentForwardedOrigin, resolveRequestOrigin } from '@/lib/security/redirects.mjs'
 
 export async function getDirectBloggerSession(siteKey = 'sportmassagefuengirola') {
   try {
@@ -18,15 +18,22 @@ export async function getDirectBloggerSession(siteKey = 'sportmassagefuengirola'
       : 'http://invalid.local'
     const forwardedHost = requestHeaders.get('x-forwarded-host')
     const customCandidate = getCustomBloggerSiteByHost(forwardedHost ?? '') ?? getCustomBloggerSiteByHost(new URL(requestOrigin).hostname)
+    const allowedHosts = [
+      'admin.webfuengirola.com',
+      'portal.webfuengirola.com',
+      ...(customCandidate?.blogger.customOrigin ? [new URL(customCandidate.blogger.customOrigin as string).hostname] : []),
+    ]
+    if (!hasConsistentForwardedOrigin({
+      forwardedHost,
+      forwardedProto: requestHeaders.get('x-forwarded-proto'),
+      requestOrigin,
+      allowedHosts,
+    })) return null
     const hostname = new URL(resolveRequestOrigin({
       forwardedHost,
       forwardedProto: requestHeaders.get('x-forwarded-proto'),
       requestOrigin,
-      allowedHosts: [
-        'admin.webfuengirola.com',
-        'portal.webfuengirola.com',
-        ...(customCandidate?.blogger.customOrigin ? [new URL(customCandidate.blogger.customOrigin as string).hostname] : []),
-      ],
+      allowedHosts,
     })).hostname
     const customSite = getCustomBloggerSiteByHost(hostname)
     if (

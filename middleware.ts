@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 import { updateSession } from '@/lib/supabase/middleware'
 import { getCustomBloggerSiteByHost } from '@/lib/blogger/custom-hosts.mjs'
-import { resolveRequestOrigin, sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
+import { hasConsistentForwardedOrigin, resolveRequestOrigin, sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
 import { SUPPORT_COOKIE_NAME } from '@/lib/support/constants'
 
 const ADMIN_HOST = 'admin.webfuengirola.com'
@@ -47,6 +47,15 @@ export async function middleware(request: NextRequest) {
       pathname === '/api/blogger/direct-session' ||
       /^\/api\/tools\/blogger\/[a-z0-9]+(?:-[a-z0-9]+)*\/launch$/.test(pathname)
     )
+  const consistentProxyOrigin = hasConsistentForwardedOrigin({
+    forwardedHost,
+    forwardedProto,
+    requestOrigin: request.nextUrl.origin,
+    allowedHosts,
+  })
+  if (!consistentProxyOrigin && !isPortalBloggerMutation) {
+    return new NextResponse(null, { status: 404 })
+  }
   const hasSupportRoutingHint = Boolean(request.cookies?.get(SUPPORT_COOKIE_NAME)?.value)
 
   // Only apply domain routing in production (known hosts)

@@ -21,7 +21,7 @@ export default async function DirectBloggerPage({
   const sportMassage = siteKey === 'sportmassagefuengirola'
   const directSession = await getDirectBloggerSession(siteKey)
   if (sportMassage && !directSession) {
-    return <DirectBloggerLogin invalid={query?.error === 'invalid'} />
+    return <DirectBloggerLogin invalid={query?.error === 'invalid'} handoffFailed={query?.error === 'handoff'} />
   }
   const identity = directSession ? null : await getOptionalIdentity()
   if (!directSession && !identity) notFound()

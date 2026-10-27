@@ -51,8 +51,8 @@ function loadRoute(consumeResult) {
 test('custom host consumes its exact ticket and redirects to a clean root session', async () => {
   const { route, calls } = loadRoute(() => binding)
   const response = await route.GET(new Request(`${origin}/api/blogger/handoff?code=${code}`))
-  assert.equal(response.status, 303)
-  assert.equal(response.headers.get('location'), `${origin}/`)
+  assert.equal(response.status, 200)
+  assert.equal(response.headers.get('location'), null)
   assert.deepEqual(calls, [{
     database: { marker: 'database' },
     input: { code, siteKey, audience: origin },
@@ -65,7 +65,10 @@ test('custom host consumes its exact ticket and redirects to a clean root sessio
   assert.doesNotMatch(cookie, /Domain=/i)
   assert.equal(response.headers.get('cache-control'), 'private, no-store, max-age=0, must-revalidate')
   assert.equal(response.headers.get('referrer-policy'), 'no-referrer')
-  assert.doesNotMatch(`${response.headers.get('location')} ${await response.text()}`, new RegExp(code))
+  const html = await response.text()
+  assert.match(html, /history\.replaceState\([^)]*['"]\/['"]\)/)
+  assert.match(html, /location\.replace\(['"]\/['"]\)/)
+  assert.doesNotMatch(html, new RegExp(code))
 })
 
 test('custom host rejects replay and binding mismatches without creating a session', async () => {
@@ -91,13 +94,26 @@ test('custom host rejects replay and binding mismatches without creating a sessi
 
 test('handoff rejects wrong hosts, malformed codes and extra query input before ticket consumption', async () => {
   const { route, calls } = loadRoute(() => binding)
-  for (const url of [
-    `https://portal.webfuengirola.com/api/blogger/handoff?code=${code}`,
-    `${origin}/api/blogger/handoff?code=short`,
-    `${origin}/api/blogger/handoff?code=${code}&siteKey=another-tenant`,
-  ]) {
+  assert.equal((await route.GET(new Request(`https://portal.webfuengirola.com/api/blogger/handoff?code=${code}`))).status, 404)
+  for (const url of [`${origin}/api/blogger/handoff?code=short`, `${origin}/api/blogger/handoff?code=${code}&siteKey=another-tenant`]) {
     const response = await route.GET(new Request(url))
-    assert.equal(response.status, 404, url)
+    assert.equal(response.status, 303, url)
+    assert.equal(response.headers.get('location'), `${origin}/?error=handoff`)
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer')
   }
   assert.deepEqual(calls, [])
+})
+
+test('handoff rejects contradictory public proxy hosts before consuming a ticket', async () => {
+  for (const forwardedHost of [
+    'portal.webfuengirola.com',
+    'blogger.sportmassagefuengirola.com, portal.webfuengirola.com',
+  ]) {
+    const { route, calls } = loadRoute(() => binding)
+    const response = await route.GET(new Request(`${origin}/api/blogger/handoff?code=${code}`, {
+      headers: { 'x-forwarded-host': forwardedHost, 'x-forwarded-proto': 'https' },
+    }))
+    assert.equal(response.status, 404)
+    assert.deepEqual(calls, [])
+  }
 })

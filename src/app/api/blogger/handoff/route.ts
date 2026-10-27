@@ -6,7 +6,7 @@ import {
   loadDirectBloggerSessionConfig,
 } from '@/lib/blogger/direct-access.mjs'
 import { getCustomBloggerOrigin, getCustomBloggerSiteByHost } from '@/lib/blogger/custom-hosts.mjs'
-import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
+import { hasConsistentForwardedOrigin, resolveRequestOrigin } from '@/lib/security/redirects.mjs'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import {
   buildLaunchSecurityHeaders,
@@ -19,6 +19,7 @@ export const runtime = 'nodejs'
 const CODE_PATTERN = /^[A-Za-z0-9_-]{43}$/
 const SESSION_TTL_SECONDS = 8 * 60 * 60
 const secureHeaders = buildLaunchSecurityHeaders()
+const successDocument = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=/"><meta name="referrer" content="no-referrer"><title>Opening Blogger</title></head><body><script>history.replaceState(null,'','/');window.location.replace('/')</script><a href="/">Continue to Blogger</a></body></html>`
 
 function redirect(origin: string, error?: string) {
   const destination = new URL('/', origin)
@@ -58,12 +59,18 @@ export async function GET(request: Request) {
     requestOrigin: requestUrl.origin,
     allowedHosts: [new URL(customOrigin).hostname],
   })
+  if (!hasConsistentForwardedOrigin({
+    forwardedHost,
+    forwardedProto: request.headers.get('x-forwarded-proto'),
+    requestOrigin: requestUrl.origin,
+    allowedHosts: [new URL(customOrigin).hostname],
+  })) return new NextResponse(null, { status: 404 })
   if (origin !== customOrigin) return new NextResponse(null, { status: 404 })
 
   const keys = [...requestUrl.searchParams.keys()]
   const code = requestUrl.searchParams.get('code')
   if (keys.length !== 1 || keys[0] !== 'code' || !code || !CODE_PATTERN.test(code)) {
-    return new NextResponse(null, { status: 404 })
+    return redirect(customOrigin, 'handoff')
   }
 
   try {
@@ -77,7 +84,14 @@ export async function GET(request: Request) {
     }
 
     const { sessionSecret } = loadDirectBloggerSessionConfig(process.env)
-    const response = redirect(customOrigin)
+    const response = new NextResponse(successDocument, {
+      status: 200,
+      headers: {
+        ...secureHeaders,
+        'Content-Type': 'text/html; charset=utf-8',
+        'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+      },
+    })
     response.cookies.set(DIRECT_BLOGGER_COOKIE, createDirectBloggerSession({
       secret: sessionSecret,
       siteKey: candidateSite.key,

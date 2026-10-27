@@ -164,6 +164,40 @@ export function resolveRequestOrigin({
   return requestOrigin;
 }
 
+export function hasConsistentForwardedOrigin({
+  forwardedHost,
+  forwardedProto,
+  requestOrigin,
+  allowedHosts = ["admin.webfuengirola.com", "portal.webfuengirola.com"],
+}) {
+  const hasHost = forwardedHost !== null && forwardedHost !== undefined;
+  const hasProto = forwardedProto !== null && forwardedProto !== undefined;
+  if (!hasHost && !hasProto) return true;
+
+  let requestUrl;
+  try {
+    requestUrl = new URL(requestOrigin);
+  } catch {
+    return false;
+  }
+  const normalizedProto = typeof forwardedProto === "string" && !forwardedProto.includes(",")
+    ? forwardedProto.trim().toLowerCase()
+    : "";
+  if (!hasHost) {
+    return normalizedProto === "https" && requestUrl.protocol === "http:" &&
+      allowedHosts.includes(requestUrl.hostname.toLowerCase());
+  }
+  if (!hasProto) return false;
+  const normalizedHost = typeof forwardedHost === "string" && !forwardedHost.includes(",")
+    ? forwardedHost.trim().toLowerCase()
+    : "";
+  if (!normalizedHost || normalizedProto !== "https" || !allowedHosts.includes(normalizedHost)) return false;
+
+  const requestHost = requestUrl.hostname.toLowerCase();
+  if (allowedHosts.includes(requestHost)) return normalizedHost === requestHost;
+  return isTrustedInternalRequestOrigin(requestUrl.origin);
+}
+
 export function isTrustedInternalRequestOrigin(origin) {
   let requestUrl;
   try {

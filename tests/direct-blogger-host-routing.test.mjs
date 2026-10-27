@@ -283,6 +283,24 @@ test('direct session lookup rejects a public admin host mislabeled as portal by 
   assert.equal(cookieReads, 0)
 })
 
+test('direct session lookup rejects contradictory branded proxy hosts before reading the bearer', async () => {
+  for (const forwardedHost of [PORTAL_HOST, `${SPORT_BLOGGER_HOST}, ${PORTAL_HOST}`]) {
+    let cookieReads = 0
+    const module = loadProjectModule('src/lib/blogger/direct-access-server.ts', {
+      'next/headers': {
+        headers: async () => new Headers({
+          host: SPORT_BLOGGER_HOST,
+          'x-forwarded-host': forwardedHost,
+          'x-forwarded-proto': 'https',
+        }),
+        cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
+      },
+    })
+    assert.equal(await module.getDirectBloggerSession(), null)
+    assert.equal(cookieReads, 0)
+  }
+})
+
 test('admin auth callback still permits the existing administrator panel destination', async () => {
   const { middleware, updated } = loadMiddleware()
   const response = await middleware(request('/auth/callback?next=%2Fpaneladmin%2Finicio'))
