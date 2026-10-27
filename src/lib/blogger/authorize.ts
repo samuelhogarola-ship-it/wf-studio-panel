@@ -15,9 +15,11 @@ export async function authorizeBloggerSite(
 ) {
   const identity = await getOptionalIdentity()
   if (!identity) throw Object.assign(new Error('Inicia sesión para usar Blogger.'), { status: 401 })
-  const allowedRoles = options.allowedRoles ?? ['client', 'admin']
-  if ((identity.role !== 'client' && identity.role !== 'admin') || !allowedRoles.includes(identity.role)) throw denied()
   const site = getBloggerSite(siteKey)
+  const allowedRoles = site.site.blogger.runtime === 'central-legacy'
+    ? ['admin']
+    : (options.allowedRoles ?? ['client', 'admin'])
+  if ((identity.role !== 'client' && identity.role !== 'admin') || !allowedRoles.includes(identity.role)) throw denied()
 
   const db = getSupabaseAdminClient()
   let clientId: string | null = null

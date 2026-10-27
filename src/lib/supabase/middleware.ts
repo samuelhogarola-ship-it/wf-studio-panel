@@ -18,6 +18,9 @@ export async function updateSession(request: NextRequest, options: SessionUpdate
   const env = getPublicEnv()
 
   if (!env.supabaseUrl || !env.supabaseKey) {
+    if (options.requireAuthentication || options.requiredAuthenticatedRole) {
+      return new NextResponse(null, { status: 404 })
+    }
     return response
   }
 

@@ -48,6 +48,14 @@ function loadSessionMiddleware(role, { authenticated = true } = {}) {
   return { ...module, signedOut: () => signedOut }
 }
 
+function loadUnconfiguredSessionMiddleware() {
+  return loadProjectModule('src/lib/supabase/middleware.ts', {
+    '@/lib/env': { getPublicEnv: () => ({ supabaseUrl: '', supabaseKey: '' }) },
+    '@/lib/security/redirects.mjs': { getProtectedArea: () => null },
+    '@supabase/ssr': { createServerClient() { throw new Error('must not create an unconfigured client') } },
+  })
+}
+
 test('admin-host session middleware revokes a client session and returns a non-discoverable response', async () => {
   const session = loadSessionMiddleware('client')
   const response = await session.updateSession(request(), { requiredAuthenticatedRole: 'admin' })
@@ -82,6 +90,17 @@ test('admin-only static Blogger assets are non-discoverable without a session', 
 
   assert.equal(response.status, 404)
   assert.equal(session.signedOut(), 0)
+})
+
+test('admin-only routes fail closed when public authentication configuration is unavailable', async () => {
+  const session = loadUnconfiguredSessionMiddleware()
+  for (const options of [
+    { requireAuthentication: true },
+    { requiredAuthenticatedRole: 'admin' },
+  ]) {
+    const response = await session.updateSession(request('/blogger/index.html'), options)
+    assert.equal(response.status, 404)
+  }
 })
 
 function loadAdminLogin(role) {

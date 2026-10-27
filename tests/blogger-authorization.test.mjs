@@ -137,3 +137,28 @@ test('Blogger authorization never trusts a caller-supplied identity over the aut
   )
   assert.deepEqual(db.calls, [])
 })
+
+test('central-legacy Blogger sites are administrator-only through every generic API authorizer', async () => {
+  const legacySite = {
+    ...registrySite,
+    key: 'sportmassagefuengirola',
+    domain: 'sportmassagefuengirola.com',
+    blogger: {
+      ...registrySite.blogger,
+      runtime: 'central-legacy',
+      url: 'https://sportmassagefuengirola.com/admin/blogger/',
+    },
+  }
+  const db = database(activeSeed)
+  const module = loadProjectModule('src/lib/blogger/authorize.ts', {
+    '@/lib/auth': { getOptionalIdentity: async () => identity },
+    '@/lib/blogger/sites.mjs': { getBloggerSite: () => ({ ...site, site: legacySite }) },
+    '@/lib/supabase/admin': { getSupabaseAdminClient: () => db },
+  })
+
+  await assert.rejects(
+    () => module.authorizeBloggerSite('sportmassagefuengirola', { allowedRoles: ['client', 'admin'] }),
+    error => error?.status === 403,
+  )
+  assert.deepEqual(db.calls, [])
+})
