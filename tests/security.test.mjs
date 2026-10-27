@@ -99,6 +99,25 @@ test("resolveRequestOrigin prefers forwarded host over fallback origin", () => {
   );
 });
 
+test("resolveRequestOrigin accepts the exact HTTPS internal origin reported by the Coolify runtime", () => {
+  const input = {
+    forwardedHost: "portal.webfuengirola.com",
+    forwardedProto: "https",
+    requestOrigin: "https://0.0.0.0:3000",
+    fallbackOrigin: "https://admin.webfuengirola.com",
+    allowedHosts: ["admin.webfuengirola.com", "portal.webfuengirola.com"],
+  };
+  assert.equal(resolveRequestOrigin(input), "https://portal.webfuengirola.com");
+  assert.equal(
+    resolveRequestOrigin({ ...input, requestOrigin: "https://0.0.0.0:3001" }),
+    "https://admin.webfuengirola.com",
+  );
+  assert.equal(
+    resolveRequestOrigin({ ...input, requestOrigin: "https://external.example:3000" }),
+    "https://admin.webfuengirola.com",
+  );
+});
+
 test("resolveRequestOrigin rejects ambiguous or non-HTTPS proxy headers", () => {
   const input = {
     requestOrigin: "http://wf-studio-panel:3000",
