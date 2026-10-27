@@ -110,6 +110,19 @@ create table public.billing_payment_options (
   check ((method = 'manual_link' and url is not null) or (method <> 'manual_link' and url is null))
 );
 
+create table public.billing_share_links (
+  id uuid primary key default gen_random_uuid(),
+  document_id uuid not null references public.billing_documents(id) on delete cascade,
+  token_hash text not null unique check (token_hash ~ '^[a-f0-9]{64}$'),
+  expires_at timestamptz not null default (timezone('utc', now()) + interval '7 days'),
+  revoked_at timestamptz,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  check (expires_at <= created_at + interval '7 days')
+);
+
+create index billing_share_links_document_idx on public.billing_share_links(document_id, expires_at desc);
+
 drop trigger if exists set_billing_payment_options_updated_at on public.billing_payment_options;
 create trigger set_billing_payment_options_updated_at before update on public.billing_payment_options
 for each row execute function public.set_updated_at();
@@ -360,12 +373,57 @@ begin
 end;
 $$;
 
+create or replace function public.create_billing_share(p_document_id uuid, p_token_hash text, p_expires_at timestamptz)
+returns public.billing_share_links
+language plpgsql security definer set search_path = public, private as $$
+declare saved public.billing_share_links;
+begin
+  if not private.is_admin() then raise exception using errcode = '42501', message = 'Not authorized'; end if;
+  if p_token_hash !~ '^[a-f0-9]{64}$' or p_expires_at <= now() or p_expires_at > now() + interval '7 days' then
+    raise exception 'Invalid share';
+  end if;
+  if not exists (select 1 from public.billing_documents where id = p_document_id and status = 'issued') then
+    raise exception 'Document is not available to share';
+  end if;
+  update public.billing_share_links set revoked_at = timezone('utc', now())
+    where document_id = p_document_id and revoked_at is null;
+  insert into public.billing_share_links(document_id, token_hash, expires_at, created_by)
+    values (p_document_id, p_token_hash, p_expires_at, auth.uid()) returning * into saved;
+  return saved;
+end;
+$$;
+
+create or replace function public.revoke_billing_share(p_share_id uuid)
+returns boolean language plpgsql security definer set search_path = public, private as $$
+begin
+  if not private.is_admin() then raise exception using errcode = '42501', message = 'Not authorized'; end if;
+  update public.billing_share_links set revoked_at = coalesce(revoked_at, timezone('utc', now())) where id = p_share_id;
+  return found;
+end;
+$$;
+
+create or replace function public.resolve_billing_share(p_token_hash text)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'document', to_jsonb(d),
+    'lines', coalesce((select jsonb_agg(to_jsonb(l) order by l.sort_order) from public.billing_document_lines l where l.document_id = d.id), '[]'::jsonb),
+    'payments', coalesce((select jsonb_agg(to_jsonb(p) order by p.paid_on, p.created_at) from public.billing_payments p where p.document_id = d.id and p.reversed_at is null), '[]'::jsonb),
+    'paymentOption', to_jsonb(o)
+  )
+  from public.billing_share_links s
+  join public.billing_documents d on d.id = s.document_id
+  left join public.billing_payment_options o on o.document_id = d.id and o.active
+  where s.token_hash = p_token_hash and s.revoked_at is null and s.expires_at > now() and d.status = 'issued'
+  limit 1
+$$;
+
 alter table public.billing_products enable row level security;
 alter table public.billing_documents enable row level security;
 alter table public.billing_document_lines enable row level security;
 alter table public.billing_number_sequences enable row level security;
 alter table public.billing_payments enable row level security;
 alter table public.billing_payment_options enable row level security;
+alter table public.billing_share_links enable row level security;
 
 create policy billing_products_admin_all on public.billing_products for all to authenticated
 using (private.is_admin()) with check (private.is_admin());
@@ -389,6 +447,8 @@ using (private.is_admin()) with check (private.is_admin());
 create policy billing_payment_options_client_read on public.billing_payment_options for select to authenticated
 using (active and exists (select 1 from public.billing_documents d where d.id = document_id
   and d.client_id = private.current_portal_client_id() and d.status in ('issued', 'paid')));
+create policy billing_share_links_admin_all on public.billing_share_links for all to authenticated
+using (private.is_admin()) with check (private.is_admin());
 
 revoke all on function public.save_billing_product(uuid, text, text, bigint, text, integer, boolean, integer) from public, anon;
 revoke all on function public.delete_billing_product(uuid) from public, anon;
@@ -397,6 +457,9 @@ revoke all on function public.issue_billing_document(uuid) from public, anon;
 revoke all on function public.record_billing_payment(uuid, bigint, date, text, text) from public, anon;
 revoke all on function public.reverse_billing_payment(uuid) from public, anon;
 revoke all on function public.set_billing_payment_option(uuid, text, text, text, boolean) from public, anon;
+revoke all on function public.create_billing_share(uuid, text, timestamptz) from public, anon;
+revoke all on function public.revoke_billing_share(uuid) from public, anon;
+revoke all on function public.resolve_billing_share(text) from public;
 grant execute on function public.save_billing_product(uuid, text, text, bigint, text, integer, boolean, integer) to authenticated;
 grant execute on function public.delete_billing_product(uuid) to authenticated;
 grant execute on function public.save_billing_document_draft(uuid, text, uuid, text, text, text, text, text, date, date, uuid, uuid, jsonb) to authenticated;
@@ -404,6 +467,9 @@ grant execute on function public.issue_billing_document(uuid) to authenticated;
 grant execute on function public.record_billing_payment(uuid, bigint, date, text, text) to authenticated;
 grant execute on function public.reverse_billing_payment(uuid) to authenticated;
 grant execute on function public.set_billing_payment_option(uuid, text, text, text, boolean) to authenticated;
+grant execute on function public.create_billing_share(uuid, text, timestamptz) to authenticated;
+grant execute on function public.revoke_billing_share(uuid) to authenticated;
+grant execute on function public.resolve_billing_share(text) to anon, authenticated;
 grant select on public.billing_products, public.billing_documents, public.billing_document_lines,
   public.billing_payments, public.billing_payment_options to authenticated;
 
