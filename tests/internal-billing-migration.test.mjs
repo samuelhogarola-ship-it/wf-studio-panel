@@ -41,5 +41,5 @@ test('catalogue and document mutations are admin-only while clients can read the
   assert.match(sql, /private\.is_admin\(\)/i)
   assert.match(sql, /alter table public\.billing_products enable row level security/i)
   assert.match(sql, /alter table public\.billing_documents enable row level security/i)
-  assert.match(sql, /client_id = private\.current_portal_client_id\(\).*status = 'issued'/is)
+  assert.match(sql, /client_id = private\.current_portal_client_id\(\).*status in \('issued', 'paid'\)/is)
 })
