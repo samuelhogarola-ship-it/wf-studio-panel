@@ -220,6 +220,19 @@ test('server layout provides identical desktop/mobile actions, labels and access
   assert.equal((html.match(/aria-current="page"/g) ?? []).length, 2);
 });
 
+test('Sport Massage uses English as the client portal fallback locale', async () => {
+  let fallback;
+  const sport = { ...project, slug: 'sportmassagefuengirola', name: 'Sport Massage', domain: 'sportmassagefuengirola.com' };
+  const s = setup({
+    projects: [sport],
+    localeRead: async value => { fallback = value; return value; },
+  });
+  const element = await s.load(`${protectedRoot}/layout.tsx`).default({ children: 'Sport portal' });
+
+  assert.equal(fallback, 'en');
+  assert.equal(element.props.locale, 'en');
+});
+
 test('shell consumes supplied navigation without generating extra actions or duplicate href keys', () => {
   const s = setup({ pathname: '/cliente/proyectos/example' });
   const Shell = s.load('src/components/layout/client-shell.tsx').ClientShell;
