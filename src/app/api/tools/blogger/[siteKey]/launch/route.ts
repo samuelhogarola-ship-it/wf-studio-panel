@@ -8,6 +8,7 @@ import {
 } from '@/lib/blogger/direct-access.mjs'
 import { getAccessibleClientProject, getActiveClientCapability } from '@/lib/data/projects'
 import { validateProjectDestination } from '@/lib/projects/model.mjs'
+import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
 import { getSiteByKey, getBloggerHandoff } from '@/lib/sites/registry.mjs'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -121,7 +122,11 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ siteKey: string }> },
 ) {
-  const requestOrigin = new URL(request.url).origin
+  const requestOrigin = resolveRequestOrigin({
+    forwardedHost: request.headers.get('x-forwarded-host'),
+    forwardedProto: request.headers.get('x-forwarded-proto'),
+    requestOrigin: new URL(request.url).origin,
+  })
   const origin = request.headers.get('origin')
   if (origin !== requestOrigin) return safeJson({ error: 'forbidden' }, 403)
 
