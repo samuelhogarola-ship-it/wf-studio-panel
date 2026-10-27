@@ -109,6 +109,16 @@ export function validateSite(site) {
     }
     parseHttpsUrl(site.blogger.url, "Blogger", site, new Set([...allowedOrigins, STUDIO_ORIGIN, CLIENT_STUDIO_ORIGIN]));
   }
+  if (site.blogger?.customOrigin !== undefined) {
+    if (!site.blogger.enabled || !["central-multisite", "central-legacy"].includes(site.blogger.runtime)) {
+      throw new Error(`Registro de sitios: Blogger de ${site.key} necesita un runtime central para usar un origen personalizado`);
+    }
+    const customOrigin = parseExactOrigin(site.blogger.customOrigin, `origen personalizado de Blogger de ${site.key}`);
+    const customHost = customOrigin.hostname.toLowerCase();
+    if (customHost === domain || !customHost.endsWith(`.${domain}`)) {
+      throw new Error(`Registro de sitios: origen personalizado de Blogger de ${site.key} no pertenece a su dominio`);
+    }
+  }
   const handoffMetadata = site.blogger?.adapter !== undefined || site.blogger?.capabilities !== undefined;
   if (handoffMetadata) {
     const blogger = site.blogger;
