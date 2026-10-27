@@ -4,7 +4,7 @@ Actualizado: 27/10/2026, Europe/Madrid. Este documento contiene el contexto nece
 
 ## Petición actual del usuario
 
-Conseguir una clave **gratuita** de DeepL para `info@webfuengirola.com`, configurar el Blogger y comprobar la traducción automática. Dejar el contexto recuperable solo con Git porque el usuario cambia de ordenador.
+Configurar en el Blogger la clave **gratuita** de DeepL ya disponible para `info@webfuengirola.com` y comprobar la traducción automática. Dejar el contexto recuperable solo con Git porque el usuario cambia de ordenador; los secretos permanecen fuera de Git.
 
 Condiciones obligatorias:
 
@@ -39,7 +39,7 @@ Esta rama contiene el código de main comprobado más esta guía; no introduce c
 - Desde Área Cliente: <https://portal.webfuengirola.com/cliente/proyectos/sportmassagefuengirola/blogger>.
 - Usuario de Blogger: `sportmassagefuengirola@gmail.com`. Contraseña excluida de Git.
 - Cuenta elegida para DeepL: `info@webfuengirola.com`. Es una cuenta distinta del acceso de la clienta al Blogger.
-- El usuario respondió que la cuenta DeepL ya existe y precisó después que **cree tener una cuenta o contraseña asociada a ese correo, pero no sabe dónde**. La existencia y el plan no se han verificado mediante acceso. Empezar por el inicio de sesión, sin repetir el registro ni crear otra cuenta por defecto. El correo es solo el identificador de la cuenta, no una contraseña ni una clave API.
+- **Cuenta y API verificadas mediante sesión del titular el 27/10/2026:** `info@webfuengirola.com`. La suscripción muestra **API Developer**, **Active**, **Free**, 1.000.000 de caracteres y una clave API activa. El correo es solo el identificador de la cuenta, no una contraseña ni una clave API. No crear una cuenta ni una clave duplicada.
 
 ## Recomprobación en el nuevo ordenador — 27/10/2026
 
@@ -48,8 +48,16 @@ Esta rama contiene el código de main comprobado más esta guía; no introduce c
 - El panel confirma `Running (no healthcheck)` y el despliegue satisfactorio `7rody2ac8fxcgxotj9gf6i0x` del commit `bad6f5132a30d774669876217413b1c876f5be0e`.
 - La búsqueda `DEEPL` en las 80 variables del entorno devuelve cero coincidencias. La búsqueda `BLOGGER_GITHUB` confirma los nombres de las variables de repositorio, rama y token existentes, sin revelar sus valores. No se modificó ninguna variable ni se lanzó un despliegue.
 - No se encontró una dirección HTTPS de administración de Coolify: el campo URL de sus ajustes generales está vacío. No presentar el acceso HTTP como cifrado ni pedir contraseñas allí. Confirmar un canal cifrado antes de introducir una clave nueva.
-- El navegador integrado llega a `https://auth.deepl.com/login`, sin sesión iniciada. Se dejó preparado el correo indicado por el usuario; falta que el titular complete el acceso. No se obtuvo ni configuró una clave. No extraer contraseñas del llavero ni pedir secretos por chat.
+- El titular completó después el inicio de sesión y el registro del producto API en el navegador integrado. La ruta de claves ya muestra una clave activa. Se guardó únicamente una copia local en `.env.local`, ignorada por Git y con modo `0600`, junto con su endpoint. La carga local del entorno se validó sin red ni mostrar valores privados. Coolify sigue sin cambios. No extraer contraseñas del llavero ni pedir secretos por chat.
 - En el checkout aislado se repitieron `npm test` (556 pruebas: 554 aprobadas, 2 omitidas, cero fallos), lint, typecheck, build y auditoría de producción (cero vulnerabilidades). Son comprobaciones locales; no equivalen a una traducción real ni a publicar en Hostinger.
+
+### Producto API gratuito activo; configuración remota pendiente
+
+La pestaña API de la web es una página comercial. Desde su tabla de planes se abrió **Sign up for free** para Developer en la cuenta ya autenticada, sin crear otra cuenta. El formulario mostraba **Your Developer plan is completely free**, **Total price free**, **Email verified** y **Start building for free**, sin pedir tarjeta. El titular completó después el registro. Se recomprobó la suscripción activa gratuita y la presencia de una clave, sin crear claves adicionales.
+
+La clave de este Developer utiliza el endpoint `https://api-free.deepl.com/v2/translate`, seleccionado según su sufijo por el mismo criterio que el SDK oficial. **No asumir el endpoint estándar solo por el nombre Developer.** La copia local lo declara expresamente; los ejemplos dejan `DEEPL_API_URL` vacío para no anular la detección automática. No se ha realizado ninguna solicitud autenticada: ni cuota disponible ni traducción real están verificadas todavía.
+
+La revisión automática rechazó la transferencia del secreto a Coolify por requerir autorización explícita del destino. El usuario autorizó como alternativa una copia local privada en el archivo de entorno de `wf-studio-panel`; se completó esa copia y no se trasladó el secreto al servidor. No efectuar llamadas autenticadas al proveedor ni modificar el entorno remoto en este alcance. Antes de la transferencia, obtener la aprobación específica para llevar la clave de esta cuenta a `DEEPL_AUTH_KEY` del entorno de ejecución de `wf-studio-panel` (UUID `osmlaapxv7bkkrpgpzvkat4k`), manteniendo oculto su valor y el resto de variables. La activación remota y la prueba real de traducción siguen pendientes.
 
 ## Estado de código y despliegue comprobado
 
@@ -59,7 +67,7 @@ Esta rama contiene el código de main comprobado más esta guía; no introduce c
 - Panel alojado en Coolify, repositorio `wf-studio-panel`, rama `main`, aplicación UUID `osmlaapxv7bkkrpgpzvkat4k`.
 - Último despliegue comprobado: `7rody2ac8fxcgxotj9gf6i0x`, terminado para ese mismo commit.
 - La conexión GitHub necesaria para leer/escribir contenido está configurada en el entorno de ejecución del servidor. No reconfigurar ni copiar su secreto innecesariamente.
-- **No hay clave DeepL configurada**: la API devuelve `translationAvailable: false` y el botón de generación aparece desactivado.
+- **No hay clave DeepL configurada en producción**: la última API autenticada devolvía `translationAvailable: false`. Hay una copia local privada; no implica activación remota del botón de generación.
 
 Estos valores describen la última comprobación; volver a verificarlos antes de actuar. Guardar esta guía en una rama no implica desplegarla.
 
@@ -108,18 +116,18 @@ Ejecutar typecheck y build secuencialmente: Next regenera `.next/types` y una ej
 - [Claves de la cuenta](https://app.deepl.com/en/your-account/keys).
 - [Instrucciones oficiales para crear una clave](https://support.deepl.com/hc/en-us/articles/360020695820-API-key-for-DeepL-API).
 
-Historial del intento anterior: se intentó el formulario oficial con Developer seleccionado, el correo elegido y una contraseña aleatoria nueva. La petición quedó en `clearance.deepl.com`, con una comprobación humana. El usuario dijo que pulsarla no funcionaba. Ese intento no confirmó un alta ni produjo una clave. **El usuario indica ahora que cree tener una cuenta asociada al correo**; comprobar primero su acceso, sin repetir el alta por defecto. No asumir que la contraseña provisional del intento anterior es válida ni pedir acceso a Proton Pass.
+Historial del intento anterior: se intentó el formulario oficial con Developer seleccionado, el correo elegido y una contraseña aleatoria nueva. La petición quedó en `clearance.deepl.com`, con una comprobación humana. El usuario dijo que pulsarla no funcionaba. Ese intento no confirmó un alta ni produjo una clave. El titular ha accedido después a su cuenta existente; no repetir el alta. No asumir que la contraseña provisional del intento anterior es válida ni pedir acceso a Proton Pass.
 
 También se probó la vía oficial alternativa: API Keys → `auth.deepl.com/login` → Crear una cuenta. Los campos cumplían la validación, pero el botón de crear cuenta permanecía deshabilitado y se cargaban comprobaciones de `clearance.deepl.com` y `challenges.cloudflare.com`. No se forzó el botón ni se resolvió/eludió el desafío. Esta vía tampoco produjo una clave.
 
-La página ofrece acceso con Google o Apple. Solo puede completarse con una sesión autorizada del titular; no se ha probado ese acceso ni debe presumirse que el correo elegido pertenece a Google Workspace. Cuando el titular complete el acceso a su cuenta existente, comprobar su plan y las claves disponibles antes de crear otra clave o modificar la configuración. No reabrir ventanas del usuario por iniciativa propia.
+La página ofrece acceso con Google o Apple; no debe presumirse que el correo elegido pertenece a Google Workspace. La sesión actual ya está autenticada por el titular: reutilizarla sin volver a pedir contraseña. No reabrir ventanas del usuario por iniciativa propia.
 
 ## Próximos pasos concretos
 
 1. Verificar main, CI y el despliegue actual mediante lecturas, sin modificar servicios que ya funcionan.
-2. Pedir al titular que complete el acceso oficial con `info@webfuengirola.com` en el navegador integrado y comprobar entonces la cuenta, su plan y si ya tiene una clave utilizable gratuita. Si no recuerda el acceso, que utilice personalmente la recuperación oficial. No repetir el registro ni crear claves duplicadas innecesariamente. No comprar cuotas ni contratar planes para desbloquearla. Si continúa la comprobación humana, comunicar el bloqueo exacto.
-3. Guardar la clave de forma segura en `DEEPL_AUTH_KEY` del entorno de ejecución de Coolify, cifrada y oculta; preservar las demás variables. No subirla a Git. No usar `DEEPL_API_KEY`: el editor consulta `DEEPL_AUTH_KEY`.
-4. El código selecciona `https://api-free.deepl.com/v2/translate` para claves antiguas terminadas en `:fx`, y `https://api.deepl.com/v2/translate` para las actuales. Existe `DEEPL_API_URL` para indicar un endpoint oficial explícito si corresponde. Confirmar los datos oficiales del plan/clave real antes de configurar.
+2. Reutilizar la sesión de `info@webfuengirola.com` y la clave activa del Developer gratuito. No repetir el registro ni crear claves duplicadas. Si se trabaja en el mismo ordenador, la copia local está en `.env.local`, fuera de Git; si se cambia de ordenador, recuperar el secreto por un canal seguro autorizado. No comprar cuotas ni contratar planes.
+3. Tras la aprobación específica del destino y la comprobación del canal cifrado, guardar la clave de forma segura en `DEEPL_AUTH_KEY` del entorno de ejecución de Coolify, cifrada y oculta; preservar las demás variables. No subirla a Git. No usar `DEEPL_API_KEY`: el editor consulta `DEEPL_AUTH_KEY`.
+4. El código selecciona `https://api-free.deepl.com/v2/translate` para claves terminadas en `:fx`, incluida la clave Developer comprobada en esta cuenta, y `https://api.deepl.com/v2/translate` para las demás. `DEEPL_API_URL` permite un endpoint oficial explícito si corresponde; dejarlo vacío conserva la detección automática.
 5. Aplicar la configuración mediante despliegue del panel cuando sea necesario. Verificar que `translationAvailable` es verdadero y que el botón queda habilitado.
 6. Probar traducción real finés→inglés y finés→español con una frase genérica en memoria, sin crear ni publicar artículos. Confirmar también el manejo de errores y el respeto a las correcciones manuales con las pruebas aisladas.
 7. Mantener como no verificada la entrega real de artículos a Hostinger hasta poder comprobarla sin violar la prohibición de publicar contenido de prueba.

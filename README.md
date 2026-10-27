@@ -50,7 +50,7 @@ BLOGGER_GITHUB_TOKEN=
 BLOGGER_GITHUB_REPOSITORY=samuelhogarola-ship-it/sportmassage
 BLOGGER_GITHUB_BRANCH=main
 DEEPL_AUTH_KEY=
-DEEPL_API_URL=https://api.deepl.com/v2/translate
+DEEPL_API_URL=
 CRON_SECRET=
 PENDING_REMINDERS_CRON_SECRET=
 TODO_PLASTICO_URL=
@@ -154,7 +154,7 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 
 > `NEXT_PUBLIC_*` se incrustan en el bundle cliente en build time — deben estar disponibles durante el build en Coolify, no solo en runtime.
 
-> Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador. La publicación usa inglés como idioma base y puede generar variantes en español y finés mediante DeepL (`DEEPL_AUTH_KEY`); la clave también se mantiene únicamente en servidor.
+> Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador. La autora escribe el original en finés y puede generar borradores en inglés y español mediante DeepL (`DEEPL_AUTH_KEY`), editarlos y aprobarlos antes de publicar. La publicación utiliza los textos guardados y aprobados, sin retraducir. La clave se mantiene únicamente en servidor. Deja `DEEPL_API_URL` vacío para seleccionar el endpoint oficial según la clave (`:fx` usa `api-free.deepl.com`; las demás, `api.deepl.com`); indica una URL explícita solo si has confirmado que corresponde a esa clave, sin deducirla del nombre del plan.
 
 Sport Massage usa un único Blogger central (`/blogger/index.html`). El botón de **Área Cliente → proyecto Sport Massage → Blogger** abre ese editor dentro del portal y reutiliza la sesión Supabase actual. El enlace directo es `https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola`: cuando falta sesión, muestra el acceso con correo/contraseña de la misma cuenta Supabase y vuelve al editor. Las cookies permanecen vinculadas a cada host; abrir el enlace directo en el host administrador puede requerir ese inicio de sesión aunque exista una sesión en el portal.
 
