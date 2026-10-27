@@ -322,7 +322,9 @@ begin
       then round(net.net_cents::numeric * (line->>'tax_rate_bps')::integer / 10000)::bigint else 0 end as tax_cents
   ) amounts
   where trim(coalesce(line->>'description', '')) <> ''
-    and (line->>'quantity')::numeric > 0 and (line->>'unit_net_cents')::bigint >= 0
+    and (line->>'quantity')::numeric > 0
+    and (line->>'quantity')::numeric = round((line->>'quantity')::numeric, 3)
+    and (line->>'unit_net_cents')::bigint >= 0
     and line->>'tax_mode' in ('taxable', 'exempt', 'non_taxable')
     and (line->>'tax_rate_bps')::integer between 0 and 10000;
 
@@ -356,7 +358,10 @@ begin
   next_number := next_number + 1;
   update public.billing_number_sequences set last_number = next_number where series = sequence_series and year = sequence_year;
   update public.billing_documents set number = prefix || sequence_year::text || '-' || lpad(next_number::text, 4, '0'),
-    status = 'issued', issued_at = timezone('utc', now()) where id = p_document_id returning * into saved;
+    status = case when saved.total_cents = (select coalesce(sum(amount_cents), 0)::bigint
+      from public.billing_payments where (document_id = p_document_id or advance_invoice_id = p_document_id)
+        and reversed_at is null) then 'paid' else 'issued' end,
+    issued_at = timezone('utc', now()) where id = p_document_id returning * into saved;
   return saved;
 end;
 $$;
@@ -374,7 +379,7 @@ begin
   select * into document_row from public.billing_documents where id = p_document_id for update;
   if not found or document_row.status not in ('issued', 'paid') then raise exception 'Document cannot receive payments'; end if;
   select coalesce(sum(amount_cents), 0)::bigint into paid_total from public.billing_payments
-    where document_id = p_document_id and reversed_at is null;
+    where (document_id = p_document_id or advance_invoice_id = p_document_id) and reversed_at is null;
   if paid_total + p_amount_cents > document_row.total_cents then raise exception 'Payment exceeds document balance'; end if;
   insert into public.billing_payments(document_id, amount_cents, paid_on, method, note, created_by)
     values (p_document_id, p_amount_cents, coalesce(p_paid_on, current_date), p_method, nullif(trim(p_note), ''), auth.uid())
@@ -410,13 +415,15 @@ $$;
 
 create or replace function public.reverse_billing_payment(p_payment_id uuid)
 returns boolean language plpgsql security definer set search_path = public, private as $$
-declare target_document_id uuid;
+declare target_document_id uuid; target_advance_id uuid;
 begin
   if not private.is_admin() then raise exception using errcode = '42501', message = 'Not authorized'; end if;
   update public.billing_payments set reversed_at = timezone('utc', now()), reversed_by = auth.uid()
-    where id = p_payment_id and reversed_at is null returning document_id into target_document_id;
+    where id = p_payment_id and reversed_at is null
+    returning document_id, advance_invoice_id into target_document_id, target_advance_id;
   if not found then return false; end if;
   update public.billing_documents set status = 'issued' where id = target_document_id and status = 'paid';
+  update public.billing_documents set status = 'void' where id = target_advance_id and status <> 'void';
   return true;
 end;
 $$;
@@ -488,7 +495,7 @@ returns jsonb language sql stable security definer set search_path = public as $
     ) order by p.paid_on, p.created_at) from public.billing_payments p
       where (p.document_id = d.id or p.advance_invoice_id = d.id) and p.reversed_at is null), '[]'::jsonb),
     'paymentOption', case when o.id is null then null else jsonb_build_object(
-      'method', o.method, 'url', o.payment_url, 'instructions', o.instructions, 'active', o.active
+      'method', o.method, 'url', o.url, 'instructions', o.instructions, 'active', o.active
     ) end
   )
   from public.billing_share_links s

@@ -70,8 +70,8 @@ export async function deleteBillingProductAction(formData: FormData) {
   const id = z.string().uuid().safeParse(String(formData.get('id') ?? ''))
   if (!id.success) return
   const db = await createSupabaseServerClient()
-  const { error } = await db.rpc('delete_billing_product', { p_id: id.data })
-  if (error) throw new Error('No se pudo borrar el producto.')
+  const { data, error } = await db.rpc('delete_billing_product', { p_id: id.data })
+  if (error || data !== true) throw new Error('No se pudo borrar el producto.')
   refresh()
 }
 

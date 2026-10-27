@@ -94,3 +94,14 @@ test('failed catalogue deletion and document issue surface database errors', asy
     assert.deepEqual(cacheCalls, [])
   }
 })
+
+test('missing catalogue deletion is surfaced before revalidation', async () => {
+  const db = database({}, {}, { rpcs: { delete_billing_product: () => ({ data: false, error: null }) } })
+  const cacheCalls = []
+  const actions = loadProjectModule('src/lib/actions/billing-documents.ts', {
+    ...boundary(db).mocks,
+    'next/cache': { revalidatePath: path => cacheCalls.push(path) },
+  })
+  await assert.rejects(actions.deleteBillingProductAction(form({ id: '11111111-1111-4111-8111-111111111111' })), /producto/i)
+  assert.deepEqual(cacheCalls, [])
+})

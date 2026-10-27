@@ -56,8 +56,10 @@ test('database enforces balances, reversals and one advance invoice per proposal
   assert.match(sql, /create table public\.billing_payment_options/i)
   assert.match(sql, /create or replace function public\.record_billing_payment/i)
   assert.match(sql, /if paid_total \+ p_amount_cents > document_row\.total_cents/i)
+  assert.match(sql, /where \(document_id = p_document_id or advance_invoice_id = p_document_id\)[\s\S]*reversed_at is null/i)
   assert.match(sql, /document_row\.document_type = 'proposal'[\s\S]*advance_invoice/i)
   assert.match(sql, /create or replace function public\.reverse_billing_payment/i)
+  assert.match(sql, /set status = 'void' where id = target_advance_id/i)
   assert.match(sql, /create or replace function public\.set_billing_payment_option/i)
   assert.match(sql, /p_url !~ '\^https:\/\/'/i)
   assert.match(sql, /p\.document_id = d\.id[\s\S]*p\.advance_invoice_id = d\.id/i)
@@ -76,5 +78,16 @@ test('failed payment reversal is surfaced and does not revalidate', async () => 
     actions.reverseBillingPaymentAction(form({ payment_id: '11111111-1111-4111-8111-111111111111' })),
     /cobro/i,
   )
+  assert.deepEqual(cacheCalls, [])
+})
+
+test('missing payment reversal is surfaced and does not revalidate', async () => {
+  const db = database({}, {}, { rpcs: { reverse_billing_payment: () => ({ data: false, error: null }) } })
+  const cacheCalls = []
+  const actions = loadProjectModule('src/lib/actions/billing-payments.ts', {
+    ...boundary(db).mocks,
+    'next/cache': { revalidatePath: path => cacheCalls.push(path) },
+  })
+  await assert.rejects(actions.reverseBillingPaymentAction(form({ payment_id: '11111111-1111-4111-8111-111111111111' })), /cobro/i)
   assert.deepEqual(cacheCalls, [])
 })

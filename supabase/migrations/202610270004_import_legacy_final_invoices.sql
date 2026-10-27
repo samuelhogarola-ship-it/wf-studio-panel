@@ -312,7 +312,10 @@ begin
   update public.billing_number_sequences set last_number = next_number where series = sequence_series and year = sequence_year;
   update public.billing_documents set number = prefix || sequence_year::text || '-' ||
       lpad(next_number::text, case when sequence_series = 'WF' then 3 else 4 end, '0'),
-    status = 'issued', issued_at = timezone('utc', now()) where id = p_document_id returning * into saved;
+    status = case when saved.total_cents = (select coalesce(sum(amount_cents), 0)::bigint
+      from public.billing_payments where (document_id = p_document_id or advance_invoice_id = p_document_id)
+        and reversed_at is null) then 'paid' else 'issued' end,
+    issued_at = timezone('utc', now()) where id = p_document_id returning * into saved;
   return saved;
 end;
 $$;

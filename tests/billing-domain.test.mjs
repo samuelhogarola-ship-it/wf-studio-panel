@@ -47,10 +47,33 @@ test('uses exact thousandth quantities and rejects greater precision', () => {
     /tres decimales/i,
   )
   assert.equal(schema.billingLineInputSchema.safeParse({ description: 'Horas', quantity: 1.0001, unitNetCents: 100, taxMode: 'taxable', taxRateBps: 2_100 }).success, false)
+  assert.equal(schema.billingLineInputSchema.safeParse({ description: 'Horas', quantity: 1.001, unitNetCents: 100, taxMode: 'taxable', taxRateBps: 2_100 }).success, true)
 })
 
 test('rejects payments that exceed the document total', () => {
   assert.throws(() => calculations.remainingBalance(10_000, [8_000, 2_001]), /excede/i)
+})
+
+test('calculates every accounting KPI without double-counting linked advance payments', () => {
+  const summary = calculations.calculateAccountingSummary(
+    '2026-10-01',
+    [
+      { net_cents: 10_000, tax_cents: 2_100, total_cents: 12_100, source_mode: 'individual' },
+      { net_cents: 50_000, tax_cents: 0, total_cents: 50_000, source_mode: 'monthly_summary' },
+    ],
+    [{ tax_cents: 420, deductible_tax_cents: 210, total_cents: 2_420 }],
+    [{ id: 'pay-1', document_id: 'proposal-1', advance_invoice_id: 'advance-1', amount_cents: 2_420, paid_on: '2026-10-05' }],
+    [{ id: 'proposal-1', total_cents: 12_100 }, { id: 'advance-1', total_cents: 2_420 }],
+  )
+  assert.deepEqual(summary, {
+    netIncomeTotal: 10_000,
+    outputTaxTotal: 2_100,
+    collectionTotal: 2_420,
+    outstandingBalanceTotal: 9_680,
+    expenseTotal: 2_420,
+    inputTaxTotal: 420,
+    deductibleTaxTotal: 210,
+  })
 })
 
 test('validates editable products, document lines, payments, income and expenses', () => {

@@ -81,7 +81,7 @@ export async function reverseBillingPaymentAction(formData: FormData) {
   const paymentId = documentIdSchema.safeParse(String(formData.get('payment_id') ?? ''))
   if (!paymentId.success) return
   const db = await createSupabaseServerClient()
-  const { error } = await db.rpc('reverse_billing_payment', { p_payment_id: paymentId.data })
-  if (error) throw new Error('No se pudo anular el cobro.')
+  const { data, error } = await db.rpc('reverse_billing_payment', { p_payment_id: paymentId.data })
+  if (error || data !== true) throw new Error('No se pudo anular el cobro.')
   revalidateBilling()
 }

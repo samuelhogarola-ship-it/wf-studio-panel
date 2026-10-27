@@ -56,3 +56,40 @@ export function remainingBalance(totalCents: number, paymentsCents: number[]): n
   if (paidCents > totalCents) throw new Error('El total pagado excede el importe del documento.')
   return totalCents - paidCents
 }
+
+type LedgerIncome = { net_cents: number; tax_cents: number; total_cents: number; source_mode: string }
+type LedgerExpense = { tax_cents: number; deductible_tax_cents: number; total_cents: number }
+type BillingPayment = { id: string; document_id: string; advance_invoice_id: string | null; amount_cents: number; paid_on: string }
+type BillingDocument = { id: string; total_cents: number }
+
+export function calculateAccountingSummary(
+  from: string,
+  income: LedgerIncome[],
+  expenses: LedgerExpense[],
+  paymentsThroughPeriod: BillingPayment[],
+  documents: BillingDocument[],
+) {
+  const individualIncome = income.filter(entry => entry.source_mode === 'individual')
+  const documentIds = new Set(documents.map(document => document.id))
+  const appliedByDocument = new Map<string, Map<string, number>>()
+  for (const payment of paymentsThroughPeriod) {
+    for (const documentId of [payment.document_id, payment.advance_invoice_id]) {
+      if (!documentId || !documentIds.has(documentId)) continue
+      const applied = appliedByDocument.get(documentId) ?? new Map<string, number>()
+      applied.set(payment.id, payment.amount_cents)
+      appliedByDocument.set(documentId, applied)
+    }
+  }
+  return {
+    netIncomeTotal: individualIncome.reduce((sum, entry) => sum + entry.net_cents, 0),
+    outputTaxTotal: individualIncome.reduce((sum, entry) => sum + entry.tax_cents, 0),
+    collectionTotal: paymentsThroughPeriod.filter(payment => payment.paid_on >= from).reduce((sum, payment) => sum + payment.amount_cents, 0),
+    outstandingBalanceTotal: documents.reduce((sum, document) => {
+      const paid = [...(appliedByDocument.get(document.id)?.values() ?? [])].reduce((total, amount) => total + amount, 0)
+      return sum + Math.max(0, document.total_cents - paid)
+    }, 0),
+    expenseTotal: expenses.reduce((sum, entry) => sum + entry.total_cents, 0),
+    inputTaxTotal: expenses.reduce((sum, entry) => sum + entry.tax_cents, 0),
+    deductibleTaxTotal: expenses.reduce((sum, entry) => sum + entry.deductible_tax_cents, 0),
+  }
+}

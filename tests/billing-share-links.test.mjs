@@ -47,6 +47,8 @@ test('share schema closes revoked, expired and paid documents with one-document 
   assert.doesNotMatch(sql, /'document',\s*to_jsonb\(d\)/i)
   assert.doesNotMatch(sql, /jsonb_agg\(to_jsonb\([lp]\)/i)
   assert.match(sql, /p\.document_id = d\.id[\s\S]*p\.advance_invoice_id = d\.id/i)
+  assert.match(sql, /'url',\s*o\.url/i)
+  assert.doesNotMatch(sql, /o\.payment_url/i)
 })
 
 test('share revocation failure is surfaced before revalidation', async () => {
@@ -62,6 +64,17 @@ test('share revocation failure is surfaced before revalidation', async () => {
     actions.revokeBillingShareAction(form({ share_id: '11111111-1111-4111-8111-111111111111' })),
     /enlace/i,
   )
+  assert.deepEqual(cacheCalls, [])
+})
+
+test('missing share revocation is surfaced before revalidation', async () => {
+  const db = database({}, {}, { rpcs: { revoke_billing_share: () => ({ data: false, error: null }) } })
+  const cacheCalls = []
+  const actions = loadProjectModule('src/lib/actions/billing-shares.ts', {
+    ...boundary(db).mocks,
+    'next/cache': { revalidatePath: path => cacheCalls.push(path) },
+  })
+  await assert.rejects(actions.revokeBillingShareAction(form({ share_id: '11111111-1111-4111-8111-111111111111' })), /enlace/i)
   assert.deepEqual(cacheCalls, [])
 })
 

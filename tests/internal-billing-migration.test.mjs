@@ -36,6 +36,7 @@ test('draft save derives totals from line snapshots and issue consumes the final
   assert.match(sql, /for update/i)
   assert.match(sql, /billing_number_sequences/i)
   assert.match(sql, /status = 'issued'/i)
+  assert.match(sql, /quantity'\)::numeric = round\(\(line->>'quantity'\)::numeric, 3\)/i)
 })
 
 test('catalogue and document mutations are admin-only while clients can read their issued snapshots', async () => {
