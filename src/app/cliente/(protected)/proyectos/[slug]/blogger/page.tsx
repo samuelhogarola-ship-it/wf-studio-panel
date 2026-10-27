@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 
 import { getAccessibleClientProject } from '@/lib/data/projects'
 import { getBloggerEditorTarget } from '@/lib/blogger/editor.mjs'
@@ -18,6 +18,7 @@ export default async function ClientBloggerPage({ params }: { params: Promise<{ 
     notFound()
   }
   if (!site.blogger.enabled || site.domain.replace(/^www\./, '') !== project.domain.replace(/^www\./, '')) notFound()
+  if (site.key === 'sportmassagefuengirola') redirect('/acceso/blogger/sportmassagefuengirola')
   const target = getBloggerEditorTarget(site)
   if (!target) notFound()
   const handoff = typeof site.blogger.launchUrl === 'string'

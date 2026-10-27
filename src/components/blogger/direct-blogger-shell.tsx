@@ -15,10 +15,12 @@ export function DirectBloggerShell({
   site,
   homeHref,
   target,
+  directSession = false,
 }: {
   site: BloggerSite
   homeHref: string
   target: BloggerEditorTarget
+  directSession?: boolean
 }) {
   const english = site.key === 'sportmassagefuengirola'
   return (
@@ -30,9 +32,15 @@ export function DirectBloggerShell({
             <h1 className="truncate text-lg font-black text-foreground">{site.name}</h1>
             <p className="truncate text-xs text-muted">{site.domain}</p>
           </div>
-          <Link href={homeHref} className="shrink-0 rounded-lg border border-line px-4 py-2 text-sm font-bold text-foreground transition hover:bg-slate-50">
-            {english ? 'Home' : 'Inicio'}
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link href={homeHref} className="rounded-lg border border-line px-4 py-2 text-sm font-bold text-foreground transition hover:bg-slate-50">
+              {english ? 'Home' : 'Inicio'}
+            </Link>
+            {directSession ? <form action="/api/blogger/direct-session" method="post">
+              <input type="hidden" name="action" value="logout" />
+              <button type="submit" className="rounded-lg border border-line px-4 py-2 text-sm font-bold text-foreground transition hover:bg-slate-50">Sign out</button>
+            </form> : null}
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-screen-2xl p-4 sm:p-6">

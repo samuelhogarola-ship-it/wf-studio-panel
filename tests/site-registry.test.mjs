@@ -47,7 +47,7 @@ test("canonical website registry covers every current site and configures Samuel
   assert.equal(sportMassage.blogger.enabled, true);
   assert.equal(
     sportMassage.blogger.url,
-    "https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola",
+    "https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola",
   );
   assert.equal(sportMassage.blogger.runtime, "central-legacy");
   assert.equal(sportMassage.blogger.publicPostBase, "/blog/");

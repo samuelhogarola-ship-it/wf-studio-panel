@@ -2,14 +2,14 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 import { updateSession } from '@/lib/supabase/middleware'
-import { isDirectBloggerDestination, sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
+import { sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
 import { SUPPORT_COOKIE_NAME } from '@/lib/support/constants'
 
 const ADMIN_HOST = 'admin.webfuengirola.com'
 const PORTAL_HOST = 'portal.webfuengirola.com'
 
 export async function middleware(request: NextRequest) {
-  const host = request.headers.get('host') ?? ''
+  const host = (request.headers.get('host') ?? '').trim().toLowerCase().split(':')[0]
   const pathname = request.nextUrl.pathname
   const hasSupportRoutingHint = Boolean(request.cookies?.get(SUPPORT_COOKIE_NAME)?.value)
 
@@ -17,13 +17,17 @@ export async function middleware(request: NextRequest) {
   const isKnownHost = host === ADMIN_HOST || host === PORTAL_HOST
 
   if (isKnownHost) {
+    if (host === ADMIN_HOST && (
+      pathname.startsWith('/acceso/blogger') ||
+      pathname === '/api/blogger/direct-session'
+    )) {
+      return new NextResponse(null, { status: 404 })
+    }
+
     // A support cookie only routes the request. PortalViewer validates it and
     // remains the fail-closed authorization boundary for every client page.
     if (host === ADMIN_HOST && pathname.startsWith('/cliente') && !hasSupportRoutingHint) {
-      const destination = request.nextUrl.searchParams.get('redirectedFrom')
-      if (pathname !== '/cliente' || !isDirectBloggerDestination(destination)) {
-        return new NextResponse(null, { status: 404 })
-      }
+      return new NextResponse(null, { status: 404 })
     }
 
     if (host === ADMIN_HOST && pathname === '/auth/callback') {
@@ -32,7 +36,7 @@ export async function middleware(request: NextRequest) {
         fallback: '',
         allowedPrefixes: ['/paneladmin'],
       })
-      if (destination !== null && !isDirectBloggerDestination(destination) && adminDestination !== destination) {
+      if (destination !== null && adminDestination !== destination) {
         return new NextResponse(null, { status: 404 })
       }
     }

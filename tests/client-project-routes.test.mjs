@@ -220,6 +220,19 @@ test('server layout provides identical desktop/mobile actions, labels and access
   assert.equal((html.match(/aria-current="page"/g) ?? []).length, 2);
 });
 
+test('Sport Massage always uses English even when a Spanish locale cookie exists', async () => {
+  let localeReads = 0;
+  const sport = { ...project, slug: 'sportmassagefuengirola', name: 'Sport Massage', domain: 'sportmassagefuengirola.com' };
+  const s = setup({
+    projects: [sport],
+    localeRead: async () => { localeReads += 1; return 'es'; },
+  });
+  const element = await s.load(`${protectedRoot}/layout.tsx`).default({ children: 'Sport portal' });
+
+  assert.equal(localeReads, 0);
+  assert.equal(element.props.locale, 'en');
+});
+
 test('shell consumes supplied navigation without generating extra actions or duplicate href keys', () => {
   const s = setup({ pathname: '/cliente/proyectos/example' });
   const Shell = s.load('src/components/layout/client-shell.tsx').ClientShell;

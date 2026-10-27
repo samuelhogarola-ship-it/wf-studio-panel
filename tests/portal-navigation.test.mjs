@@ -80,3 +80,28 @@ test('returns fresh immutable serializable data without freezing or exposing inp
 test('fails closed for invalid modes instead of granting legacy navigation', () => {
   assert.throws(() => buildPortalNavigation({ mode: 'typo', projects: [], locale: 'es' }), /mode/i);
 });
+
+test('Sport Massage gets the approved focused English sidebar with project tools in place', () => {
+  const sport = project({
+    slug: 'sportmassagefuengirola',
+    name: 'Sport Massage',
+    domain: 'sportmassagefuengirola.com',
+    capabilities: [
+      capability('domains'),
+      capability('bonuses_reports'),
+      capability('analytics'),
+      capability('blogger'),
+      capability('invoices'),
+    ],
+  });
+
+  assert.deepEqual(navigation('dynamic', [sport], 'en'), [
+    { id: 'sport-domains', href: '/cliente/proyectos/sportmassagefuengirola#domains', label: 'Domains' },
+    { id: 'projects', href: '/cliente/proyectos', label: 'Websites' },
+    { id: 'bonos', href: '/cliente/bonos', label: 'Bonuses' },
+    { id: 'sport-analytics', href: '/cliente/proyectos/sportmassagefuengirola/estadisticas', label: 'Statistics' },
+    { id: 'sport-blogger', href: '/acceso/blogger/sportmassagefuengirola', label: 'Blogger' },
+    { id: 'help', href: '/cliente/mensajeria?new=1', label: 'Help' },
+    { id: 'facturas', href: '/cliente/facturas', label: 'Invoices' },
+  ]);
+});

@@ -230,7 +230,7 @@
     "blogger": {
       "enabled": true,
       "runtime": "central-legacy",
-      "url": "https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola",
+      "url": "https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola",
       "apiBase": "/api/posts",
       "buildEndpoint": "/api/build",
       "publicPostBase": "/blog/"

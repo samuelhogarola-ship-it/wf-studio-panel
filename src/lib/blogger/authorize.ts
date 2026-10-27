@@ -14,6 +14,7 @@ export async function authorizeBloggerSite(siteKey: string) {
   if (!identity) throw Object.assign(new Error('Inicia sesión para usar Blogger.'), { status: 401 })
   const site = getBloggerSite(siteKey)
   if (!['client', 'admin'].includes(identity.role)) throw denied()
+  if (site.site.blogger.runtime === 'central-legacy' && identity.role !== 'admin') throw denied()
 
   const db = getSupabaseAdminClient()
   let clientId: string | null = null

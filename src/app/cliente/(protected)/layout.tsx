@@ -6,7 +6,10 @@ import { buildPortalNavigation } from '@/lib/projects/portal-navigation.mjs'
 import { ClientShell } from '@/components/layout/client-shell'
 
 export default async function ClientProtectedLayout({ children }: { children: ReactNode }) {
-  const [context, locale] = await Promise.all([getClientPortalContext(), getLocale()])
+  const context = await getClientPortalContext()
+  const isSportMassage = context.projects.some(project =>
+    project.slug === 'sportmassagefuengirola' || project.domain === 'sportmassagefuengirola.com')
+  const locale = isSportMassage ? 'en' : await getLocale()
   const navigation = buildPortalNavigation({ mode: context.mode, projects: context.projects, locale })
   return (
     <ClientShell
