@@ -24,13 +24,14 @@ function securityHeaders() {
   const connectSources = ["'self'", 'https://api.github.com', 'https://api.deepl.com', ...origins]
   const imageSources = ["'self'", 'data:', 'blob:', ...origins]
   const frameSources = ["'self'", 'https://www.samuelcoachdealeman.com']
+  const formSources = ["'self'", 'https://blogger.sportmassagefuengirola.com']
   const policy = [
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'self'",
     `frame-src ${frameSources.join(' ')}`,
-    "form-action 'self'",
+    `form-action ${formSources.join(' ')}`,
     "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
     `connect-src ${connectSources.join(' ')}`,

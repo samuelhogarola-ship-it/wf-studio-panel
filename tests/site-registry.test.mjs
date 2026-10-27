@@ -9,6 +9,11 @@ import {
   getSites,
   validateSite,
 } from "../src/lib/sites/registry.mjs";
+import {
+  createCustomBloggerHostMap,
+  getCustomBloggerOrigin,
+  getCustomBloggerSiteByHost,
+} from "../src/lib/blogger/custom-hosts.mjs";
 
 test("canonical website registry covers every current site and configures Samuel and Agama Blogger", () => {
   const sites = getSites();
@@ -50,11 +55,74 @@ test("canonical website registry covers every current site and configures Samuel
     "https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola",
   );
   assert.equal(sportMassage.blogger.runtime, "central-legacy");
+  assert.equal(
+    sportMassage.blogger.customOrigin,
+    "https://blogger.sportmassagefuengirola.com",
+  );
   assert.equal(sportMassage.blogger.publicPostBase, "/blog/");
   assert.equal(getBloggerHandoff(sportMassage), null);
   for (const obsolete of ["launchUrl", "healthUrl", "adapter", "capabilities"]) {
     assert.equal(obsolete in sportMassage.blogger, false, `Sport central registry must omit ${obsolete}`);
   }
+});
+
+test("custom Blogger hosts resolve one exact central tenant and reject lookalikes", () => {
+  const sportMassage = getSiteByKey("sportmassagefuengirola");
+  assert.equal(
+    getCustomBloggerOrigin(sportMassage),
+    "https://blogger.sportmassagefuengirola.com",
+  );
+  assert.equal(
+    getCustomBloggerSiteByHost("blogger.sportmassagefuengirola.com")?.key,
+    "sportmassagefuengirola",
+  );
+  assert.equal(
+    getCustomBloggerSiteByHost("BLOGGER.SPORTMASSAGEFUENGIROLA.COM")?.key,
+    "sportmassagefuengirola",
+  );
+  for (const hostname of [
+    "portal.webfuengirola.com",
+    "blogger.sportmassagefuengirola.com.evil.example",
+    "evilblogger.sportmassagefuengirola.com",
+    "blogger.sportmassagefuengirola.com:443",
+    "blogger.sportmassagefuengirola.com, portal.webfuengirola.com",
+  ]) assert.equal(getCustomBloggerSiteByHost(hostname), null, hostname);
+});
+
+test("custom Blogger origins are exact HTTPS subdomains for central runtimes", () => {
+  const base = structuredClone(getSiteByKey("sportmassagefuengirola"));
+  for (const customOrigin of [
+    "http://blogger.sportmassagefuengirola.com",
+    "https://blogger.sportmassagefuengirola.com/path",
+    "https://blogger.sportmassagefuengirola.com?preview=1",
+    "https://user:pass@blogger.sportmassagefuengirola.com",
+    "https://blogger.evil.example",
+    "https://evilsportmassagefuengirola.com",
+  ]) {
+    assert.throws(
+      () => validateSite({ ...base, blogger: { ...base.blogger, customOrigin } }),
+      /Blogger|origen|dominio|HTTPS|registro/i,
+      customOrigin,
+    );
+  }
+  assert.throws(
+    () => validateSite({
+      ...base,
+      blogger: { ...base.blogger, runtime: "external", customOrigin: "https://blogger.sportmassagefuengirola.com" },
+    }),
+    /Blogger|central|registro/i,
+  );
+});
+
+test("custom Blogger host registry rejects duplicate tenant shells", () => {
+  const sportMassage = structuredClone(getSiteByKey("sportmassagefuengirola"));
+  assert.throws(
+    () => createCustomBloggerHostMap([
+      sportMassage,
+      { ...sportMassage, key: "another-tenant" },
+    ]),
+    /duplicado|duplicate|host|Blogger/i,
+  );
 });
 
 test("the site registry contains no exchange secret or private credentials", async () => {

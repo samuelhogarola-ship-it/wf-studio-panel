@@ -27,6 +27,37 @@ test('accepts the public origin reported by the trusted reverse proxy', () => {
   assert.doesNotThrow(() => assertTrustedMutation(proxiedRequest, { requireJson: true }))
 })
 
+test('accepts branded Blogger mutations through the exact Coolify proxy host', () => {
+  const proxiedRequest = new Request('http://wf-studio-panel:3000/api/posts', {
+    method: 'POST',
+    headers: {
+      origin: 'https://blogger.sportmassagefuengirola.com',
+      'content-type': 'application/json',
+      'x-forwarded-host': 'blogger.sportmassagefuengirola.com',
+      'x-forwarded-proto': 'https',
+    },
+  })
+  assert.doesNotThrow(() => assertTrustedMutation(proxiedRequest, { requireJson: true }))
+})
+
+test('rejects contradictory branded proxy headers before accepting a mutation', () => {
+  for (const forwardedHost of [
+    'portal.webfuengirola.com',
+    'blogger.sportmassagefuengirola.com, portal.webfuengirola.com',
+  ]) {
+    const forged = new Request('https://blogger.sportmassagefuengirola.com/api/posts', {
+      method: 'POST',
+      headers: {
+        origin: 'https://blogger.sportmassagefuengirola.com',
+        'content-type': 'application/json',
+        'x-forwarded-host': forwardedHost,
+        'x-forwarded-proto': 'https',
+      },
+    })
+    assert.throws(() => assertTrustedMutation(forged, { requireJson: true }), error => error?.status === 403)
+  }
+})
+
 test('rejects absent, foreign and lookalike origins', () => {
   for (const origin of [undefined, 'https://evil.example', 'https://admin.webfuengirola.com.evil.example']) {
     const headers = origin ? { origin, 'content-type': 'application/json' } : { 'content-type': 'application/json' }

@@ -20,6 +20,7 @@ export type SiteManifestEntry = {
   blogger: {
     enabled: boolean
     runtime?: 'central-multisite' | 'central-legacy' | 'external'
+    customOrigin?: string
     [key: string]: unknown
   }
 }

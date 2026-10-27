@@ -101,6 +101,17 @@ test('Sport Massage direct route renders the independent English login instead o
   assert.deepEqual(db.calls, [])
 })
 
+test('expired temporary access shows a generic retry message without exposing ticket details', async () => {
+  const { Page } = setup()
+  const html = renderToStaticMarkup(await Page({
+    params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }),
+    searchParams: Promise.resolve({ error: 'handoff' }),
+  }))
+  assert.match(html, /temporary access link/i)
+  assert.match(html, /sign in with your Blogger password/i)
+  assert.doesNotMatch(html, /ticket|code=|token/i)
+})
+
 test('direct credential session opens the existing editor and exposes Sign out', async () => {
   const { Page } = setup({ directSession: { siteKey: 'sportmassagefuengirola', source: 'direct', subject: null } })
   const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }))

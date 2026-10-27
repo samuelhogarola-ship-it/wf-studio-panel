@@ -4,6 +4,7 @@ type BloggerSite = {
   key: string
   name: string
   domain: string
+  productionUrl: string
 }
 
 type BloggerEditorTarget = {
