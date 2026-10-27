@@ -33,7 +33,7 @@ function clientKey(request: Request) {
 }
 
 function consumeAttempt(key: string, now = Date.now()) {
-  if (attempts.size > 10_000) {
+  if (attempts.size >= 10_000) {
     for (const [candidate, state] of attempts) if (state.resetAt <= now) attempts.delete(candidate)
   }
   if (attempts.size >= 10_000 && !attempts.has(key)) return false

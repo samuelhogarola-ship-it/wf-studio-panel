@@ -54,6 +54,22 @@ test('client Blogger authorization requires active client, current project owner
   }
 })
 
+test('ordinary clients cannot use generic multisite APIs for the Sport legacy publisher', async () => {
+  const legacySite = {
+    ...registrySite,
+    key: 'sportmassagefuengirola',
+    domain: 'sportmassagefuengirola.com',
+    blogger: {
+      enabled: true,
+      runtime: 'central-legacy',
+      url: 'https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola',
+    },
+  }
+  const { db, result } = authorize(activeSeed, identity, { site: legacySite })
+  await assert.rejects(() => result, error => error?.status === 403)
+  assert.deepEqual(db.calls, [])
+})
+
 test('stale legacy Blogger membership cannot grant access without an assigned project', async () => {
   await assert.rejects(() => authorize({ ...activeSeed, client_projects: [], blogger_site_memberships: [{ user_id: identity.userId, site_key: siteKey }] }).result, error => error?.status === 403)
 })
