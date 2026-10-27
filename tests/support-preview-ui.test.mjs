@@ -309,6 +309,8 @@ test('ordinary sign-out accepts the same public HTTPS origin behind the Coolify 
 
 test('ordinary sign-out rejects a forwarded host that does not match the public request host', async () => {
   let signOuts = 0
+  const previousWarn = console.warn
+  const warnings = []
   const route = loadProjectModule('src/app/auth/sign-out/route.ts', {
     '@/lib/support/portal-viewer': { getOptionalSupportViewer: async () => null },
     '@/lib/supabase/server': {
@@ -319,18 +321,137 @@ test('ordinary sign-out rejects a forwarded host that does not match the public 
       redirect(url, status) { return { location: url.toString(), status, cookies: { set() {} } } },
     } },
   })
-  const response = await route.POST({
-    url: 'http://portal.webfuengirola.com/auth/sign-out',
-    headers: new Headers({
-      origin: 'https://portal.webfuengirola.com',
-      'x-forwarded-host': 'admin.webfuengirola.com',
-      'x-forwarded-proto': 'https',
-    }),
-    formData: async () => form({ redirect: 'client' }),
-  })
+  let response
+  console.warn = (...args) => warnings.push(args)
+  try {
+    response = await route.POST({
+      url: 'http://portal.webfuengirola.com/auth/sign-out',
+      headers: new Headers({
+        origin: 'https://portal.webfuengirola.com',
+        'x-forwarded-host': 'admin.webfuengirola.com',
+        'x-forwarded-proto': 'https',
+      }),
+      formData: async () => form({ redirect: 'client' }),
+    })
+  } finally {
+    console.warn = previousWarn
+  }
 
   assert.deepEqual(response, { body: { error: 'Forbidden' }, status: 403 })
   assert.equal(signOuts, 0)
+  assert.equal(warnings.length, 1)
+})
+
+test('ordinary sign-out uses the exact canonical browser origin when Coolify exposes only an internal URL', async () => {
+  const previousAppUrl = process.env.APP_URL
+  try {
+    for (const [origin, redirect, destination, configuredAppUrl] of [
+      ['https://portal.webfuengirola.com', 'client', '/cliente', 'https://admin.webfuengirola.com'],
+      ['https://admin.webfuengirola.com', 'admin', '/paneladmin', 'https://portal.webfuengirola.com'],
+    ]) {
+      process.env.APP_URL = configuredAppUrl
+      let signOuts = 0
+      const route = loadProjectModule('src/app/auth/sign-out/route.ts', {
+        '@/lib/support/portal-viewer': { getOptionalSupportViewer: async () => null },
+        '@/lib/supabase/server': {
+          createSupabaseRouteClient: () => ({ auth: { signOut: async () => { signOuts += 1 } } }),
+        },
+        'next/server': { NextResponse: {
+          json(body, options) { return { body, status: options.status } },
+          redirect(url, status) { return { location: url.toString(), status, cookies: { set() {} } } },
+        } },
+      })
+      const response = await route.POST({
+        url: 'http://wf-studio-panel:3000/auth/sign-out',
+        headers: new Headers({ origin, host: 'wf-studio-panel:3000' }),
+        formData: async () => form({ redirect }),
+      })
+
+      assert.equal(response.location, `${origin}${destination}`)
+      assert.equal(response.status, 303)
+      assert.equal(signOuts, 1)
+    }
+  } finally {
+    if (previousAppUrl === undefined) delete process.env.APP_URL
+    else process.env.APP_URL = previousAppUrl
+  }
+})
+
+test('ordinary sign-out cannot use a canonical fallback to relabel a public host', async () => {
+  const previousAppUrl = process.env.APP_URL
+  const previousWarn = console.warn
+  const warnings = []
+  process.env.APP_URL = 'https://admin.webfuengirola.com'
+  console.warn = (message, details) => warnings.push({ message, details })
+  try {
+    const route = loadProjectModule('src/app/auth/sign-out/route.ts', {
+      '@/lib/support/portal-viewer': { getOptionalSupportViewer: async () => null },
+      '@/lib/supabase/server': {
+        createSupabaseRouteClient: () => ({ auth: { signOut: async () => assert.fail('must not sign out') } }),
+      },
+      'next/server': { NextResponse: {
+        json(body, options) { return { body, status: options.status } },
+        redirect() { assert.fail('must not redirect') },
+      } },
+    })
+    for (const { url, origin, host, forwardedHost, forwardedProto } of [
+      {
+        url: 'https://admin.webfuengirola.com/auth/sign-out',
+        origin: 'https://portal.webfuengirola.com',
+        host: 'admin.webfuengirola.com',
+      },
+      {
+        url: 'http://wf-studio-panel:3000/auth/sign-out',
+        origin: 'https://evil.example',
+        host: 'wf-studio-panel:3000',
+      },
+      {
+        url: 'http://wf-studio-panel:3000/auth/sign-out',
+        origin: 'https://portal.webfuengirola.com',
+        host: 'wf-studio-panel:3000',
+        forwardedHost: 'admin.webfuengirola.com',
+      },
+      {
+        url: 'http://wf-studio-panel:3000/auth/sign-out',
+        origin: 'https://portal.webfuengirola.com',
+        host: 'wf-studio-panel:3000',
+        forwardedProto: 'https',
+      },
+      {
+        url: 'http://wf-studio-panel:3000/auth/sign-out',
+        origin: 'https://portal.webfuengirola.com',
+        host: 'wf-studio-panel:3000',
+        forwardedHost: 'evil.example',
+        forwardedProto: 'https',
+      },
+      {
+        url: 'http://wf-studio-panel:3000/auth/sign-out',
+        origin: 'https://portal.webfuengirola.com',
+        host: 'wf-studio-panel:3000',
+        forwardedHost: '',
+      },
+    ]) {
+      const headers = new Headers({ origin, host })
+      if (forwardedHost !== undefined) headers.set('x-forwarded-host', forwardedHost)
+      if (forwardedProto !== undefined) headers.set('x-forwarded-proto', forwardedProto)
+      const response = await route.POST({
+        url,
+        headers,
+        formData: async () => assert.fail('must not read form data'),
+      })
+      assert.deepEqual(response, { body: { error: 'Forbidden' }, status: 403 })
+    }
+
+    assert.equal(warnings.length, 6)
+    assert.ok(warnings.every(({ message }) => message === '[auth/sign-out] rejected origin'))
+    assert.deepEqual(Object.keys(warnings[0].details).sort(), [
+      'appOrigin', 'forwardedHost', 'forwardedProto', 'host', 'requestOrigin', 'requestUrlOrigin',
+    ])
+  } finally {
+    console.warn = previousWarn
+    if (previousAppUrl === undefined) delete process.env.APP_URL
+    else process.env.APP_URL = previousAppUrl
+  }
 })
 
 test('entry form names the client and explains why an unavailable target cannot start', () => {
