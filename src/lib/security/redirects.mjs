@@ -132,6 +132,7 @@ export function resolveRequestOrigin({
     typeof forwardedProto === "string" && !forwardedProto.includes(",")
       ? forwardedProto.trim().toLowerCase()
       : "";
+  const hasForwardedHost = forwardedHost !== null && forwardedHost !== undefined;
 
   let requestUrl;
   try {
@@ -141,6 +142,13 @@ export function resolveRequestOrigin({
   }
   const requestHost = requestUrl?.hostname.toLowerCase() ?? "";
   if (requestUrl && allowedHosts.includes(requestHost)) {
+    if (
+      requestUrl.protocol === "http:" &&
+      normalizedProto === "https" &&
+      (!hasForwardedHost || normalizedHost === requestHost)
+    ) {
+      return `https://${requestHost}`;
+    }
     return requestUrl.origin;
   }
   const trustedInternalOrigin = isTrustedInternalRequestOrigin(requestUrl?.origin);

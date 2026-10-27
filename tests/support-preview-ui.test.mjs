@@ -281,6 +281,58 @@ test('ordinary client and administrator sign-out remain unchanged outside suppor
   }
 })
 
+test('ordinary sign-out accepts the same public HTTPS origin behind the Coolify proxy and redirects with 303', async () => {
+  let signOuts = 0
+  const route = loadProjectModule('src/app/auth/sign-out/route.ts', {
+    '@/lib/support/portal-viewer': { getOptionalSupportViewer: async () => null },
+    '@/lib/supabase/server': {
+      createSupabaseRouteClient: () => ({ auth: { signOut: async () => { signOuts += 1 } } }),
+    },
+    'next/server': { NextResponse: {
+      json(body, options) { return { body, status: options.status } },
+      redirect(url, status) { return { location: url.toString(), status, cookies: { set() {} } } },
+    } },
+  })
+  const response = await route.POST({
+    url: 'http://portal.webfuengirola.com/auth/sign-out',
+    headers: new Headers({
+      origin: 'https://portal.webfuengirola.com',
+      'x-forwarded-proto': 'https',
+    }),
+    formData: async () => form({ redirect: 'client' }),
+  })
+
+  assert.equal(response.location, 'https://portal.webfuengirola.com/cliente')
+  assert.equal(response.status, 303)
+  assert.equal(signOuts, 1)
+})
+
+test('ordinary sign-out rejects a forwarded host that does not match the public request host', async () => {
+  let signOuts = 0
+  const route = loadProjectModule('src/app/auth/sign-out/route.ts', {
+    '@/lib/support/portal-viewer': { getOptionalSupportViewer: async () => null },
+    '@/lib/supabase/server': {
+      createSupabaseRouteClient: () => ({ auth: { signOut: async () => { signOuts += 1 } } }),
+    },
+    'next/server': { NextResponse: {
+      json(body, options) { return { body, status: options.status } },
+      redirect(url, status) { return { location: url.toString(), status, cookies: { set() {} } } },
+    } },
+  })
+  const response = await route.POST({
+    url: 'http://portal.webfuengirola.com/auth/sign-out',
+    headers: new Headers({
+      origin: 'https://portal.webfuengirola.com',
+      'x-forwarded-host': 'admin.webfuengirola.com',
+      'x-forwarded-proto': 'https',
+    }),
+    formData: async () => form({ redirect: 'client' }),
+  })
+
+  assert.deepEqual(response, { body: { error: 'Forbidden' }, status: 403 })
+  assert.equal(signOuts, 0)
+})
+
 test('entry form names the client and explains why an unavailable target cannot start', () => {
   const { SupportPreviewForm } = loadProjectModule('src/components/admin/support-preview-form.tsx', {
     '@/lib/actions/support-preview': { startSupportPreviewAction() {} },
