@@ -7,7 +7,7 @@ import {
   verifyDirectBloggerPassword,
 } from '@/lib/blogger/direct-access.mjs'
 import { assertTrustedMutation } from '@/lib/security/mutations.mjs'
-import { isTrustedInternalRequestOrigin, resolveRequestOrigin } from '@/lib/security/redirects.mjs'
+import { resolveRequestOrigin } from '@/lib/security/redirects.mjs'
 
 export const runtime = 'nodejs'
 
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   const requestUrl = new URL(request.url)
   const forwardedHost = request.headers.get('x-forwarded-host')
   const forwardedProto = request.headers.get('x-forwarded-proto')
-  const fallbackOrigin = forwardedHost === null && forwardedProto === null && isTrustedInternalRequestOrigin(requestUrl.origin)
+  const fallbackOrigin = forwardedHost === null && forwardedProto === null && request.headers.get('origin') === PORTAL_ORIGIN
     ? PORTAL_ORIGIN
     : undefined
   const origin = resolveRequestOrigin({
