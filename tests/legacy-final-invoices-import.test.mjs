@@ -103,6 +103,25 @@ test('Postgres imports and replays the legacy invoice set without duplicates', {
     await database.query(sql)
     const after = (await readDocuments()).rows
     assert.deepEqual(after, before)
+
+    await database.query(`
+      insert into public.invoices(
+        id, client_id, number, concept, amount, payment_method, status,
+        issued_at, recipient_kind, recipient_name, recipient_email, recipient_company
+      ) values (
+        '20000000-0000-4000-8000-000000000099', '10000000-0000-4000-8000-000000000004',
+        'WF-2024-999', 'Identidad fiscal correcta', 99, 'transfer', 'issued', '2024-12-31',
+        'registered', 'Archivo', 'archivo@example.test', 'Cliente histórico'
+      );
+      insert into public.billing_documents(
+        document_type, number, status, client_id, recipient_name, recipient_email,
+        recipient_company, title, document_date, net_cents, tax_cents, total_cents
+      ) values (
+        'invoice', 'WF-2024-999', 'issued', null, 'Otra empresa', 'otra@example.test',
+        'Otra empresa', 'Identidad fiscal correcta', '2024-12-31', 9900, 0, 9900
+      );
+    `)
+    await assert.rejects(database.query(sql), /Billing document number conflict for WF-2024-999/)
   } finally {
     await database.end()
   }

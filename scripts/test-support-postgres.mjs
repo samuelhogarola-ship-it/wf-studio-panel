@@ -33,7 +33,7 @@ function run(command, args, { capture = false, extraEnv = {}, cwd = workspace, s
         .replace(/postgres(?:ql)?:\/\/\S+/gi, 'postgresql://[redacted]')
         .replace(/private-credential(?:-sentinel)?|leaksecret/gi, '[redacted]')
         .trim()
-      const suffix = diagnostic ? `: ${diagnostic.slice(0, 500)}` : ''
+      const suffix = diagnostic ? `: ${diagnostic.slice(-2000)}` : ''
       reject(new Error(`Local database test command failed: ${safeArgs.join(' ')} (exit ${code})${suffix}`))
     })
   })

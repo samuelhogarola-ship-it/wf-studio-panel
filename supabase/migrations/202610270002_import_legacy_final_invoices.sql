@@ -26,9 +26,19 @@ begin
     select
       i.id as legacy_invoice_id,
       i.number,
+      i.client_id as expected_client_id,
+      i.recipient_name as expected_recipient_name,
+      i.recipient_email as expected_recipient_email,
+      i.recipient_company as expected_recipient_company,
+      i.concept as expected_title,
       d.id as document_id,
       d.document_type,
       d.status,
+      d.client_id,
+      d.recipient_name,
+      d.recipient_email,
+      d.recipient_company,
+      d.title,
       d.legacy_invoice_id as linked_legacy_invoice_id,
       d.net_cents,
       d.tax_cents,
@@ -62,7 +72,16 @@ begin
       or conflict_row.status <> conflict_row.expected_status
       or conflict_row.net_cents <> conflict_row.expected_net_cents
       or conflict_row.tax_cents <> conflict_row.expected_tax_cents
-      or conflict_row.total_cents <> conflict_row.expected_total_cents then
+      or conflict_row.total_cents <> conflict_row.expected_total_cents
+      or (case conflict_row.number
+        when 'WF-2026-001' then coalesce(conflict_row.recipient_company, '') not like '%J29227907%'
+        when 'WF-2026-002' then coalesce(conflict_row.recipient_company, '') not like '%B93154425%'
+        else (conflict_row.client_id is distinct from conflict_row.expected_client_id
+          or conflict_row.recipient_name is distinct from conflict_row.expected_recipient_name
+          or conflict_row.recipient_email is distinct from conflict_row.expected_recipient_email
+          or conflict_row.recipient_company is distinct from conflict_row.expected_recipient_company
+          or conflict_row.title is distinct from conflict_row.expected_title)
+      end) then
       raise exception 'Billing document number conflict for %', conflict_row.number;
     end if;
 
