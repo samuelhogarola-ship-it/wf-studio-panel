@@ -9,7 +9,7 @@ export default async function ClientProtectedLayout({ children }: { children: Re
   const context = await getClientPortalContext()
   const isSportMassage = context.projects.some(project =>
     project.slug === 'sportmassagefuengirola' || project.domain === 'sportmassagefuengirola.com')
-  const locale = await getLocale(isSportMassage ? 'en' : 'es')
+  const locale = isSportMassage ? 'en' : await getLocale()
   const navigation = buildPortalNavigation({ mode: context.mode, projects: context.projects, locale })
   return (
     <ClientShell
