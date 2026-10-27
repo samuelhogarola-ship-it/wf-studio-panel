@@ -25,6 +25,14 @@ function proxiedRequest(path, forwardedHost, forwardedProto = 'https') {
   }
 }
 
+function coolifyHostOnlyRequest(path, host) {
+  return {
+    method: 'GET',
+    headers: new Headers({ host }),
+    nextUrl: new URL(`http://wf-studio-panel:3000${path}`),
+  }
+}
+
 function contradictoryPublicRequest(path, host, forwardedHost) {
   return {
     headers: new Headers({
@@ -117,6 +125,24 @@ test('Coolify proxy reports the exact Sport custom host without accepting ambigu
   assert.equal(accepted.status, 200)
   assert.match(accepted.headers.get('x-middleware-rewrite') ?? '', /\/acceso\/blogger\/sportmassagefuengirola$/)
   assert.equal((await middleware({ ...proxiedRequest('/', `${SPORT_BLOGGER_HOST}, ${PORTAL_HOST}`), method: 'GET' })).status, 404)
+  assert.deepEqual(updated, [])
+})
+
+test('Coolify host-only requests retain exact tenant routing when forwarded headers are absent', async () => {
+  const { middleware, updated } = loadMiddleware()
+  const branded = await middleware(coolifyHostOnlyRequest('/', SPORT_BLOGGER_HOST))
+  assert.equal(branded.status, 200)
+  assert.equal(
+    branded.headers.get('x-middleware-rewrite'),
+    'http://wf-studio-panel:3000/acceso/blogger/sportmassagefuengirola',
+  )
+
+  const portal = await middleware(coolifyHostOnlyRequest('/', PORTAL_HOST))
+  assert.equal(portal.status, 307)
+  assert.equal(portal.headers.get('location'), `https://${PORTAL_HOST}/cliente`)
+
+  const ambiguous = await middleware(coolifyHostOnlyRequest('/', `${SPORT_BLOGGER_HOST},${PORTAL_HOST}`))
+  assert.equal(ambiguous.status, 404)
   assert.deepEqual(updated, [])
 })
 
@@ -234,6 +260,24 @@ test('direct session lookup accepts the exact mapped Sport custom host', async (
         'x-forwarded-host': SPORT_BLOGGER_HOST,
         'x-forwarded-proto': 'https',
       }),
+      cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
+    },
+    '@/lib/blogger/direct-access.mjs': {
+      DIRECT_BLOGGER_COOKIE: '__Host-wf_blogger',
+      loadDirectBloggerSessionConfig: () => ({ sessionSecret: 'secret' }),
+      verifyDirectBloggerSession: () => expected,
+    },
+  })
+  assert.deepEqual(await module.getDirectBloggerSession(), expected)
+  assert.equal(cookieReads, 1)
+})
+
+test('direct session lookup accepts the exact custom Host when Coolify omits forwarded headers', async () => {
+  let cookieReads = 0
+  const expected = { siteKey: 'sportmassagefuengirola', source: 'direct' }
+  const module = loadProjectModule('src/lib/blogger/direct-access-server.ts', {
+    'next/headers': {
+      headers: async () => new Headers({ host: SPORT_BLOGGER_HOST }),
       cookies: async () => ({ get() { cookieReads += 1; return { value: 'valid-token' } } }),
     },
     '@/lib/blogger/direct-access.mjs': {

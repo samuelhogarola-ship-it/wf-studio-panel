@@ -71,6 +71,16 @@ test('custom host consumes its exact ticket and redirects to a clean root sessio
   assert.doesNotMatch(html, new RegExp(code))
 })
 
+test('handoff accepts the exact custom Host when Coolify omits forwarded headers', async () => {
+  const { route, calls } = loadRoute(() => binding)
+  const response = await route.GET(new Request(`http://wf-studio-panel:3000/api/blogger/handoff?code=${code}`, {
+    headers: { host: 'blogger.sportmassagefuengirola.com' },
+  }))
+  assert.equal(response.status, 200)
+  assert.match(response.headers.get('set-cookie') ?? '', /__Host-wf_blogger=custom-host-session/)
+  assert.deepEqual(calls, [{ database: { marker: 'database' }, input: { code, siteKey, audience: origin } }])
+})
+
 test('custom host rejects replay and binding mismatches without creating a session', async () => {
   for (const consumed of [
     null,

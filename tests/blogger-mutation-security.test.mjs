@@ -40,6 +40,18 @@ test('accepts branded Blogger mutations through the exact Coolify proxy host', (
   assert.doesNotThrow(() => assertTrustedMutation(proxiedRequest, { requireJson: true }))
 })
 
+test('accepts exact branded Host mutations when Coolify omits forwarded headers', () => {
+  const hostOnly = new Request('http://wf-studio-panel:3000/api/posts', {
+    method: 'POST',
+    headers: {
+      host: 'blogger.sportmassagefuengirola.com',
+      origin: 'https://blogger.sportmassagefuengirola.com',
+      'content-type': 'application/json',
+    },
+  })
+  assert.doesNotThrow(() => assertTrustedMutation(hostOnly, { requireJson: true }))
+})
+
 test('rejects contradictory branded proxy headers before accepting a mutation', () => {
   for (const forwardedHost of [
     'portal.webfuengirola.com',
