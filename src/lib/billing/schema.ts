@@ -18,6 +18,7 @@ export const billingProductInputSchema = z.object({
 
 export const billingLineInputSchema = z.object({
   productId: z.string().uuid().nullable().optional(),
+  productName: z.string().trim().max(200).nullable().optional(),
   description: z.string().trim().min(1).max(1_000),
   quantity: z.number().finite().positive().max(10_000),
   unitNetCents: cents,

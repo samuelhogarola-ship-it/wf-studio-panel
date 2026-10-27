@@ -210,6 +210,7 @@ export const translations = {
     'shell.nav.activities': 'Historial',
     'shell.nav.invoices': 'Facturas',
     'shell.nav.payments': 'Pagos',
+    'shell.nav.accounting': 'Contabilidad',
 
     // Admin dashboard page
     'dashboard.title': 'Dashboard',
@@ -579,6 +580,7 @@ export const translations = {
     'shell.nav.activities': 'History',
     'shell.nav.invoices': 'Invoices',
     'shell.nav.payments': 'Payments',
+    'shell.nav.accounting': 'Accounting',
 
     // Admin dashboard page
     'dashboard.title': 'Dashboard',

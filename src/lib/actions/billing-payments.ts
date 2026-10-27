@@ -30,7 +30,9 @@ export async function recordBillingPaymentAction(_previous: BillingPaymentAction
   await requireAdmin()
   const documentId = documentIdSchema.safeParse(String(formData.get('document_id') ?? ''))
   const payment = billingPaymentInputSchema.safeParse({
-    amountCents: Number(formData.get('amount_cents')),
+    amountCents: formData.get('amount_cents') !== null
+      ? Number(formData.get('amount_cents'))
+      : Math.round(Number(formData.get('amount_euros')) * 100),
     paidOn: String(formData.get('paid_on') ?? ''),
     method: formData.get('method'),
     note: String(formData.get('note') ?? '').trim() || null,
