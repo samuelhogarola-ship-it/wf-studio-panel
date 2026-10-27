@@ -1,10 +1,16 @@
+import { resolveRequestOrigin } from "./redirects.mjs";
+
 function mutationError(message, status) {
   return Object.assign(new Error(message), { status });
 }
 
 /** Browser mutations must originate from the exact application origin. */
 export function assertTrustedMutation(request, { requireJson = false } = {}) {
-  const expectedOrigin = new URL(request.url).origin;
+  const expectedOrigin = resolveRequestOrigin({
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    forwardedProto: request.headers.get("x-forwarded-proto"),
+    requestOrigin: new URL(request.url).origin,
+  });
   if (request.headers.get("origin") !== expectedOrigin) {
     throw mutationError("Origen no permitido.", 403);
   }
