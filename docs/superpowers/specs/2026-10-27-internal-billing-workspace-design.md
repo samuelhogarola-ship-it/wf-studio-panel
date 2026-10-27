@@ -105,4 +105,3 @@ The dashboard filters by month, quarter and year and displays net income, output
 - Individual class income rolls into its month; a direct monthly entry is clearly separated.
 - An expense retains its private attachment and appears in the correct period export.
 - Tests cover calculations, sequences, access control, token expiry, partial payments, duplicate-summary presentation and attachment policy.
-

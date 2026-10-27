@@ -186,4 +186,3 @@
 - [ ] Run `npm test`, `npm run typecheck`, `npm run lint` and `npm run build` and record exact results.
 - [ ] Review the full branch diff for secrets, unintended files, access leaks and compatibility with existing invoice/payment pages.
 - [ ] Commit documentation and exports.
-
