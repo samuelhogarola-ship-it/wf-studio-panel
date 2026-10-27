@@ -307,6 +307,46 @@ test('ordinary sign-out accepts the same public HTTPS origin behind the Coolify 
   assert.equal(signOuts, 1)
 })
 
+test('ordinary sign-out accepts the exact HTTPS internal origin and proxy headers observed in production', async () => {
+  const previousAppUrl = process.env.APP_URL
+  const previousWarn = console.warn
+  const warnings = []
+  process.env.APP_URL = 'https://admin.webfuengirola.com'
+  console.warn = (...args) => warnings.push(args)
+  try {
+    let signOuts = 0
+    const route = loadProjectModule('src/app/auth/sign-out/route.ts', {
+      '@/lib/support/portal-viewer': { getOptionalSupportViewer: async () => null },
+      '@/lib/supabase/server': {
+        createSupabaseRouteClient: () => ({ auth: { signOut: async () => { signOuts += 1 } } }),
+      },
+      'next/server': { NextResponse: {
+        json(body, options) { return { body, status: options.status } },
+        redirect(url, status) { return { location: url.toString(), status, cookies: { set() {} } } },
+      } },
+    })
+    const response = await route.POST({
+      url: 'https://0.0.0.0:3000/auth/sign-out',
+      headers: new Headers({
+        origin: 'https://portal.webfuengirola.com',
+        'x-forwarded-host': 'portal.webfuengirola.com',
+        'x-forwarded-proto': 'https',
+        host: 'portal.webfuengirola.com',
+      }),
+      formData: async () => form({ redirect: 'client' }),
+    })
+
+    assert.equal(response.location, 'https://portal.webfuengirola.com/cliente')
+    assert.equal(response.status, 303)
+    assert.equal(signOuts, 1)
+    assert.deepEqual(warnings, [])
+  } finally {
+    console.warn = previousWarn
+    if (previousAppUrl === undefined) delete process.env.APP_URL
+    else process.env.APP_URL = previousAppUrl
+  }
+})
+
 test('ordinary sign-out rejects a forwarded host that does not match the public request host', async () => {
   let signOuts = 0
   const previousWarn = console.warn

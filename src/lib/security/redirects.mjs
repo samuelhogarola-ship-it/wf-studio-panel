@@ -172,7 +172,8 @@ export function isTrustedInternalRequestOrigin(origin) {
     return false;
   }
   const requestHost = requestUrl.hostname.toLowerCase();
-  return requestUrl.protocol === "http:" && requestUrl.port === "3000" && (
+  return (requestUrl.protocol === "http:" || requestUrl.protocol === "https:") &&
+    requestUrl.port === "3000" && (
     requestHost === "localhost" ||
     requestHost === "127.0.0.1" ||
     requestHost === "0.0.0.0" ||
