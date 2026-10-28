@@ -92,6 +92,11 @@ test('restore target binds the supplied loopback database URL to the labelled Do
       environment: { ...environment, LOCAL_RESTORE_DATABASE_URL: `${environment.LOCAL_RESTORE_DATABASE_URL}${suffix}` },
     }), /parámetros|URL/i)
   }
+  await assert.rejects(() => readRestoreTargetContext({
+    run,
+    root,
+    environment: { ...environment, LOCAL_RESTORE_DATABASE_URL: 'postgresql://postgres:private@localhost:56322/postgres' },
+  }), /127\.0\.0\.1|::1|explícita/i)
   await assert.rejects(() => readRestoreTargetContext({ run, root, environment: { ...environment, LOCAL_RESTORE_DATABASE_URL: 'postgresql://postgres:private@127.0.0.1:56322/other' } }), /postgres/i)
 })
 

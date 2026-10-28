@@ -40,7 +40,6 @@ function publishedHostMatches(databaseHost, publishedHost) {
   const published = normalizeHost(publishedHost)
   if (requested === '127.0.0.1') return published === '127.0.0.1' || published === '0.0.0.0'
   if (requested === '::1') return published === '::1' || published === '::'
-  if (requested === 'localhost') return ['127.0.0.1', '0.0.0.0', '::1', '::'].includes(published)
   return false
 }
 
@@ -85,6 +84,7 @@ export async function readRestoreTargetContext({ run = defaultRun, root = defaul
   const dbUrl = environment.LOCAL_RESTORE_DATABASE_URL
   if (!projectId || !/^[a-z0-9][a-z0-9_-]*$/i.test(projectId) || !dbUrl) throw new Error('Falta definir el destino local de recuperación.')
   const parsedDatabaseUrl = assertLoopbackDatabaseUrl(dbUrl)
+  if (normalizeHost(parsedDatabaseUrl.hostname) === 'localhost') throw new Error('La restauración exige una dirección explícita: 127.0.0.1 o ::1.')
   if (parsedDatabaseUrl.pathname !== '/postgres') throw new Error('El destino debe ser la base postgres del contenedor local.')
   if (parsedDatabaseUrl.search || parsedDatabaseUrl.hash) throw new Error('La URL local de restauración no admite parámetros de conexión.')
   const containersResult = await run('docker', [

@@ -128,7 +128,7 @@ El ensayo crea una nueva copia, levanta un stack desechable, restaura allí, com
 
 Si el proceso se corta de forma abrupta y un intento posterior informa de que ya hay un ensayo en curso, no elimines el bloqueo mientras exista el proceso o algún contenedor `supabase_*_wf-recovery-*`. Después de confirmar que no queda ningún ensayo activo, puede retirarse únicamente `storage/.local-data-recovery.lock` y repetirse el comando.
 
-La restauración manual está reservada a otro stack local, distinto y vacío. Hay que indicar su URL y project ID de forma explícita y escribir el indicador exacto:
+La restauración manual está reservada a otro stack local, distinto y vacío. Hay que indicar su URL y project ID de forma explícita y escribir el indicador exacto. Para evitar ambigüedad IPv4/IPv6, el destino debe usar `127.0.0.1` o `::1`, no `localhost`:
 
 ```bash
 LOCAL_RESTORE_DATABASE_URL='postgresql://…@127.0.0.1:<puerto>/postgres' \
