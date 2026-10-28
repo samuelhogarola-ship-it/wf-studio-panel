@@ -30,6 +30,7 @@
 ### Task 1: Register the two product variants and branding
 
 **Files:**
+
 - Modify: `src/config/sites.json`
 - Modify: `src/lib/sites/registry.mjs`
 - Modify: `src/lib/sites/registry-module.d.ts`
@@ -38,16 +39,18 @@
 - Add: `public/brands/sportmassage/logo.png`
 
 **Interfaces:**
+
 - Produces: typed, validated `blogger.variant`, `logoPath`, and `previewImagePath` fields.
 
-- [ ] Add failing registry tests.
-- [ ] Verify the expected failures.
-- [ ] Implement validation, types, registry values and assets.
-- [ ] Run the focused registry tests.
+- [x] Add failing registry tests.
+- [x] Verify the expected failures.
+- [x] Implement validation, types, registry values and assets.
+- [x] Run the focused registry tests.
 
 ### Task 2: Render the branded WF-Blogger entry
 
 **Files:**
+
 - Add: `src/components/blogger/blogger-branding.tsx`
 - Modify: `src/components/blogger/panel-blogger-launch.tsx`
 - Modify: `src/app/cliente/(protected)/proyectos/[slug]/blogger/page.tsx`
@@ -56,10 +59,11 @@
 - Modify: `tests/sport-blogger-central-access.test.mjs`
 
 **Interfaces:**
+
 - Consumes: optional branding paths from the validated site registry.
 - Produces: an accessible preview/logo composition for the Sport Massage WF-Blogger entry.
 
-- [ ] Add failing render assertions for WF-Blogger, preview and logo.
-- [ ] Verify the expected failures.
-- [ ] Implement the shared branded presentation and wire both panel surfaces.
-- [ ] Run focused tests, then the full suite, lint, typecheck and production build.
+- [x] Add failing render assertions for WF-Blogger, preview and logo.
+- [x] Verify the expected failures.
+- [x] Implement the shared branded presentation and wire both panel surfaces.
+- [x] Run focused tests, then the full suite, lint, typecheck and production build.

@@ -64,20 +64,51 @@ test("canonical website registry covers every current site and configures Samuel
   );
   assert.equal(sportMassage.blogger.publicPostBase, "/blog/");
   assert.equal(sportMassage.blogger.logoPath, "/brands/sportmassage/logo.png");
-  assert.equal(sportMassage.blogger.previewImagePath, "/brands/sportmassage/wf-blogger-preview.png");
+  assert.equal(
+    sportMassage.blogger.previewImagePath,
+    "/brands/sportmassage/wf-blogger-preview.png",
+  );
   assert.equal(getBloggerHandoff(sportMassage), null);
-  for (const obsolete of ["launchUrl", "healthUrl", "adapter", "capabilities"]) {
-    assert.equal(obsolete in sportMassage.blogger, false, `Sport central registry must omit ${obsolete}`);
+  for (const obsolete of [
+    "launchUrl",
+    "healthUrl",
+    "adapter",
+    "capabilities",
+  ]) {
+    assert.equal(
+      obsolete in sportMassage.blogger,
+      false,
+      `Sport central registry must omit ${obsolete}`,
+    );
   }
+
+  const enabledVariants = getSites()
+    .filter((site) => site.blogger.enabled)
+    .map((site) => [site.key, site.blogger.variant]);
+  assert.deepEqual(enabledVariants, [
+    ["samuelcoachdealeman", "vps"],
+    ["agama", "vps"],
+    ["personaltrainerfuengirola", "vps"],
+    ["sportmassagefuengirola", "static"],
+  ]);
 });
 
 test("WF-Blogger registry rejects unknown variants and unsafe public brand assets", () => {
   const base = structuredClone(getSiteByKey("sportmassagefuengirola"));
   assert.throws(
-    () => validateSite({ ...base, blogger: { ...base.blogger, variant: "third-model" } }),
+    () =>
+      validateSite({
+        ...base,
+        blogger: { ...base.blogger, variant: "third-model" },
+      }),
     /Blogger|variant|variante|registro/i,
   );
-  for (const logoPath of ["brands/logo.png", "/../secret.png", "/logo.png?x=1", "https://evil.example/logo.png"]) {
+  for (const logoPath of [
+    "brands/logo.png",
+    "/../secret.png",
+    "/logo.png?x=1",
+    "https://evil.example/logo.png",
+  ]) {
     assert.throws(
       () => validateSite({ ...base, blogger: { ...base.blogger, logoPath } }),
       /Blogger|logo|recurso|ruta|registro/i,
@@ -106,7 +137,8 @@ test("custom Blogger hosts resolve one exact central tenant and reject lookalike
     "evilblogger.sportmassagefuengirola.com",
     "blogger.sportmassagefuengirola.com:443",
     "blogger.sportmassagefuengirola.com, portal.webfuengirola.com",
-  ]) assert.equal(getCustomBloggerSiteByHost(hostname), null, hostname);
+  ])
+    assert.equal(getCustomBloggerSiteByHost(hostname), null, hostname);
 });
 
 test("custom Blogger origins are exact HTTPS subdomains for central runtimes", () => {
@@ -120,16 +152,22 @@ test("custom Blogger origins are exact HTTPS subdomains for central runtimes", (
     "https://evilsportmassagefuengirola.com",
   ]) {
     assert.throws(
-      () => validateSite({ ...base, blogger: { ...base.blogger, customOrigin } }),
+      () =>
+        validateSite({ ...base, blogger: { ...base.blogger, customOrigin } }),
       /Blogger|origen|dominio|HTTPS|registro/i,
       customOrigin,
     );
   }
   assert.throws(
-    () => validateSite({
-      ...base,
-      blogger: { ...base.blogger, runtime: "external", customOrigin: "https://blogger.sportmassagefuengirola.com" },
-    }),
+    () =>
+      validateSite({
+        ...base,
+        blogger: {
+          ...base.blogger,
+          runtime: "external",
+          customOrigin: "https://blogger.sportmassagefuengirola.com",
+        },
+      }),
     /Blogger|central|registro/i,
   );
 });
@@ -137,17 +175,24 @@ test("custom Blogger origins are exact HTTPS subdomains for central runtimes", (
 test("custom Blogger host registry rejects duplicate tenant shells", () => {
   const sportMassage = structuredClone(getSiteByKey("sportmassagefuengirola"));
   assert.throws(
-    () => createCustomBloggerHostMap([
-      sportMassage,
-      { ...sportMassage, key: "another-tenant" },
-    ]),
+    () =>
+      createCustomBloggerHostMap([
+        sportMassage,
+        { ...sportMassage, key: "another-tenant" },
+      ]),
     /duplicado|duplicate|host|Blogger/i,
   );
 });
 
 test("the site registry contains no exchange secret or private credentials", async () => {
-  const registrySource = await readFile(new URL("../src/config/sites.json", import.meta.url), "utf8");
-  assert.doesNotMatch(registrySource, /WF_BLOGGER_HANDOFF_SECRET|password|passwordHash|filesystemRoot/i);
+  const registrySource = await readFile(
+    new URL("../src/config/sites.json", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(
+    registrySource,
+    /WF_BLOGGER_HANDOFF_SECRET|password|passwordHash|filesystemRoot/i,
+  );
 });
 
 test("aGama analytics exposes only its canonical runtime lookup schema", () => {
@@ -175,24 +220,43 @@ test("Blogger handoff registry accepts only complete same-site HTTPS destination
     },
   };
 
-  assert.equal(getBloggerHandoff(validateSite(configured)).adapter, "supabase-api");
+  assert.equal(
+    getBloggerHandoff(validateSite(configured)).adapter,
+    "supabase-api",
+  );
 
   for (const blogger of [
-    { ...configured.blogger, launchUrl: "http://www.samuelcoachdealeman.com/launch" },
-    { ...configured.blogger, healthUrl: "https://user:pass@www.samuelcoachdealeman.com/health" },
+    {
+      ...configured.blogger,
+      launchUrl: "http://www.samuelcoachdealeman.com/launch",
+    },
+    {
+      ...configured.blogger,
+      healthUrl: "https://user:pass@www.samuelcoachdealeman.com/health",
+    },
     { ...configured.blogger, launchUrl: "https://evil.example/launch" },
     { ...configured.blogger, healthUrl: "https:///health" },
     { ...configured.blogger, adapter: "" },
     { ...configured.blogger, capabilities: [] },
-    { enabled: true, url: configured.blogger.url, launchUrl: configured.blogger.launchUrl },
+    {
+      enabled: true,
+      url: configured.blogger.url,
+      launchUrl: configured.blogger.launchUrl,
+    },
   ]) {
-    assert.throws(() => validateSite({ ...base, blogger }), /Blogger|HTTPS|registro/i);
+    assert.throws(
+      () => validateSite({ ...base, blogger }),
+      /Blogger|HTTPS|registro/i,
+    );
   }
 });
 
 test("closed site identities reject public suffixes, local hosts and malformed domains for every key", () => {
   const base = structuredClone(getSiteByKey("samuelcoachdealeman"));
-  const candidateKeys = [...getSites().map(({ key }) => key), "unregistered-site"];
+  const candidateKeys = [
+    ...getSites().map(({ key }) => key),
+    "unregistered-site",
+  ];
   const invalidDomains = [
     ["com", "https://com"],
     ["co.uk", "https://co.uk"],
@@ -246,8 +310,14 @@ test("registered sites accept only their exact closed production identity", () =
   const bareProduction = structuredClone(getSiteByKey("webfuengirola"));
   const wwwProduction = structuredClone(getSiteByKey("samuelcoachdealeman"));
 
-  assert.equal(validateSite(bareProduction).productionUrl, "https://webfuengirola.com");
-  assert.equal(validateSite(wwwProduction).productionUrl, "https://www.samuelcoachdealeman.com");
+  assert.equal(
+    validateSite(bareProduction).productionUrl,
+    "https://webfuengirola.com",
+  );
+  assert.equal(
+    validateSite(wwwProduction).productionUrl,
+    "https://www.samuelcoachdealeman.com",
+  );
 
   for (const site of [
     { ...bareProduction, productionUrl: "https://www.webfuengirola.com" },
@@ -261,7 +331,11 @@ test("registered sites accept only their exact closed production identity", () =
       productionUrl: "https://webfuengirola.example.com",
     },
   ]) {
-    assert.throws(() => validateSite(site), /producción|identidad|origen|registro/i, site.productionUrl);
+    assert.throws(
+      () => validateSite(site),
+      /producción|identidad|origen|registro/i,
+      site.productionUrl,
+    );
   }
 });
 
@@ -270,21 +344,26 @@ test("Blogger destinations do not inherit undeclared bare or www origins", () =>
   const wwwProduction = structuredClone(getSiteByKey("samuelcoachdealeman"));
 
   assert.throws(
-    () => validateSite({
-      ...bareProduction,
-      blogger: { enabled: true, url: "https://www.webfuengirola.com/admin/blogger/" },
-    }),
+    () =>
+      validateSite({
+        ...bareProduction,
+        blogger: {
+          enabled: true,
+          url: "https://www.webfuengirola.com/admin/blogger/",
+        },
+      }),
     /Blogger|origen|registro/i,
   );
   assert.throws(
-    () => validateSite({
-      ...wwwProduction,
-      blogger: {
-        ...wwwProduction.blogger,
-        launchUrl: "https://samuelcoachdealeman.com/admin/blogger/launch",
-        healthUrl: "https://www.samuelcoachdealeman.com/api/blogger/health",
-      },
-    }),
+    () =>
+      validateSite({
+        ...wwwProduction,
+        blogger: {
+          ...wwwProduction.blogger,
+          launchUrl: "https://samuelcoachdealeman.com/admin/blogger/launch",
+          healthUrl: "https://www.samuelcoachdealeman.com/api/blogger/health",
+        },
+      }),
     /Blogger|origen|registro/i,
   );
 });
@@ -314,7 +393,11 @@ test("Blogger destinations reject credentials, non-default ports and unapproved 
 
   for (const launchUrl of attacks) {
     assert.throws(
-      () => validateSite({ ...configured, blogger: { ...configured.blogger, launchUrl } }),
+      () =>
+        validateSite({
+          ...configured,
+          blogger: { ...configured.blogger, launchUrl },
+        }),
       /Blogger|HTTPS|origen|registro|públic/i,
       launchUrl,
     );
@@ -357,7 +440,10 @@ test("explicit allowedOrigins permits only the exact approved Blogger subdomain 
       healthUrl: "https://tools.samuelcoachdealeman.com/api/blogger/health",
     },
   };
-  assert.equal(getBloggerHandoff(validateSite(approved)).launchUrl, approved.blogger.launchUrl);
+  assert.equal(
+    getBloggerHandoff(validateSite(approved)).launchUrl,
+    approved.blogger.launchUrl,
+  );
 
   for (const allowedOrigins of [
     ["https://tools.samuelcoachdealeman.com:8443"],
@@ -408,7 +494,10 @@ test("existing site views retain registry-backed protected Blogger and project n
       ),
       "utf8",
     ),
-    readFile(new URL("../src/components/layout/app-shell.tsx", import.meta.url), "utf8"),
+    readFile(
+      new URL("../src/components/layout/app-shell.tsx", import.meta.url),
+      "utf8",
+    ),
   ]);
 
   assert.match(samuelPage, /getSiteByKey/);
