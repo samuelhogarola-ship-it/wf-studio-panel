@@ -34,7 +34,7 @@ export default async function AdminFacturasPage({
 }) {
   const identity = await requireAdmin()
   const params = searchParams ? await searchParams : {}
-  const period = resolveAccountingPeriod(params)
+  const period = resolveAccountingPeriod(params.period || params.month ? params : { ...params, period: 'all' })
   const filters = {
     ...(period.start && period.end ? { start: period.start, end: period.end } : {}),
     client: params.client, type: params.type, status: params.status, area: params.area, page: params.page,

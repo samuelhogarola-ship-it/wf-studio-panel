@@ -43,6 +43,22 @@ test('invoice history applies a shared period with document, status, and area fi
   assert.match(html, /data-query="[^"]*period[^"]*custom[^"]*from[^"]*2026-10-01[^"]*to[^"]*2026-10-31/)
 })
 
+test('invoice history defaults to all records when no period is supplied', async () => {
+  let received
+  const Page = loadProjectModule('src/app/paneladmin/(protected)/facturas/page.tsx', {
+    '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
+    '@/lib/data/invoices': { getInvoicesPageData: async (filters) => {
+      received = filters
+      return { clients: [], accounts: [], invoices: [], filteredTotal: 0, count: 0, page: 1, pageSize: 100 }
+    } },
+    '@/components/admin/invoice-form': { InvoiceForm: () => null },
+    '@/lib/actions/invoices': { markInvoicePaidAction: async () => ({}) },
+  }).default
+  const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({}) }))
+  assert.deepEqual(received, { client: undefined, type: undefined, status: undefined, area: undefined, page: undefined })
+  assert.match(html, /<option value="all" selected="">Todo el histórico<\/option>/)
+})
+
 function queryDatabase() {
   const calls = []
   return { calls, db: { from(table) {

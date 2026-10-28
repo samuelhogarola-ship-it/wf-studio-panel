@@ -26,7 +26,7 @@ export default async function AdminExpensesPage({ searchParams }: { searchParams
   const identity = await requireAdmin()
   const locale = await getLocale()
   const params = searchParams ? await searchParams : {}
-  const period = resolveAccountingPeriod(params)
+  const period = resolveAccountingPeriod(params.period || params.month ? params : { ...params, period: 'all' })
   const area = params.area === 'classes' ? 'classes' : params.area === 'general' ? 'general' : null
   const requestedPage = Math.max(0, Number.parseInt(params.page ?? '1', 10) - 1 || 0)
   const data = await getExpensesPageData({ area, page: requestedPage, ...(period.start && period.end ? { start: period.start, end: period.end } : {}) })

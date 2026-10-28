@@ -83,6 +83,21 @@ test('expense history uses the shared period and keeps it in pagination', async 
   assert.match(html, /href="\/paneladmin\/gastos\?period=custom&amp;from=2026-10-01&amp;to=2026-10-31&amp;area=classes&amp;page=1"/)
 })
 
+test('expense history defaults to all records when no period is supplied', async () => {
+  let received
+  const Page = loadProjectModule('src/app/paneladmin/(protected)/gastos/page.tsx', {
+    '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
+    '@/lib/data/expenses': { getExpensesPageData: async (filters) => {
+      received = filters
+      return { clients: [], accounts: [], expenses: [], count: 0, total: 0, page: 0, pageSize: 50 }
+    } },
+    '@/components/admin/expense-form': { ExpenseForm: () => null },
+  }).default
+  const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({}) }))
+  assert.deepEqual(received, { area: null, page: 0 })
+  assert.match(html, /Total de todo el histórico:/)
+})
+
 function expenseQueryDatabase() {
   const calls = []
   return { calls, db: {
