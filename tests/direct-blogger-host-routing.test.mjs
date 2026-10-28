@@ -86,6 +86,7 @@ test('Sport custom host exposes only its required Blogger runtime surface', asyn
     '/blogger/index.html',
     '/blogger/styles.css',
     '/blogger/app.js',
+    '/brands/sportmassage/wf-blogger-preview.png',
     '/api/posts',
     '/api/posts/article-slug',
     '/api/posts/article-slug/images',
@@ -112,6 +113,9 @@ test('Sport custom host denies panels, auth, analytics and every alternate tenan
     '/acceso/blogger/personaltrainerfuengirola',
     '/api/blogger/personaltrainerfuengirola/posts',
     '/api/tool-launch/exchange',
+    '/brands/sportmassage/logo.png',
+    '/brands/sportmassage/',
+    '/brands/sportmassage/wf-blogger-preview.svg',
   ]
   for (const path of denied) {
     assert.equal((await middleware({ ...request(path, SPORT_BLOGGER_HOST), method: 'GET' })).status, 404, path)

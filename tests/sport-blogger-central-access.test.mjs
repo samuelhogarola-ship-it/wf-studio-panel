@@ -36,7 +36,8 @@ test('Sport panel opens an English one-click temporary launch while direct entry
   assert.equal(tool?.href, '/cliente/proyectos/sportmassagefuengirola/blogger')
 
   const portalPage = load('src/app/cliente/(protected)/proyectos/[slug]/blogger/page.tsx').default
-  const directPage = load('src/app/acceso/blogger/[siteKey]/page.tsx').default
+  const directPageModule = load('src/app/acceso/blogger/[siteKey]/page.tsx')
+  const directPage = directPageModule.default
   const panelHtml = renderToStaticMarkup(await portalPage({ params: Promise.resolve({ slug: siteKey }) }))
   assert.match(panelHtml, /Opening WF-Blogger/)
   assert.match(panelHtml, /%2Fbrands%2Fsportmassage%2Fwf-blogger-preview\.png/)
@@ -50,6 +51,16 @@ test('Sport panel opens an English one-click temporary launch while direct entry
   assert.match(html, /Access WF-Blogger/)
   assert.match(html, /type="password"/)
   assert.doesNotMatch(html, /src="\/blogger\/index\.html"/)
+  const metadata = await directPageModule.generateMetadata({ params: Promise.resolve({ siteKey }) })
+  assert.equal(metadata.title, 'WF-Blogger · Sport Massage Fuengirola')
+  assert.equal(metadata.openGraph.url, 'https://blogger.sportmassagefuengirola.com/')
+  assert.deepEqual(metadata.openGraph.images, [{
+    url: 'https://blogger.sportmassagefuengirola.com/brands/sportmassage/wf-blogger-preview.png',
+    width: 900,
+    height: 900,
+    alt: 'Sport Massage Fuengirola WF-Blogger preview',
+  }])
+  assert.equal(metadata.twitter.card, 'summary_large_image')
   await assert.rejects(() => load('src/lib/blogger/legacy-authorize.ts').authorizeSportBlogger(), error => error.status === 403)
   assert.ok(db.calls.every(call => call.operation === 'select'))
 })
