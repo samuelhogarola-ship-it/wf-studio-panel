@@ -31,7 +31,9 @@ function entries(params: PreservedParams) {
 
 export function BillinPeriodFilter({ action, period, preservedParams = {} }: BillinPeriodFilterProps) {
   const preservedEntries = entries(preservedParams)
-  const clearParams = new URLSearchParams([...preservedEntries, ['period', 'all']])
+  const clearParams = new URLSearchParams()
+  for (const [name, value] of preservedEntries) clearParams.append(name, value)
+  clearParams.set('period', 'all')
 
   return (
     <form action={action} method="get" className="flex flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

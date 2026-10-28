@@ -4,7 +4,7 @@ import { collectAllPages } from '@/lib/billin/pagination.mjs'
 import { monthBounds } from '@/lib/billin/periods.mjs'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-type InvoiceFilters = { month?: string; type?: string; status?: string; area?: string; page?: string }
+type InvoiceFilters = { month?: string; start?: string; end?: string; client?: string; type?: string; status?: string; area?: string; page?: string }
 
 export const getInvoicesPageData = cache(async (filters: InvoiceFilters = {}) => {
   const supabase = await createSupabaseServerClient()
@@ -15,10 +15,13 @@ export const getInvoicesPageData = cache(async (filters: InvoiceFilters = {}) =>
     .select('id, number, concept, amount, payment_method, status, notes, issued_at, paid_at, created_at, recipient_kind, recipient_name, recipient_email, recipient_company, document_type, accounting_area, billing_account_id, transfer_instructions, clients(name, company, email)', { count: 'exact' })
     .order('issued_at', { ascending: false }).order('id', { ascending: false })
 
-  if (filters.month) {
-    const period = monthBounds(filters.month)
+  const period = filters.start && filters.end
+    ? { start: filters.start, end: filters.end }
+    : filters.month ? monthBounds(filters.month) : undefined
+  if (period) {
     invoicesQuery = invoicesQuery.gte('issued_at', period.start).lt('issued_at', period.end)
   }
+  if (filters.client) invoicesQuery = invoicesQuery.eq('client_id', filters.client)
   if (filters.type === 'invoice' || filters.type === 'proposal') invoicesQuery = invoicesQuery.eq('document_type', filters.type)
   if (['draft', 'issued', 'paid', 'void'].includes(filters.status ?? '')) invoicesQuery = invoicesQuery.eq('status', filters.status as string)
   if (filters.area === 'general' || filters.area === 'classes') invoicesQuery = invoicesQuery.eq('accounting_area', filters.area)
@@ -30,10 +33,10 @@ export const getInvoicesPageData = cache(async (filters: InvoiceFilters = {}) =>
     invoicesQuery,
     collectAllPages(async (from, to) => {
       let query = supabase.from('invoices').select('amount, status, document_type').order('issued_at', { ascending: false }).order('id', { ascending: false })
-      if (filters.month) {
-        const period = monthBounds(filters.month)
+      if (period) {
         query = query.gte('issued_at', period.start).lt('issued_at', period.end)
       }
+      if (filters.client) query = query.eq('client_id', filters.client)
       if (filters.type === 'invoice' || filters.type === 'proposal') query = query.eq('document_type', filters.type)
       if (['draft', 'issued', 'paid', 'void'].includes(filters.status ?? '')) query = query.eq('status', filters.status as string)
       if (filters.area === 'general' || filters.area === 'classes') query = query.eq('accounting_area', filters.area)

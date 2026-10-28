@@ -64,3 +64,56 @@ test('Bill-in expense action validates before writing and persists a valid entry
     expense_nature: 'one_off', billing_account_id: null, status: 'paid', notes: 'Ticket guardado', created_by: 'admin-1',
   })
 })
+
+test('expense history uses the shared period and keeps it in pagination', async () => {
+  let received
+  const Page = loadProjectModule('src/app/paneladmin/(protected)/gastos/page.tsx', {
+    '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
+    '@/lib/data/expenses': { getExpensesPageData: async (filters) => {
+      received = filters
+      return { clients: [], accounts: [], expenses: [], count: 120, total: 450, page: 1, pageSize: 50 }
+    } },
+    '@/components/admin/expense-form': { ExpenseForm: () => null },
+  }).default
+
+  const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ period: 'custom', from: '2026-10-01', to: '2026-10-31', area: 'classes', page: '2' }) }))
+  assert.deepEqual(received, { area: 'classes', page: 1, start: '2026-10-01', end: '2026-11-01' })
+  for (const name of ['period', 'from', 'to', 'area']) assert.match(html, new RegExp(`name="${name}"`))
+  assert.match(html, /Total de 1 oct 2026 – 31 oct 2026:/)
+  assert.match(html, /href="\/paneladmin\/gastos\?period=custom&amp;from=2026-10-01&amp;to=2026-10-31&amp;area=classes&amp;page=1"/)
+})
+
+function expenseQueryDatabase() {
+  const calls = []
+  return { calls, db: {
+    from(table) {
+      const call = { table, filters: [] }
+      calls.push(call)
+      const query = {
+        select() { return query }, order() { return query }, eq(name, value) { call.filters.push(['eq', name, value]); return query },
+        gte(name, value) { call.filters.push(['gte', name, value]); return query },
+        lt(name, value) { call.filters.push(['lt', name, value]); return query }, range() { return query },
+        then(resolve) { return Promise.resolve({ data: [], error: null, count: 0 }).then(resolve) },
+      }
+      return query
+    },
+    async rpc() { return { data: [{ total: 0 }], error: null } },
+  } }
+}
+
+test('expense data bounds both listed rows and the paid amount total', async () => {
+  const fake = expenseQueryDatabase()
+  const { getExpensesPageData } = loadProjectModule('src/lib/data/expenses.ts', {
+    '@/lib/supabase/server': { createSupabaseServerClient: async () => fake.db },
+    '@/lib/billin/pagination.mjs': { collectAllPages: async (fetchPage) => fetchPage(0, 999) },
+  })
+  await getExpensesPageData({ area: 'classes', page: 0, start: '2026-10-01', end: '2026-11-01' })
+  const expenseCalls = fake.calls.filter((call) => call.table === 'expenses')
+  assert.equal(expenseCalls.length, 2)
+  for (const call of expenseCalls) {
+    assert.ok(call.filters.some((filter) => filter.join(':') === 'gte:expense_date:2026-10-01'))
+    assert.ok(call.filters.some((filter) => filter.join(':') === 'lt:expense_date:2026-11-01'))
+    assert.ok(call.filters.some((filter) => filter.join(':') === 'eq:accounting_area:classes'))
+  }
+  assert.ok(expenseCalls[1].filters.some((filter) => filter.join(':') === 'eq:status:paid'))
+})

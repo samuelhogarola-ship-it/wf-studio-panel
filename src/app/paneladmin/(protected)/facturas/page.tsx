@@ -1,11 +1,13 @@
 import Link from 'next/link'
 
+import { BillinPeriodFilter } from '@/components/admin/billin-period-filter'
 import { InvoiceForm } from '@/components/admin/invoice-form'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
 import { markInvoicePaidAction } from '@/lib/actions/invoices'
+import { resolveAccountingPeriod } from '@/lib/billin/periods.mjs'
 import { getInvoicesPageData } from '@/lib/data/invoices'
 import { getLocale } from '@/lib/locale'
 import { t } from '@/lib/i18n'
@@ -18,14 +20,25 @@ function getBillingEmail(company: string | null | undefined, fallbackEmail: stri
   return fiscalEmail ?? fallbackEmail ?? ''
 }
 
+function inclusiveEnd(exclusiveEnd?: string) {
+  if (!exclusiveEnd) return undefined
+  const date = new Date(`${exclusiveEnd}T00:00:00.000Z`)
+  date.setUTCDate(date.getUTCDate() - 1)
+  return date.toISOString().slice(0, 10)
+}
+
 export default async function AdminFacturasPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ client?: string; month?: string; type?: string; status?: string; area?: string; page?: string }>
+  searchParams?: Promise<{ client?: string; period?: string; month?: string; from?: string; to?: string; type?: string; status?: string; area?: string; page?: string }>
 }) {
   const identity = await requireAdmin()
   const params = searchParams ? await searchParams : {}
-  const filters = { month: params.month, type: params.type, status: params.status, area: params.area, page: params.page }
+  const period = resolveAccountingPeriod(params)
+  const filters = {
+    ...(period.start && period.end ? { start: period.start, end: period.end } : {}),
+    client: params.client, type: params.type, status: params.status, area: params.area, page: params.page,
+  }
   const data = await getInvoicesPageData(filters)
   const locale = await getLocale()
 
@@ -44,9 +57,12 @@ export default async function AdminFacturasPage({
       locale={locale}
     >
       <Card className="mb-6 p-5">
-        <form method="get" className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <BillinPeriodFilter action="/paneladmin/facturas" period={period} preservedParams={{ client: params.client, type: params.type, status: params.status, area: params.area }} />
+        <form method="get" className="mt-4 grid gap-4 border-t border-line pt-4 md:grid-cols-2 xl:grid-cols-4">
           {params.client ? <input type="hidden" name="client" value={params.client} /> : null}
-          <label className="text-sm font-semibold text-foreground">Mes<input className="mt-2 min-h-11 w-full rounded-2xl border border-line px-4 font-normal" type="month" name="month" defaultValue={params.month ?? ''} /></label>
+          <input type="hidden" name="period" value={period.key} />
+          {period.key === 'custom' && period.start ? <input type="hidden" name="from" value={period.start} /> : null}
+          {period.key === 'custom' && period.end ? <input type="hidden" name="to" value={inclusiveEnd(period.end)} /> : null}
           <label className="text-sm font-semibold text-foreground">Documento<select className="mt-2 min-h-11 w-full rounded-2xl border border-line px-4 font-normal" name="type" defaultValue={params.type ?? ''}><option value="">Todos</option><option value="invoice">Facturas</option><option value="proposal">Propuestas</option></select></label>
           <label className="text-sm font-semibold text-foreground">Estado<select className="mt-2 min-h-11 w-full rounded-2xl border border-line px-4 font-normal" name="status" defaultValue={params.status ?? ''}><option value="">Todos</option><option value="draft">Borrador</option><option value="issued">Pendiente / emitida</option><option value="paid">Cobrada</option><option value="void">Anulada</option></select></label>
           <label className="text-sm font-semibold text-foreground">Contabilidad<select className="mt-2 min-h-11 w-full rounded-2xl border border-line px-4 font-normal" name="area" defaultValue={params.area ?? ''}><option value="">Todas</option><option value="general">General</option><option value="classes">Clases</option></select></label>
