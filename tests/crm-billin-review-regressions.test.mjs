@@ -24,6 +24,7 @@ test('proposals cannot inherit payment links or unpaid invoice semantics', async
   const sql = (await Promise.all([
     source('supabase/migrations/202610280004_billin_crm_hardening.sql'),
     source('supabase/migrations/202610280005_proposal_payment_guard.sql'),
+    source('supabase/migrations/202610280006_document_type_immutable.sql'),
   ])).join('\n')
   const action = await source('src/lib/actions/invoices.ts')
   const page = await source('src/app/paneladmin/(protected)/facturas/page.tsx')
@@ -31,6 +32,7 @@ test('proposals cannot inherit payment links or unpaid invoice semantics', async
   assert.match(sql, /delete from public\.payment_links/i)
   assert.match(sql, /create trigger payment_links_reject_proposals/i)
   assert.match(sql, /issue_invoice_with_payment_link[\s\S]*document_type\s*<>\s*'invoice'/i)
+  assert.match(sql, /create trigger invoices_document_type_immutable/i)
   assert.ok(action.indexOf("documentType === 'proposal'") < action.indexOf("create_billing_document_draft"))
   assert.match(page, /document_type === 'proposal' \? 'Emitida'/)
   const form = await source('src/components/admin/invoice-form.tsx')
