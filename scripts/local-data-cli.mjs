@@ -71,7 +71,8 @@ export async function readRestoreTargetContext({ run = defaultRun, root = defaul
   const projectId = environment.LOCAL_RESTORE_PROJECT_ID
   const dbUrl = environment.LOCAL_RESTORE_DATABASE_URL
   if (!projectId || !/^[a-z0-9][a-z0-9_-]*$/i.test(projectId) || !dbUrl) throw new Error('Falta definir el destino local de recuperación.')
-  assertLoopbackDatabaseUrl(dbUrl)
+  const parsedDatabaseUrl = assertLoopbackDatabaseUrl(dbUrl)
+  if (parsedDatabaseUrl.pathname !== '/postgres') throw new Error('El destino debe ser la base postgres del contenedor local.')
   const containersResult = await run('docker', [
     'ps',
     '--filter', `label=com.supabase.cli.project=${projectId}`,
@@ -82,6 +83,19 @@ export async function readRestoreTargetContext({ run = defaultRun, root = defaul
     .map((line) => line.trim().split(/\s+/))
     .find(([, image]) => isSupabasePostgresImage(image))?.[0]
   if (!containerId) throw new Error('No se encontró el contenedor PostgreSQL del destino local.')
+  const inspectResult = await run('docker', [
+    'inspect',
+    '--format', '{{range $port := index .NetworkSettings.Ports "5432/tcp"}}{{$port.HostIp}} {{$port.HostPort}}{{"\\n"}}{{end}}',
+    containerId,
+  ], { cwd: root })
+  const expectedPort = parsedDatabaseUrl.port || '5432'
+  const publishedPorts = String(inspectResult.stdout)
+    .split(/\r?\n/)
+    .map((line) => line.trim().split(/\s+/))
+    .filter(([, port]) => port)
+  if (!publishedPorts.some(([, port]) => port === expectedPort)) {
+    throw new Error('La URL del destino no corresponde al puerto publicado por su contenedor.')
+  }
   return { projectId, dbUrl, containerId }
 }
 

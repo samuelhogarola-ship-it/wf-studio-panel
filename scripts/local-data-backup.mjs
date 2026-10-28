@@ -53,12 +53,24 @@ export async function createLocalBackup({ context, status, backupRoot, run, now 
   return { manifestPath, dumpPath }
 }
 
+export async function verifyContainerDumpIntegrity({ run, containerId, containerDumpPath, manifest }) {
+  const sizeResult = await run('docker', ['exec', containerId, 'stat', '-c', '%s', containerDumpPath])
+  const copiedSize = Number(String(sizeResult.stdout).trim())
+  if (!Number.isSafeInteger(copiedSize) || copiedSize !== manifest.dump.size) {
+    throw new Error('El tamaño del volcado copiado no coincide con el manifiesto.')
+  }
+  const checksumResult = await run('docker', ['exec', containerId, 'sha256sum', containerDumpPath])
+  const copiedChecksum = String(checksumResult.stdout).trim().split(/\s+/)[0]?.toLowerCase()
+  if (copiedChecksum !== manifest.dump.sha256) throw new Error('El checksum del volcado copiado no coincide con el manifiesto.')
+}
+
 export async function verifyLocalBackup({ manifestPath, backupRoot, run, context }) {
   const manifest = await verifyBackupManifest({ root: backupRoot, manifestPath })
   const dumpPath = await resolveConfinedBackupPath(backupRoot, join(dirname(manifestPath), manifest.dump.file))
   const containerDumpPath = `/tmp/wf-panel-verify-${randomUUID()}.dump`
   try {
     await run('docker', ['cp', dumpPath, `${context.containerId}:${containerDumpPath}`])
+    await verifyContainerDumpIntegrity({ run, containerId: context.containerId, containerDumpPath, manifest })
     await run('docker', ['exec', context.containerId, 'pg_restore', '--list', containerDumpPath])
   } finally {
     await run('docker', ['exec', context.containerId, 'rm', '-f', containerDumpPath]).catch(() => {})

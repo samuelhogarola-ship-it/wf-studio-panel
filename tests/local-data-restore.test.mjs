@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { chmod, mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { chmod, mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -25,6 +26,10 @@ const emptyTargetStatus = {
   tables: manifest.tables.map((table) => ({ ...table, count: 0 })),
 }
 
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex')
+}
+
 test('restore validation rejects every unsafe destination before destructive work', () => {
   const valid = {
     source,
@@ -39,6 +44,7 @@ test('restore validation rejects every unsafe destination before destructive wor
     [{ ...valid, target: { ...target, dbUrl: 'postgresql://remote.example.com/postgres' } }, /local|loopback/i],
     [{ ...valid, target: { ...target, projectId: source.projectId } }, /distinto/i],
     [{ ...valid, target: { ...target, dbUrl: source.dbUrl } }, /distinto/i],
+    [{ ...valid, source: { ...source, containerId: target.containerId } }, /distinto/i],
     [{ ...valid, manifest: { ...manifest, projectId: 'some-other-source' } }, /origen/i],
     [{ ...valid, targetStatus: { ...emptyTargetStatus, migrations: ['202610280005'] } }, /migraciones/i],
     [{ ...valid, targetStatus: { ...emptyTargetStatus, tables: emptyTargetStatus.tables.map((table) => table.name === 'clients' ? { ...table, count: 1 } : table) } }, /vacío/i],
@@ -65,7 +71,14 @@ test('restore verifies the dump before invoking Docker and then uses only the ta
   await writeFile(manifestPath, JSON.stringify(backupManifest), { mode: 0o600 })
   await chmod(manifestPath, 0o600)
   let calls = []
-  const run = async (command, args) => { calls.push([command, args]); return { stdout: '' } }
+  let copiedContent = ''
+  const run = async (command, args) => {
+    calls.push([command, args])
+    if (args[0] === 'cp' && !args[1].startsWith(`${target.containerId}:`)) copiedContent = await readFile(args[1], 'utf8')
+    if (args.includes('stat')) return { stdout: `${Buffer.byteLength(copiedContent)}\n` }
+    if (args.includes('sha256sum')) return { stdout: `${sha256(copiedContent)}  archive.dump\n` }
+    return { stdout: '' }
+  }
   await assert.rejects(() => restoreLocalBackup({ manifestPath, targetContext: target, run }), /checksum/i)
   assert.equal(calls.length, 0)
 
@@ -81,6 +94,7 @@ test('restore verifies the dump before invoking Docker and then uses only the ta
   assert.equal(restoreCall[1][1], target.containerId)
   assert.ok(restoreCall[1].includes('--data-only'))
   assert.ok(restoreCall[1].includes('--exit-on-error'))
+  assert.ok(restoreCall[1].includes('--single-transaction'))
   assert.equal(restoreCall[1][restoreCall[1].indexOf('-U') + 1], 'supabase_admin')
 })
 
@@ -144,4 +158,16 @@ test('recovery drill owns one lock and always stops only its disposable stack', 
     ['supabase', 'stop', '--workdir', workspace, '--no-backup'],
   ])
   assert.ok(calls.every(([, args]) => !args.join(' ').includes('postgresql://')))
+
+  calls.length = 0
+  const failedStartRun = async (command, args) => {
+    calls.push([command, args])
+    if (args[1] === 'start') throw new Error('partial start')
+    return { stdout: '' }
+  }
+  await assert.rejects(() => withDisposableSupabase({ workspace, run: failedStartRun }, async () => {}), /partial start/)
+  assert.deepEqual(calls.map(([, args]) => args), [
+    ['supabase', 'start', '--workdir', workspace],
+    ['supabase', 'stop', '--workdir', workspace, '--no-backup'],
+  ])
 })

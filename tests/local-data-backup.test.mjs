@@ -1,10 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { mkdtemp, readFile, realpath, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { createLocalBackup, verifyLocalBackup } from '../scripts/local-data-backup.mjs'
+
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex')
+}
 
 const context = {
   projectId: 'wf-local-test',
@@ -85,11 +90,30 @@ test('backup verification checks integrity before inspecting the PostgreSQL arch
 
   await writeFile(dumpPath, 'tampered-archive', { mode: 0o600 })
   let calls = []
-  const verifyRun = async (command, args) => { calls.push([command, args]); return { stdout: '' } }
+  let copiedContent = ''
+  const verifyRun = async (command, args) => {
+    calls.push([command, args])
+    if (args[0] === 'cp' && !args[1].startsWith(`${context.containerId}:`)) copiedContent = await readFile(args[1], 'utf8')
+    if (args.includes('stat')) return { stdout: `${Buffer.byteLength(copiedContent)}\n` }
+    if (args.includes('sha256sum')) return { stdout: `${sha256(copiedContent)}  archive.dump\n` }
+    return { stdout: '' }
+  }
   await assert.rejects(() => verifyLocalBackup({ manifestPath, backupRoot, run: verifyRun, context }), /tamaño|checksum/i)
   assert.equal(calls.length, 0)
 
   await writeFile(dumpPath, 'custom-pg-archive', { mode: 0o600 })
+  const raceCalls = []
+  let racedContent = ''
+  const raceRun = async (command, args) => {
+    raceCalls.push([command, args])
+    if (args[0] === 'cp' && !args[1].startsWith(`${context.containerId}:`)) racedContent = 'changed-after-check'
+    if (args.includes('stat')) return { stdout: `${Buffer.byteLength(racedContent)}\n` }
+    if (args.includes('sha256sum')) return { stdout: `${sha256(racedContent)}  archive.dump\n` }
+    return { stdout: '' }
+  }
+  await assert.rejects(() => verifyLocalBackup({ manifestPath, backupRoot, run: raceRun, context }), /copiado|checksum|tamaño/i)
+  assert.equal(raceCalls.some(([, args]) => args.includes('pg_restore')), false)
+
   calls = []
   const manifest = await verifyLocalBackup({ manifestPath, backupRoot, run: verifyRun, context })
   assert.equal(manifest.projectId, context.projectId)

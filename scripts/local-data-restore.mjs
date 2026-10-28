@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { dirname, join } from 'node:path'
 
 import { collectLocalDataStatus } from './local-data-db.mjs'
+import { verifyContainerDumpIntegrity } from './local-data-backup.mjs'
 import { assertLoopbackDatabaseUrl, resolveConfinedBackupPath, verifyBackupManifest } from './local-data-safety.mjs'
 
 function databaseIdentity(databaseUrl) {
@@ -31,7 +32,7 @@ export function validateRestoreRequest({ source, target, manifest, confirmation,
   if (confirmation !== '--confirm-local-restore') throw new Error('La confirmación exacta de restauración local es obligatoria.')
   const sourceDatabase = databaseIdentity(source.dbUrl)
   const targetDatabase = databaseIdentity(target.dbUrl)
-  if (source.projectId === target.projectId || sourceDatabase === targetDatabase) throw new Error('El destino de recuperación debe ser distinto del origen activo.')
+  if (source.projectId === target.projectId || sourceDatabase === targetDatabase || (source.containerId && source.containerId === target.containerId)) throw new Error('El destino de recuperación debe ser distinto del origen activo.')
   if (manifest.projectId !== source.projectId) throw new Error('La copia no pertenece al proyecto de origen activo.')
   if (migrationContract(manifest.migrationVersions) !== migrationContract(targetStatus.migrations)) throw new Error('El historial de migraciones del destino no coincide exactamente.')
   if (JSON.stringify(tableNames(manifest.tables)) !== JSON.stringify(tableNames(targetStatus.tables))) throw new Error('El conjunto de tablas del destino no coincide con la copia.')
@@ -104,9 +105,10 @@ export async function restoreLocalBackup({ manifestPath, targetContext, run, bac
   const containerDumpPath = `/tmp/wf-panel-restore-${randomUUID()}.dump`
   try {
     await run('docker', ['cp', dumpPath, `${targetContext.containerId}:${containerDumpPath}`])
+    await verifyContainerDumpIntegrity({ run, containerId: targetContext.containerId, containerDumpPath, manifest })
     await run('docker', [
       'exec', targetContext.containerId,
-      'pg_restore', '--data-only', '--exit-on-error', '--disable-triggers', '--no-owner', '--no-privileges',
+      'pg_restore', '--data-only', '--exit-on-error', '--single-transaction', '--disable-triggers', '--no-owner', '--no-privileges',
       '-U', 'supabase_admin', '-d', 'postgres', containerDumpPath,
     ])
   } finally {

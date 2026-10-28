@@ -126,6 +126,8 @@ npm run test:data-recovery
 
 El ensayo crea una nueva copia, levanta un stack desechable, restaura allí, compara migraciones, tablas, recuentos e invariantes de Bill-in y elimina únicamente ese stack. No restaura sobre la base de trabajo.
 
+Si el proceso se corta de forma abrupta y un intento posterior informa de que ya hay un ensayo en curso, no elimines el bloqueo mientras exista el proceso o algún contenedor `supabase_*_wf-recovery-*`. Después de confirmar que no queda ningún ensayo activo, puede retirarse únicamente `storage/.local-data-recovery.lock` y repetirse el comando.
+
 La restauración manual está reservada a otro stack local, distinto y vacío. Hay que indicar su URL y project ID de forma explícita y escribir el indicador exacto:
 
 ```bash

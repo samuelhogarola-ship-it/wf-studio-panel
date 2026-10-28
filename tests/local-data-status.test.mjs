@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { collectLocalDataStatus } from '../scripts/local-data-db.mjs'
-import { formatLocalDataStatus, readSupabaseLocalContext } from '../scripts/local-data-cli.mjs'
+import { formatLocalDataStatus, readRestoreTargetContext, readSupabaseLocalContext } from '../scripts/local-data-cli.mjs'
 
 const localStatus = `
 API_URL="http://127.0.0.1:55321"
@@ -55,6 +55,33 @@ test('local context rejects remote or incomplete status before container discove
     })
     assert.equal(calls, 1)
   }
+})
+
+test('restore target binds the supplied loopback database URL to the labelled Docker container', async () => {
+  const root = await projectRoot()
+  const environment = {
+    LOCAL_RESTORE_PROJECT_ID: 'wf-recovery-target',
+    LOCAL_RESTORE_DATABASE_URL: 'postgresql://postgres:private@127.0.0.1:56322/postgres',
+  }
+  const calls = []
+  const run = async (command, args) => {
+    calls.push([command, args])
+    if (args[0] === 'ps') return { stdout: 'target123\tpublic.ecr.aws/supabase/postgres:17.6.1.132\n' }
+    if (args[0] === 'inspect') return { stdout: '127.0.0.1\t56322\n' }
+    throw new Error(`Unexpected command: ${command} ${args.join(' ')}`)
+  }
+  assert.deepEqual(await readRestoreTargetContext({ run, root, environment }), {
+    projectId: 'wf-recovery-target',
+    dbUrl: environment.LOCAL_RESTORE_DATABASE_URL,
+    containerId: 'target123',
+  })
+  assert.equal(calls.length, 2)
+
+  const mismatchRun = async (_command, args) => args[0] === 'ps'
+    ? { stdout: 'target123\tpublic.ecr.aws/supabase/postgres:17.6.1.132\n' }
+    : { stdout: '127.0.0.1\t57322\n' }
+  await assert.rejects(() => readRestoreTargetContext({ run: mismatchRun, root, environment }), /URL|contenedor|puerto/i)
+  await assert.rejects(() => readRestoreTargetContext({ run, root, environment: { ...environment, LOCAL_RESTORE_DATABASE_URL: 'postgresql://postgres:private@127.0.0.1:56322/other' } }), /postgres/i)
 })
 
 test('database status includes every public table and only required Auth identities', async () => {

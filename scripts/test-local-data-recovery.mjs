@@ -54,8 +54,8 @@ export async function withRecoveryDrillLock(lockPath, operation) {
 }
 
 export async function withDisposableSupabase({ workspace, run = defaultRun }, operation) {
-  await run('npx', ['supabase', 'start', '--workdir', workspace], { cwd: workspace })
   try {
+    await run('npx', ['supabase', 'start', '--workdir', workspace], { cwd: workspace })
     return await operation()
   } finally {
     await run('npx', ['supabase', 'stop', '--workdir', workspace, '--no-backup'], { cwd: workspace }).catch(() => {})
