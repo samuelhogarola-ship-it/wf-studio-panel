@@ -38,12 +38,16 @@ test('Sport panel opens an English one-click temporary launch while direct entry
   const portalPage = load('src/app/cliente/(protected)/proyectos/[slug]/blogger/page.tsx').default
   const directPage = load('src/app/acceso/blogger/[siteKey]/page.tsx').default
   const panelHtml = renderToStaticMarkup(await portalPage({ params: Promise.resolve({ slug: siteKey }) }))
-  assert.match(panelHtml, /Opening Blogger/)
+  assert.match(panelHtml, /Opening WF-Blogger/)
+  assert.match(panelHtml, /%2Fbrands%2Fsportmassage%2Fwf-blogger-preview\.png/)
+  assert.match(panelHtml, /%2Fbrands%2Fsportmassage%2Flogo\.png/)
+  assert.match(panelHtml, /alt="Sport Massage Fuengirola WF-Blogger preview"/)
+  assert.match(panelHtml, /alt="Sport Massage Fuengirola logo"/)
   assert.match(panelHtml, /action="\/api\/tools\/blogger\/sportmassagefuengirola\/launch"/)
   assert.match(panelHtml, /method="post"/)
   assert.doesNotMatch(panelHtml, /admin\.webfuengirola\.com|type="password"/)
   const html = renderToStaticMarkup(await directPage({ params: Promise.resolve({ siteKey }) }))
-  assert.match(html, /Access Blogger/)
+  assert.match(html, /Access WF-Blogger/)
   assert.match(html, /type="password"/)
   assert.doesNotMatch(html, /src="\/blogger\/index\.html"/)
   await assert.rejects(() => load('src/lib/blogger/legacy-authorize.ts').authorizeSportBlogger(), error => error.status === 403)
@@ -64,7 +68,7 @@ test('Sport portal, direct entry and editor API deny foreign, revoked or mismatc
     const directPage = load('src/app/acceso/blogger/[siteKey]/page.tsx').default
     await assert.rejects(() => portalPage({ params: Promise.resolve({ slug: siteKey }) }), { message: '404' })
     const html = renderToStaticMarkup(await directPage({ params: Promise.resolve({ siteKey }) }))
-    assert.match(html, /Access Blogger/)
+    assert.match(html, /Access WF-Blogger/)
     await assert.rejects(() => load('src/lib/blogger/legacy-authorize.ts').authorizeSportBlogger(), error => error.status === 403)
   }
 })

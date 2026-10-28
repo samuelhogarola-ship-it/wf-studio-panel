@@ -54,7 +54,7 @@ test('active Blogger uses the authorized internal route and exposes no runtime c
 
   assert.deepEqual(tool, {
     id: 'blogger',
-    label: 'Blogger',
+    label: 'WF-Blogger',
     href: '/paneladmin/blogger/first-site',
     state: 'active',
     audience: 'both',

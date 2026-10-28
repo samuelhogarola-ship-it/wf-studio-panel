@@ -29,7 +29,7 @@ export function DirectBloggerShell({
       <header className="border-b border-line bg-white px-4 py-4 sm:px-6">
         <div className="mx-auto flex max-w-screen-2xl items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">WF-STUDIO · Blogger</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">WF-STUDIO · WF-Blogger</p>
             <h1 className="truncate text-lg font-black text-foreground">{site.name}</h1>
             <p className="truncate text-xs text-muted">{site.domain}</p>
           </div>
@@ -46,8 +46,8 @@ export function DirectBloggerShell({
       </header>
       <main className="mx-auto max-w-screen-2xl p-4 sm:p-6">
         {target.kind === 'iframe'
-          ? <iframe title={`Blogger · ${site.name}`} src={target.href} className="h-[calc(100vh-8.5rem)] min-h-[760px] w-full rounded-xl border border-line bg-white" />
-          : <a href={target.href} rel="noopener noreferrer" className="inline-flex rounded-lg bg-brand px-4 py-3 font-bold text-white">{english ? 'Open Blogger' : 'Abrir Blogger'} · {site.name} ↗</a>}
+          ? <iframe title={`WF-Blogger · ${site.name}`} src={target.href} className="h-[calc(100vh-8.5rem)] min-h-[760px] w-full rounded-xl border border-line bg-white" />
+          : <a href={target.href} rel="noopener noreferrer" className="inline-flex rounded-lg bg-brand px-4 py-3 font-bold text-white">{english ? 'Open WF-Blogger' : 'Abrir WF-Blogger'} · {site.name} ↗</a>}
       </main>
     </div>
   )

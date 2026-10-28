@@ -17,8 +17,11 @@ declare module "@/lib/sites/registry.mjs" {
     };
     blogger: {
       enabled: boolean;
+      variant?: 'static' | 'vps';
       runtime?: 'central-multisite' | 'central-legacy' | 'external';
       customOrigin?: string;
+      logoPath?: string;
+      previewImagePath?: string;
       url?: string;
       apiBase?: string;
       buildEndpoint?: string;

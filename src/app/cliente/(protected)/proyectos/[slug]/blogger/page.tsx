@@ -30,6 +30,8 @@ export default async function ClientBloggerPage({
     return <PanelBloggerLaunch
       action={`/api/tools/blogger/${encodeURIComponent(site.key)}/launch`}
       siteName={site.name}
+      logoPath={site.blogger.logoPath}
+      previewImagePath={site.blogger.previewImagePath}
       launchFailed={query?.error === 'launch'}
     />
   }

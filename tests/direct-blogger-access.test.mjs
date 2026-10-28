@@ -93,7 +93,7 @@ function setup({ identity = null, directSession = null, authorizedSites = [] } =
 test('Sport Massage direct route renders the independent English login instead of the panel login', async () => {
   const { Page, db } = setup()
   const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }))
-  assert.match(html, /Access Blogger/)
+  assert.match(html, /Access WF-Blogger/)
   assert.match(html, /sportmassagefuengirola@gmail\.com/)
   assert.match(html, /type="password"/)
   assert.match(html, />Show</)
@@ -108,7 +108,7 @@ test('expired temporary access shows a generic retry message without exposing ti
     searchParams: Promise.resolve({ error: 'handoff' }),
   }))
   assert.match(html, /temporary access link/i)
-  assert.match(html, /sign in with your Blogger password/i)
+  assert.match(html, /sign in with your WF-Blogger password/i)
   assert.doesNotMatch(html, /ticket|code=|token/i)
 })
 
@@ -124,7 +124,7 @@ test('an ordinary Sofia panel session still requires the independent Blogger cre
   const { Page } = setup({ identity: identities.sofia, authorizedSites: ['sportmassagefuengirola'] })
   const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }))
 
-  assert.match(html, /Access Blogger/)
+  assert.match(html, /Access WF-Blogger/)
   assert.match(html, /type="password"/)
   assert.doesNotMatch(html, /src="\/blogger\/index\.html"|paneladmin/)
 })
@@ -149,7 +149,7 @@ test('aGama panel-ticket session receives only the exact aGama editor', async ()
 test('a client cannot use its ordinary session to guess the Sport editor', async () => {
   const { Page } = setup({ identity: identities.agama, authorizedSites: ['agama'] })
   const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ siteKey: 'sportmassagefuengirola' }) }))
-  assert.match(html, /Access Blogger/)
+  assert.match(html, /Access WF-Blogger/)
   assert.doesNotMatch(html, /src="\/blogger\/index\.html"/)
 })
 

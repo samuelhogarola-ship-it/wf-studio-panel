@@ -6,7 +6,7 @@ const labels = {
     fotografias: 'Fotografías', servicios: 'Servicios', pendientes: 'Pendientes',
     facturas: 'Facturas', pagos: 'Pagos', historial: 'Historial', mensajeria: 'Mensajería',
     bonos: 'Bonos', packs: 'Packs', products: 'Productos', domains: 'Dominios',
-    hosting: 'Hosting', blogger: 'Blogger', analytics: 'Estadísticas',
+    hosting: 'Hosting', blogger: 'WF-Blogger', analytics: 'Estadísticas',
     help: 'Ayuda', bonuses: 'Bonos',
   },
   en: {
@@ -14,7 +14,7 @@ const labels = {
     fotografias: 'Photos', servicios: 'Services', pendientes: 'Pending',
     facturas: 'Invoices', pagos: 'Payments', historial: 'History', mensajeria: 'Messages',
     bonos: 'Hours', packs: 'Packs', products: 'Products', domains: 'Domains',
-    hosting: 'Hosting', blogger: 'Blogger', analytics: 'Statistics',
+    hosting: 'Hosting', blogger: 'WF-Blogger', analytics: 'Statistics',
     help: 'Help', bonuses: 'Bonuses',
   },
 };

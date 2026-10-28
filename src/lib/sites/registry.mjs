@@ -60,6 +60,19 @@ function parseExactOrigin(value, label) {
   return parsed;
 }
 
+function validatePublicAssetPath(value, label) {
+  if (
+    typeof value !== "string" ||
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.includes("..") ||
+    value.includes("?") ||
+    value.includes("#") ||
+    !/^\/[a-zA-Z0-9/_-]+\.(?:avif|png|svg|webp)$/.test(value)
+  ) throw new Error(`Registro de sitios: ${label} no es una ruta pública segura`);
+  return value;
+}
+
 function allowedSiteOrigins(site, domain, productionOrigin) {
   const allowed = new Set([productionOrigin]);
   if (site.allowedOrigins === undefined) return allowed;
@@ -108,6 +121,11 @@ export function validateSite(site) {
       throw new Error(`Registro de sitios: Blogger de ${site.key} no tiene runtime válido`);
     }
     parseHttpsUrl(site.blogger.url, "Blogger", site, new Set([...allowedOrigins, STUDIO_ORIGIN, CLIENT_STUDIO_ORIGIN]));
+    if (site.blogger.variant !== undefined && !["static", "vps"].includes(site.blogger.variant)) {
+      throw new Error(`Registro de sitios: Blogger de ${site.key} no tiene una variante válida`);
+    }
+    if (site.blogger.logoPath !== undefined) validatePublicAssetPath(site.blogger.logoPath, `logo de Blogger de ${site.key}`);
+    if (site.blogger.previewImagePath !== undefined) validatePublicAssetPath(site.blogger.previewImagePath, `vista previa de Blogger de ${site.key}`);
   }
   if (site.blogger?.customOrigin !== undefined) {
     if (!site.blogger.enabled || !["central-multisite", "central-legacy"].includes(site.blogger.runtime)) {

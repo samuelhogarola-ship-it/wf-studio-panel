@@ -113,52 +113,54 @@ El build funciona sin credenciales reales: las páginas dinámicas (las que usan
 
 Configura estas variables en Coolify antes de hacer el primer deploy:
 
-| Variable                               | Descripción                                                                        |
-| -------------------------------------- | ---------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`             | URL del proyecto Supabase                                                          |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Clave pública (anon key)                                                           |
-| `SUPABASE_SECRET_KEY`                  | Service role key; solo servidor, también persiste los informes mensuales           |
+| Variable                               | Descripción                                                                         |
+| -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | URL del proyecto Supabase                                                           |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Clave pública (anon key)                                                            |
+| `SUPABASE_SECRET_KEY`                  | Service role key; solo servidor, también persiste los informes mensuales            |
 | `PROJECT_PROVISIONING_SECRET`          | Secreto Bearer solo servidor para registrar webs mediante `/api/projects/provision` |
-| `APP_URL`                              | URL canónica del panel para magic links, callbacks y metadatos                     |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`       | Site key pública opcional de Cloudflare Turnstile; configurar junto al secret      |
-| `TURNSTILE_SECRET_KEY`                 | Secret opcional de Turnstile; configurar junto a la site key                       |
-| `RESEND_API_KEY`                       | API key de Resend para emails                                                      |
-| `RESEND_FROM_EMAIL`                    | Email remitente verificado en Resend                                               |
-| `NEXT_PUBLIC_APP_URL`                  | URL pública expuesta al cliente; mantenerla igual que `APP_URL`                    |
+| `APP_URL`                              | URL canónica del panel para magic links, callbacks y metadatos                      |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`       | Site key pública opcional de Cloudflare Turnstile; configurar junto al secret       |
+| `TURNSTILE_SECRET_KEY`                 | Secret opcional de Turnstile; configurar junto a la site key                        |
+| `RESEND_API_KEY`                       | API key de Resend para emails                                                       |
+| `RESEND_FROM_EMAIL`                    | Email remitente verificado en Resend                                                |
+| `NEXT_PUBLIC_APP_URL`                  | URL pública expuesta al cliente; mantenerla igual que `APP_URL`                     |
 | `CRON_SECRET`                          | Secreto compartido para tareas programadas; se envía como `Authorization: Bearer`   |
-| `PENDING_REMINDERS_CRON_SECRET`        | Secreto opcional específico para el cron de recordatorios                          |
-| `MONTHLY_STAT_REPORTS_CRON_SECRET`     | Secreto opcional específico para el cron mensual de informes                       |
-| `UMAMI_PERSONAL_URL`                   | Umami personal: `https://analytics.187.124.55.36.sslip.io`                         |
-| `UMAMI_PERSONAL_USERNAME`              | Usuario API del Umami personal; por defecto `admin`                                |
-| `UMAMI_PERSONAL_PASSWORD`              | Contraseña del Umami personal, solo servidor                                       |
+| `PENDING_REMINDERS_CRON_SECRET`        | Secreto opcional específico para el cron de recordatorios                           |
+| `MONTHLY_STAT_REPORTS_CRON_SECRET`     | Secreto opcional específico para el cron mensual de informes                        |
+| `UMAMI_PERSONAL_URL`                   | Umami personal: `https://analytics.187.124.55.36.sslip.io`                          |
+| `UMAMI_PERSONAL_USERNAME`              | Usuario API del Umami personal; por defecto `admin`                                 |
+| `UMAMI_PERSONAL_PASSWORD`              | Contraseña del Umami personal, solo servidor                                        |
 | `UMAMI_AGAMA_URL`                      | Umami Agama/TodoPlástico: `https://analytics.2.24.10.239.sslip.io`                  |
-| `UMAMI_AGAMA_USERNAME`                 | Usuario API del Umami Agama; por defecto `admin`                                   |
-| `UMAMI_AGAMA_PASSWORD`                 | Contraseña del Umami Agama, solo servidor                                          |
-| `UMAMI_WEBSITE_ID_*`                   | Website ID por sitio; si falta se intenta resolver por dominio en su instancia     |
-| `STAT_REPORT_EMAIL_TO`                 | Destinatario requerido; puede sustituirse explícitamente con `RESEND_TO_EMAIL`     |
-| `TODO_PLASTICO_URL`                    | URL Supabase/API del proyecto TodoPlastico                                         |
-| `TODO_PLASTICO_SERVICE_KEY`            | Service role key de TodoPlastico, solo servidor                                    |
+| `UMAMI_AGAMA_USERNAME`                 | Usuario API del Umami Agama; por defecto `admin`                                    |
+| `UMAMI_AGAMA_PASSWORD`                 | Contraseña del Umami Agama, solo servidor                                           |
+| `UMAMI_WEBSITE_ID_*`                   | Website ID por sitio; si falta se intenta resolver por dominio en su instancia      |
+| `STAT_REPORT_EMAIL_TO`                 | Destinatario requerido; puede sustituirse explícitamente con `RESEND_TO_EMAIL`      |
+| `TODO_PLASTICO_URL`                    | URL Supabase/API del proyecto TodoPlastico                                          |
+| `TODO_PLASTICO_SERVICE_KEY`            | Service role key de TodoPlastico, solo servidor                                     |
 | `TODO_PLASTICO_ADMIN_URL`              | Login admin exacto: `https://todo-plastico.com/ingresar?next=/admin`                |
 | `NEXT_PUBLIC_TODO_PLASTICO_PUBLIC_URL` | Panel de clientes exacto: `https://todo-plastico.com/panel`                         |
 | `NEXT_PUBLIC_TODO_PLASTICO_ADMIN_URL`  | Login admin usado desde el lanzador                                                 |
-| `SUPERENTRENADOR_URL`                  | URL Supabase/API de Superentrenador                                                |
-| `SUPERENTRENADOR_SERVICE_KEY`          | Service role key de Superentrenador, solo servidor                                 |
-| `NEXT_PUBLIC_SUPERENTRENADOR_URL`      | URL publica del marketplace Superentrenador                                        |
-| `NEXT_PUBLIC_COACH_STUDIO_URL`         | URL publica del panel entrenador/alumno                                            |
-| `APPS_USERS_URL`                       | URL Supabase/API de usuarios compartidos de apps educativas                        |
-| `APPS_USERS_SERVICE_KEY`               | Service role key de usuarios compartidos, solo servidor                            |
-| `IMKONTEXT_URL`                        | URL Supabase/API de imKontext/Vokabel                                              |
-| `IMKONTEXT_SERVICE_KEY`                | Service role key de imKontext/Vokabel, solo servidor                               |
+| `SUPERENTRENADOR_URL`                  | URL Supabase/API de Superentrenador                                                 |
+| `SUPERENTRENADOR_SERVICE_KEY`          | Service role key de Superentrenador, solo servidor                                  |
+| `NEXT_PUBLIC_SUPERENTRENADOR_URL`      | URL publica del marketplace Superentrenador                                         |
+| `NEXT_PUBLIC_COACH_STUDIO_URL`         | URL publica del panel entrenador/alumno                                             |
+| `APPS_USERS_URL`                       | URL Supabase/API de usuarios compartidos de apps educativas                         |
+| `APPS_USERS_SERVICE_KEY`               | Service role key de usuarios compartidos, solo servidor                             |
+| `IMKONTEXT_URL`                        | URL Supabase/API de imKontext/Vokabel                                               |
+| `IMKONTEXT_SERVICE_KEY`                | Service role key de imKontext/Vokabel, solo servidor                                |
 
 > `APP_URL` es ahora la referencia canónica del servidor para auth y callbacks. `NEXT_PUBLIC_APP_URL` debe apuntar al mismo dominio para evitar discrepancias entre servidor y cliente.
 
 > `NEXT_PUBLIC_*` se incrustan en el bundle cliente en build time — deben estar disponibles durante el build en Coolify, no solo en runtime.
 
-> Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador. La publicación usa inglés como idioma base y puede generar variantes en español y finés mediante DeepL (`DEEPL_AUTH_KEY`); la clave también se mantiene únicamente en servidor.
+> WF-Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador. La publicación usa inglés como idioma base y puede generar variantes en español y finés mediante DeepL (`DEEPL_AUTH_KEY`); la clave también se mantiene únicamente en servidor.
 
-Sport Massage usa un único Blogger central (`/blogger/index.html`). El botón de **Área Cliente → proyecto Sport Massage → Blogger** abre ese editor dentro del portal y reutiliza la sesión Supabase actual. El enlace directo es `https://admin.webfuengirola.com/acceso/blogger/sportmassagefuengirola`: cuando falta sesión, muestra el acceso con correo/contraseña de la misma cuenta Supabase y vuelve al editor. Las cookies permanecen vinculadas a cada host; abrir el enlace directo en el host administrador puede requerir ese inicio de sesión aunque exista una sesión en el portal.
+Sport Massage usa WF-Blogger Static con un único runtime central. Su puerta de marca es `https://blogger.sportmassagefuengirola.com`: el botón del panel crea un ticket temporal, de un solo uso y ligado a ese origen; el intercambio crea una cookie exclusiva del host y limpia el código de la URL. La misma puerta admite la credencial independiente de WF-Blogger y ofrece cierre de sesión. El host personalizado no expone el panel general, administración ni otros tenants.
 
-El cliente debe estar activo, pertenecer a `wf-studio`, tener asignado el proyecto activo con acceso cliente habilitado y la capacidad Blogger activa. El editor y sus APIs revalidan esos permisos. Sport Massage no requiere backend independiente, secreto de handoff ni un nuevo intercambio de tokens. Las altas y recuperaciones de contraseña se gestionan mediante los flujos existentes de Supabase Auth y la asignación del administrador, sin guardar contraseñas en archivos o variables del proyecto.
+El cliente debe estar activo, pertenecer a `wf-studio`, tener asignado el proyecto activo con acceso cliente habilitado y la capacidad WF-Blogger activa. El editor y sus APIs revalidan esos permisos. Sport Massage no requiere otra aplicación, contenedor, base de datos ni editor. Las credenciales directas se mantienen separadas de la contraseña general del portal y no se guardan en el registro de sitios.
+
+WF-Blogger tiene dos variantes canónicas en `src/config/sites.json`: `static` para webs estáticas como Sport Massage, publicadas mediante repositorio, y `vps` para webs dinámicas como Agama, Samuel Coach y Personal Trainer Fuengirola, publicadas mediante raíces persistentes, API o build hooks del VPS. Ambas comparten el mismo editor, autenticación, permisos y traducciones de Studio.
 
 > Turnstile es opcional. Si no se configuran ni la site key ni el secret, el formulario conserva origen permitido, validación Zod, honeypot y envío de email sin ejecutar Turnstile. Si se activa, deben configurarse ambas claves. El código mantiene compatibilidad secundaria con `TURNSTILE_SITE_KEY` como fallback legado para la site key, pero la convención principal de producción es `NEXT_PUBLIC_TURNSTILE_SITE_KEY`.
 
@@ -192,13 +194,13 @@ El flujo público depende de estos endpoints:
 
 Variables realmente usadas por ese flujo:
 
-| Variable                         | Endpoint              | Qué pasa si falta                                                                                     |
-| -------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `/api/contact/config` | Si tampoco existe el fallback legado `TURNSTILE_SITE_KEY` y también falta el secret, responde `200 {turnstileEnabled:false}`; si falta toda site key pero existe el secret, responde `503 turnstile_misconfigured` |
-| `TURNSTILE_SECRET_KEY`           | `/api/contact`        | Si también falta la site key, acepta token vacío y omite Turnstile; si falta solo esta, responde `503 turnstile_misconfigured` |
-| `RESEND_API_KEY`                 | `/api/contact`        | El envío por Resend falla                                                                             |
-| `RESEND_FROM_EMAIL`              | `/api/contact`        | El envío por Resend falla                                                                             |
-| `STAT_REPORT_EMAIL_TO`           | `/api/monthly-stat-reports` | Sin este valor ni `RESEND_TO_EMAIL`, responde `503 stat_report_not_configured`                   |
+| Variable                         | Endpoint                    | Qué pasa si falta                                                                                                                                                                                                  |
+| -------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | `/api/contact/config`       | Si tampoco existe el fallback legado `TURNSTILE_SITE_KEY` y también falta el secret, responde `200 {turnstileEnabled:false}`; si falta toda site key pero existe el secret, responde `503 turnstile_misconfigured` |
+| `TURNSTILE_SECRET_KEY`           | `/api/contact`              | Si también falta la site key, acepta token vacío y omite Turnstile; si falta solo esta, responde `503 turnstile_misconfigured`                                                                                     |
+| `RESEND_API_KEY`                 | `/api/contact`              | El envío por Resend falla                                                                                                                                                                                          |
+| `RESEND_FROM_EMAIL`              | `/api/contact`              | El envío por Resend falla                                                                                                                                                                                          |
+| `STAT_REPORT_EMAIL_TO`           | `/api/monthly-stat-reports` | Sin este valor ni `RESEND_TO_EMAIL`, responde `503 stat_report_not_configured`                                                                                                                                     |
 
 Fallback legado aceptado por código:
 
@@ -219,7 +221,7 @@ Cada alta o cambio se hace desde `core-general`, incluso si la web nació en otr
 npm run site:onboard -- --root "/ruta/web" --panel-root "/ruta/wf-studio-panel" --key "mi-web" --name "Mi Web" --domain "mi-web.com"
 ```
 
-Añade `--blogger` cuando la web deba instalar Blogger Studio. Samuel Coach queda registrado con su editor protegido de producción en `https://www.samuelcoachdealeman.com/admin/blogger/`.
+Añade `--blogger --blogger-variant <static|vps> --blogger-runtime <runtime> --blogger-url <url>` cuando la web deba registrar WF-Blogger. Una variante explícita usa el editor central y no copia otro editor en la web. Samuel Coach queda registrado en el editor central protegido de Studio: `https://admin.webfuengirola.com/paneladmin/blogger/samuelcoachdealeman`.
 
 El runtime de Blogger vive en este panel y trabaja por `siteKey`. Core General instala el contrato y la configuración de cada nueva web; Studio conserva el editor, la autenticación Supabase, las raíces persistentes y el webhook de publicación de cada tenant. En producción hay que montar las raíces de Samuel y Personal en el volumen del VPS mediante `BLOGGER_SITE_ROOTS_JSON` y configurar sus `BLOGGER_BUILD_HOOK_*`.
 

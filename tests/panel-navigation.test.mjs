@@ -47,7 +47,7 @@ test("Samuel Coach launcher keeps every academy action and adds its direct Blogg
   assert.match(samuelSection, /label: 'Ejercicios'.*href: '\/paneladmin\/samuel-coach\/ejercicios'/);
   assert.match(samuelSection, /label: 'Progreso'.*href: '\/paneladmin\/samuel-coach\/progreso'/);
   assert.match(samuelSection, /label: 'Estadísticas'.*href: '\/paneladmin\/samuel-coach#estadisticas'/);
-  assert.match(samuelSection, /label: 'Blogger'.*href: '\/paneladmin\/blogger\/samuelcoachdealeman'/);
+  assert.match(samuelSection, /label: 'WF-Blogger'.*href: '\/paneladmin\/blogger\/samuelcoachdealeman'/);
 });
 
 test("admin shell allows page content and navigation to scroll", async () => {
