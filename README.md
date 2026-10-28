@@ -50,7 +50,7 @@ BLOGGER_GITHUB_TOKEN=
 BLOGGER_GITHUB_REPOSITORY=samuelhogarola-ship-it/sportmassage
 BLOGGER_GITHUB_BRANCH=main
 DEEPL_AUTH_KEY=
-DEEPL_API_URL=https://api.deepl.com/v2/translate
+DEEPL_API_URL=
 CRON_SECRET=
 PENDING_REMINDERS_CRON_SECRET=
 TODO_PLASTICO_URL=
@@ -218,7 +218,7 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 
 > `NEXT_PUBLIC_*` se incrustan en el bundle cliente en build time — deben estar disponibles durante el build en Coolify, no solo en runtime.
 
-> WF-Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador. La publicación usa inglés como idioma base y puede generar variantes en español y finés mediante DeepL (`DEEPL_AUTH_KEY`); la clave también se mantiene únicamente en servidor.
+> WF-Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador. La publicación usa inglés como idioma base y puede generar variantes en español y finés mediante DeepL (`DEEPL_AUTH_KEY`); la clave también se mantiene únicamente en servidor. Deja `DEEPL_API_URL` vacío para seleccionar automáticamente el endpoint oficial según la clave (`:fx` usa `api-free.deepl.com`); configura una URL explícita solo cuando necesites sobrescribir esa selección.
 
 Sport Massage usa WF-Blogger Static con un único runtime central. Su puerta de marca es `https://blogger.sportmassagefuengirola.com`: el botón del panel crea un ticket temporal, de un solo uso y ligado a ese origen; el intercambio crea una cookie exclusiva del host y limpia el código de la URL. La misma puerta admite la credencial independiente de WF-Blogger y ofrece cierre de sesión. El host personalizado no expone el panel general, administración ni otros tenants.
 

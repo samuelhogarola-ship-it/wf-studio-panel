@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -89,6 +90,13 @@ test('legacy free API credentials use the free DeepL endpoint for Finnish to Eng
     const request=JSON.parse(options.body);assert.equal(request.source_lang,'FI');assert.equal(request.target_lang,'EN-GB');
     return Response.json({translations:[{text:'<p>Massage</p>'}]});
   });
+});
+
+test("the environment example preserves DeepL endpoint autodetection", () => {
+  const example = readFileSync(new URL("../.env.example", import.meta.url), "utf8");
+  const configuredEndpoint = example.match(/^DEEPL_API_URL=(.*)$/m)?.[1];
+
+  assert.equal(configuredEndpoint, "");
 });
 
 test("buildPostHtml renders a static Sport Massage article under /blog", () => {
