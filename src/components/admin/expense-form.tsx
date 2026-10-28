@@ -44,6 +44,14 @@ export function ExpenseForm({ clients, defaultClientId }: { clients: ClientOptio
           <option value="classes">Clases</option><option value="other">Otros</option>
         </Select>
       </div>
+      <div>
+        <Label htmlFor="expense-nature">Tipo de gasto</Label>
+        <Select id="expense-nature" name="expense_nature" defaultValue="one_off">
+          <option value="fixed">Fijo mensual</option>
+          <option value="recurring">Recurrente variable</option>
+          <option value="one_off">Único</option>
+        </Select>
+      </div>
       <div className="md:col-span-2">
         <Label htmlFor="expense-concept">Concepto</Label>
         <Input id="expense-concept" name="concept" required placeholder="Qué se ha pagado" />

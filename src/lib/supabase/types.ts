@@ -91,9 +91,9 @@ export type Database = {
         Relationships: [{ foreignKeyName: "invoices_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
       expenses: {
-        Row: { id: string; client_id: string | null; supplier: string; concept: string; category: string; accounting_area: string; amount: number; expense_date: string; payment_method: string; status: string; notes: string | null; created_by: string | null; created_at: string; updated_at: string }
-        Insert: { id?: string; client_id?: string | null; supplier: string; concept: string; category?: string; accounting_area?: string; amount: number; expense_date?: string; payment_method?: string; status?: string; notes?: string | null; created_by?: string | null; created_at?: string; updated_at?: string }
-        Update: { client_id?: string | null; supplier?: string; concept?: string; category?: string; accounting_area?: string; amount?: number; expense_date?: string; payment_method?: string; status?: string; notes?: string | null; updated_at?: string }
+        Row: { id: string; client_id: string | null; supplier: string; concept: string; category: string; accounting_area: string; expense_nature: string; amount: number; expense_date: string; payment_method: string; status: string; notes: string | null; created_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; client_id?: string | null; supplier: string; concept: string; category?: string; accounting_area?: string; expense_nature?: string; amount: number; expense_date?: string; payment_method?: string; status?: string; notes?: string | null; created_by?: string | null; created_at?: string; updated_at?: string }
+        Update: { client_id?: string | null; supplier?: string; concept?: string; category?: string; accounting_area?: string; expense_nature?: string; amount?: number; expense_date?: string; payment_method?: string; status?: string; notes?: string | null; updated_at?: string }
         Relationships: [{ foreignKeyName: "expenses_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
       invoice_audit: {

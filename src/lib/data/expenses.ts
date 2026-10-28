@@ -6,7 +6,7 @@ export const getExpensesPageData = cache(async ({ area, page, pageSize = 50 }: {
   const supabase = await createSupabaseServerClient()
   let expensesQuery = supabase
     .from('expenses')
-    .select('id, client_id, supplier, concept, category, accounting_area, amount, expense_date, payment_method, status, notes, clients(name)', { count: 'exact' })
+    .select('id, client_id, supplier, concept, category, accounting_area, expense_nature, amount, expense_date, payment_method, status, notes, clients(name)', { count: 'exact' })
     .order('expense_date', { ascending: false })
     .order('created_at', { ascending: false })
   if (area) expensesQuery = expensesQuery.eq('accounting_area', area)
