@@ -221,7 +221,7 @@ Cada alta o cambio se hace desde `core-general`, incluso si la web nació en otr
 npm run site:onboard -- --root "/ruta/web" --panel-root "/ruta/wf-studio-panel" --key "mi-web" --name "Mi Web" --domain "mi-web.com"
 ```
 
-Añade `--blogger --blogger-variant <static|vps> --blogger-runtime <runtime> --blogger-url <url>` cuando la web deba registrar WF-Blogger. Una variante explícita usa el editor central y no copia otro editor en la web. Samuel Coach queda registrado con su editor protegido de producción en `https://www.samuelcoachdealeman.com/admin/blogger/`.
+Añade `--blogger --blogger-variant <static|vps> --blogger-runtime <runtime> --blogger-url <url>` cuando la web deba registrar WF-Blogger. Una variante explícita usa el editor central y no copia otro editor en la web. Samuel Coach queda registrado en el editor central protegido de Studio: `https://admin.webfuengirola.com/paneladmin/blogger/samuelcoachdealeman`.
 
 El runtime de Blogger vive en este panel y trabaja por `siteKey`. Core General instala el contrato y la configuración de cada nueva web; Studio conserva el editor, la autenticación Supabase, las raíces persistentes y el webhook de publicación de cada tenant. En producción hay que montar las raíces de Samuel y Personal en el volumen del VPS mediante `BLOGGER_SITE_ROOTS_JSON` y configurar sus `BLOGGER_BUILD_HOOK_*`.
 
