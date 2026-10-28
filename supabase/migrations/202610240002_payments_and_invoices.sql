@@ -1,8 +1,8 @@
 begin;
 
 alter table public.invoices alter column client_id drop not null;
-update public.invoices set status = 'issued' where status = 'pending';
 alter table public.invoices drop constraint if exists invoices_status_check;
+update public.invoices set status = 'issued' where status = 'pending';
 alter table public.invoices add constraint invoices_status_check check (status in ('draft', 'issued', 'paid', 'void'));
 alter table public.invoices add column if not exists recipient_kind text;
 alter table public.invoices add column if not exists recipient_name text;
