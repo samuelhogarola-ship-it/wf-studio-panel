@@ -4,6 +4,7 @@ import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
+import { monthBounds } from '@/lib/billin/periods.mjs'
 import { getBillinDashboardData } from '@/lib/data/billin'
 import { getLocale } from '@/lib/locale'
 import { formatDate } from '@/lib/utils'
@@ -12,9 +13,11 @@ export const dynamic = 'force-dynamic'
 
 const euro = (value: number) => value.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })
 
-export default async function BillinDashboardPage() {
+export default async function BillinDashboardPage({ searchParams }: { searchParams?: Promise<{ month?: string }> }) {
   const identity = await requireAdmin()
-  const [locale, data] = await Promise.all([getLocale(), getBillinDashboardData()])
+  const params = searchParams ? await searchParams : {}
+  const period = monthBounds(params.month)
+  const [locale, data] = await Promise.all([getLocale(), getBillinDashboardData({ start: period.start, end: period.end })])
   const { summary } = data
   const metrics = [
     { label: 'Facturado', value: summary.totals.invoiced, detail: `${summary.counts.invoices} facturas` },
@@ -25,6 +28,10 @@ export default async function BillinDashboardPage() {
 
   return (
     <AdminShell title="Bill-in" description="Facturación y contabilidad del estudio en un solo lugar." currentPath="/paneladmin/billin" userEmail={identity.email} locale={locale}>
+      <Card className="mb-6 flex flex-wrap items-end justify-between gap-4 p-5">
+        <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Periodo contable</p><h2 className="mt-1 text-xl font-bold text-foreground">Resumen de {period.label}</h2></div>
+        <form method="get" className="flex flex-wrap items-end gap-2"><label className="text-sm font-semibold text-foreground">Mes<input className="mt-2 block min-h-11 rounded-2xl border border-line px-4 font-normal" type="month" name="month" defaultValue={period.key} /></label><button className="min-h-11 rounded-full bg-slate-900 px-5 text-sm font-semibold text-white" type="submit">Cambiar mes</button></form>
+      </Card>
       <div className="mb-6 flex flex-wrap gap-3">
         <Link href="/paneladmin/facturas" className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white">Crear factura o propuesta</Link>
         <Link href="/paneladmin/gastos" className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Registrar gasto</Link>
@@ -63,7 +70,7 @@ export default async function BillinDashboardPage() {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <Card className="overflow-hidden">
-          <div className="flex items-center justify-between border-b border-line px-6 py-5"><h2 className="text-lg font-bold text-foreground">Facturas y propuestas recientes</h2><Link href="/paneladmin/facturas" className="text-sm font-semibold text-brand">Ver histórico</Link></div>
+          <div className="flex items-center justify-between border-b border-line px-6 py-5"><h2 className="text-lg font-bold text-foreground">Facturas y propuestas recientes</h2><Link href={`/paneladmin/facturas?month=${period.key}`} className="text-sm font-semibold text-brand">Ver histórico</Link></div>
           <div className="divide-y divide-line">
             {data.recentInvoices.map((invoice) => <div key={invoice.id} className="flex items-center justify-between gap-4 px-6 py-4 text-sm"><div><p className="font-semibold text-foreground">{invoice.number} · {invoice.concept}</p><p className="text-muted">{formatDate(invoice.issued_at)}</p></div><div className="text-right"><p className="font-bold text-foreground">{euro(Number(invoice.amount))}</p><Badge>{invoice.document_type === 'proposal' ? 'Propuesta' : invoice.status === 'paid' ? 'Cobrada' : 'Pendiente'}</Badge></div></div>)}
             {data.recentInvoices.length === 0 ? <p className="px-6 py-8 text-sm text-muted">Todavía no hay facturas ni propuestas.</p> : null}

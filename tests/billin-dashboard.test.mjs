@@ -30,9 +30,12 @@ test('Bill-in summary excludes proposals and void records from money while separ
 })
 
 test('Bill-in dashboard renders its totals, ledgers, and direct accounting actions', async () => {
+  let requestedPeriod
   const Page = loadProjectModule('src/app/paneladmin/(protected)/billin/page.tsx', {
     '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
-    '@/lib/data/billin': { getBillinDashboardData: async () => ({
+    '@/lib/data/billin': { getBillinDashboardData: async (period) => {
+      requestedPeriod = period
+      return ({
       summary: {
         totals: { invoiced: 230, collected: 180, expenses: 60, net: 120 },
         counts: { invoices: 3, proposals: 1, pendingInvoices: 1, expenses: 3 },
@@ -43,11 +46,15 @@ test('Bill-in dashboard renders its totals, ledgers, and direct accounting actio
       },
       recentInvoices: [{ id: 'invoice-1', number: 'FAC-2026-001', concept: 'Web', amount: 100, status: 'paid', document_type: 'invoice', accounting_area: 'general', issued_at: '2026-10-28' }],
       recentExpenses: [{ id: 'expense-1', supplier: 'Hosting', concept: 'Servidor', amount: 40, status: 'paid', accounting_area: 'general', expense_date: '2026-10-27' }],
-    }) },
+      })
+    } },
   }).default
 
-  const html = renderToStaticMarkup(await Page())
+  const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ month: '2026-10' }) }))
 
+  assert.deepEqual(requestedPeriod, { start: '2026-10-01', end: '2026-11-01' })
+  assert.match(html, /Resumen de octubre de 2026/)
+  assert.match(html, /name="month"/)
   for (const label of ['Facturado', 'Cobrado', 'Gastos pagados', 'Resultado de caja', 'Contabilidad general', 'Contabilidad de clases', 'Facturas y propuestas recientes', 'Gastos recientes']) {
     assert.match(html, new RegExp(label))
   }

@@ -21,11 +21,12 @@ function getBillingEmail(company: string | null | undefined, fallbackEmail: stri
 export default async function AdminFacturasPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ client?: string }>
+  searchParams?: Promise<{ client?: string; month?: string; type?: string; status?: string; area?: string }>
 }) {
   const identity = await requireAdmin()
   const params = searchParams ? await searchParams : {}
-  const data = await getInvoicesPageData()
+  const filters = { month: params.month, type: params.type, status: params.status, area: params.area }
+  const data = await getInvoicesPageData(filters)
   const locale = await getLocale()
 
   const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -42,6 +43,17 @@ export default async function AdminFacturasPage({
       userEmail={identity.email}
       locale={locale}
     >
+      <Card className="mb-6 p-5">
+        <form method="get" className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          {params.client ? <input type="hidden" name="client" value={params.client} /> : null}
+          <label className="text-sm font-semibold text-foreground">Mes<input className="mt-2 min-h-11 w-full rounded-2xl border border-line px-4 font-normal" type="month" name="month" defaultValue={params.month ?? ''} /></label>
+          <label className="text-sm font-semibold text-foreground">Documento<select className="mt-2 min-h-11 w-full rounded-2xl border border-line px-4 font-normal" name="type" defaultValue={params.type ?? ''}><option value="">Todos</option><option value="invoice">Facturas</option><option value="proposal">Propuestas</option></select></label>
+          <label className="text-sm font-semibold text-foreground">Estado<select className="mt-2 min-h-11 w-full rounded-2xl border border-line px-4 font-normal" name="status" defaultValue={params.status ?? ''}><option value="">Todos</option><option value="issued">Pendiente / emitida</option><option value="paid">Cobrada</option><option value="void">Anulada</option></select></label>
+          <label className="text-sm font-semibold text-foreground">Contabilidad<select className="mt-2 min-h-11 w-full rounded-2xl border border-line px-4 font-normal" name="area" defaultValue={params.area ?? ''}><option value="">Todas</option><option value="general">General</option><option value="classes">Clases</option></select></label>
+          <div className="flex items-end gap-2"><button className="min-h-11 rounded-full bg-brand px-5 text-sm font-semibold text-white" type="submit">Filtrar</button><Link href="/paneladmin/facturas" className="flex min-h-11 items-center rounded-full bg-slate-100 px-4 text-sm font-semibold text-slate-700">Limpiar filtros</Link></div>
+        </form>
+        <div className="mt-4 flex flex-wrap justify-between gap-2 border-t border-line pt-4 text-sm"><span className="font-semibold text-foreground">{data.invoices.length} documentos</span><span className="font-semibold text-foreground">Total filtrado · {data.filteredTotal.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span></div>
+      </Card>
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
         <InvoiceForm clients={data.clients} locale={locale} defaultClientId={params.client} />
 
