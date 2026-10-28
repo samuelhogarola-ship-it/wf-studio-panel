@@ -40,7 +40,7 @@ type EditingService = {
 
 const initialState: AdminFormState = {}
 
-export function ServiceForm({ clients, editingService }: { clients: ClientOption[]; editingService: EditingService }) {
+export function ServiceForm({ clients, editingService, defaultClientId }: { clients: ClientOption[]; editingService: EditingService; defaultClientId?: string }) {
   const [state, action, pending] = useActionState(upsertServiceAction, initialState)
 
   return (
@@ -49,7 +49,7 @@ export function ServiceForm({ clients, editingService }: { clients: ClientOption
 
       <div>
         <Label htmlFor="sf-client">Cliente</Label>
-        <Select id="sf-client" name="client_id" defaultValue={editingService?.client_id ?? ''} required>
+        <Select id="sf-client" name="client_id" defaultValue={editingService?.client_id ?? defaultClientId ?? ''} required>
           <option value="">Selecciona un cliente</option>
           {clients.map((c) => (
             <option key={c.id} value={c.id} disabled={c.status !== 'active'}>

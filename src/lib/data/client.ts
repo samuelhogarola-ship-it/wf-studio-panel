@@ -160,7 +160,7 @@ export const getClientFacturasData = cache(async (clientId: string) => {
   const supabase = await createSupabaseServerClient()
   const { data } = await supabase
     .from('invoices')
-    .select('id, number, concept, amount, payment_method, status, notes, issued_at, paid_at, created_at')
+    .select('id, number, concept, amount, payment_method, status, notes, issued_at, paid_at, created_at, document_type, accounting_area, transfer_instructions')
     .eq('client_id', clientId)
     .order('issued_at', { ascending: false })
     .limit(100)

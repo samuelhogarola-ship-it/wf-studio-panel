@@ -56,6 +56,7 @@ test('client detail exposes a direct new-domain action for that client', async (
       activePacks: [], packs: [], messages: [], pendingItems: [], recentActivities: [],
     }) },
     '@/lib/actions/admin': { deletePendingItemAction() {}, togglePendingItemStatusAction() {} },
+    '@/components/admin/client-form': { ClientForm: () => null },
     '@/components/admin/client-message-form': { ClientMessageForm: () => null },
     '@/components/admin/pending-item-form': { PendingItemForm: () => null },
     '@/components/admin/support-preview-form': { SupportPreviewForm: () => null },

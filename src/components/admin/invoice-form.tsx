@@ -22,7 +22,7 @@ type ClientOption = {
 
 const initialState: InvoiceFormState = {}
 
-export function InvoiceForm({ clients, locale }: { clients: ClientOption[]; locale: Locale }) {
+export function InvoiceForm({ clients, locale, defaultClientId }: { clients: ClientOption[]; locale: Locale; defaultClientId?: string }) {
   const [state, action, pending] = useActionState(createInvoiceAction, initialState)
 
   return (
@@ -33,8 +33,22 @@ export function InvoiceForm({ clients, locale }: { clients: ClientOption[]; loca
       </div>
       <form action={action} className="grid gap-4 md:grid-cols-2">
         <div>
+          <Label htmlFor="document_type">Tipo de documento</Label>
+          <Select id="document_type" name="document_type" defaultValue="invoice">
+            <option value="invoice">Factura</option>
+            <option value="proposal">Propuesta</option>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="accounting_area">Contabilidad</Label>
+          <Select id="accounting_area" name="accounting_area" defaultValue="general">
+            <option value="general">General</option>
+            <option value="classes">Clases</option>
+          </Select>
+        </div>
+        <div>
           <Label htmlFor="client_id">{t(locale, 'invoiceForm.client')}</Label>
-          <Select id="client_id" name="client_id" defaultValue="">
+          <Select id="client_id" name="client_id" defaultValue={defaultClientId ?? ''}>
             <option value="">Destinatario externo</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
@@ -80,8 +94,13 @@ export function InvoiceForm({ clients, locale }: { clients: ClientOption[]; loca
           <Textarea id="notes" name="notes" placeholder={t(locale, 'invoiceForm.notes.placeholder')} />
         </div>
         <div className="md:col-span-2">
-          <Label htmlFor="payment_url">Enlace de pago Stripe (opcional)</Label>
+          <Label htmlFor="transfer_instructions">Datos para transferencia (opcional)</Label>
+          <Textarea id="transfer_instructions" name="transfer_instructions" placeholder="IBAN, titular y referencia que debe indicar" />
+        </div>
+        <div className="md:col-span-2">
+          <Label htmlFor="payment_url">Enlace de pago con tarjeta mediante Stripe (opcional)</Label>
           <Input id="payment_url" name="payment_url" type="url" placeholder="https://buy.stripe.com/..." />
+          <p className="mt-2 text-xs text-muted">Déjalo vacío para efectivo o transferencia. El enlace Stripe corresponde al pago con tarjeta.</p>
         </div>
         <div className="md:col-span-2">
           <FormMessage error={state.error} success={state.success} />

@@ -15,14 +15,14 @@ export default async function ClientFacturasPage() {
   const invoices = await getClientFacturasData(identity.client.id)
 
   const pendingTotal = invoices
-    .filter((i) => i.status === 'issued' || i.status === 'pending')
+    .filter((i) => i.document_type !== 'proposal' && (i.status === 'issued' || i.status === 'pending'))
     .reduce((sum, i) => sum + Number(i.amount ?? 0), 0)
 
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-2xl font-black tracking-tight text-foreground">Facturas</h1>
-        <p className="mt-0.5 text-sm text-slate-500">Historial de facturación y estado de pagos.</p>
+        <h1 className="text-2xl font-black tracking-tight text-foreground">Facturas y propuestas</h1>
+        <p className="mt-0.5 text-sm text-slate-500">Historial de documentos y estado de pagos.</p>
       </div>
 
       {pendingTotal > 0 && (
@@ -63,7 +63,7 @@ export default async function ClientFacturasPage() {
               <tbody className="divide-y divide-slate-100">
                 {invoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-slate-50 transition">
-                    <td className="px-5 py-4 font-mono text-xs text-slate-500">{inv.number}</td>
+                    <td className="px-5 py-4 font-mono text-xs text-slate-500">{inv.number}<span className="mt-1 block font-sans text-[10px] font-semibold uppercase text-slate-400">{inv.document_type === 'proposal' ? 'Propuesta' : 'Factura'}</span></td>
                     <td className="px-5 py-4">
                       <p className="font-semibold text-foreground">{inv.concept}</p>
                       {inv.notes && <p className="mt-0.5 text-xs text-slate-400">{inv.notes}</p>}
@@ -74,7 +74,9 @@ export default async function ClientFacturasPage() {
                       {Number(inv.amount).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
                     </td>
                     <td className="px-5 py-4 text-center">
-                      {inv.status === 'paid' ? (
+                      {inv.document_type === 'proposal' ? (
+                        <span className="rounded-full bg-violet-50 px-3 py-0.5 text-xs font-semibold text-violet-700">Propuesta</span>
+                      ) : inv.status === 'paid' ? (
                         <span className="rounded-full bg-emerald-50 px-3 py-0.5 text-xs font-semibold text-emerald-700">
                           Pagado {inv.paid_at ? formatDate(inv.paid_at) : ''}
                         </span>
@@ -104,7 +106,9 @@ export default async function ClientFacturasPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {inv.status === 'paid' ? (
+                  {inv.document_type === 'proposal' ? (
+                    <span className="rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-semibold text-violet-700">Propuesta</span>
+                  ) : inv.status === 'paid' ? (
                     <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Pagado</span>
                   ) : inv.status === 'void' ? (
                     <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">Anulada</span>

@@ -315,3 +315,22 @@ export const getAdminClientDetailPageData = cache(async (clientId: string) => {
     messages: messages ?? [],
   }
 })
+
+export const getAdminMessagesPageData = cache(async () => {
+  const supabase = await createSupabaseServerClient()
+  const [{ data: clients }, { data: messages }] = await Promise.all([
+    supabase
+      .from('clients')
+      .select('id, name, email, status')
+      .eq('project', 'wf-studio')
+      .eq('status', 'active')
+      .order('name'),
+    supabase
+      .from('messages')
+      .select('id, client_id, subject, body, direction, type, read_at, created_at, clients(name)')
+      .order('created_at', { ascending: false })
+      .limit(100),
+  ])
+
+  return { clients: clients ?? [], messages: messages ?? [] }
+})

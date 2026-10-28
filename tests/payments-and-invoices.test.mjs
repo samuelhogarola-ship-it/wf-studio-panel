@@ -43,7 +43,7 @@ test('invoice actions do not expose physical deletion and validate links server-
  const source = await readFile(new URL('../src/lib/actions/invoices.ts', import.meta.url), 'utf8')
  const payments = await readFile(new URL('../src/lib/actions/payments.ts', import.meta.url), 'utf8')
  assert.doesNotMatch(source, /\.delete\(\)/i)
- assert.match(source, /create_invoice|next_invoice_number/i)
+ assert.match(source, /create_billing_document|next_invoice_number/i)
  assert.match(payments, /parseStripePaymentLink/i)
  assert.match(payments, /requireAdmin/i)
 })

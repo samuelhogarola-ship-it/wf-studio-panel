@@ -650,6 +650,7 @@ export async function sendAdminClientMessageAction(_prevState: AdminFormState, f
   }
 
   revalidatePath(`/paneladmin/clientes/${client_id}`)
+  revalidatePath('/paneladmin/mensajes')
   revalidatePath('/cliente/mensajeria')
   revalidatePath('/cliente/dashboard')
   return { success: 'Mensaje enviado al portal del cliente.' }

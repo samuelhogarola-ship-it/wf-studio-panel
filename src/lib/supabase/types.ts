@@ -85,10 +85,16 @@ export type Database = {
         Relationships: []
       }
       invoices: {
-        Row: { amount: number; client_id: string | null; concept: string; created_at: string; id: string; issued_at: string; notes: string | null; number: string; paid_at: string | null; payment_method: string; recipient_company: string | null; recipient_email: string; recipient_kind: string; recipient_name: string; status: string; updated_at: string }
-        Insert: { amount: number; client_id?: string | null; concept: string; created_at?: string; id?: string; issued_at?: string; notes?: string | null; number: string; paid_at?: string | null; payment_method?: string; recipient_company?: string | null; recipient_email: string; recipient_kind?: string; recipient_name: string; status?: string; updated_at?: string }
-        Update: { amount?: number; client_id?: string | null; concept?: string; created_at?: string; id?: string; issued_at?: string; notes?: string | null; number?: string; paid_at?: string | null; payment_method?: string; recipient_company?: string | null; recipient_email?: string; recipient_kind?: string; recipient_name?: string; status?: string; updated_at?: string }
+        Row: { amount: number; client_id: string | null; concept: string; created_at: string; id: string; issued_at: string; notes: string | null; number: string; paid_at: string | null; payment_method: string; recipient_company: string | null; recipient_email: string; recipient_kind: string; recipient_name: string; status: string; document_type: string; accounting_area: string; transfer_instructions: string | null; updated_at: string }
+        Insert: { amount: number; client_id?: string | null; concept: string; created_at?: string; id?: string; issued_at?: string; notes?: string | null; number: string; paid_at?: string | null; payment_method?: string; recipient_company?: string | null; recipient_email: string; recipient_kind?: string; recipient_name: string; status?: string; document_type?: string; accounting_area?: string; transfer_instructions?: string | null; updated_at?: string }
+        Update: { amount?: number; client_id?: string | null; concept?: string; created_at?: string; id?: string; issued_at?: string; notes?: string | null; number?: string; paid_at?: string | null; payment_method?: string; recipient_company?: string | null; recipient_email?: string; recipient_kind?: string; recipient_name?: string; status?: string; document_type?: string; accounting_area?: string; transfer_instructions?: string | null; updated_at?: string }
         Relationships: [{ foreignKeyName: "invoices_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
+      }
+      expenses: {
+        Row: { id: string; client_id: string | null; supplier: string; concept: string; category: string; accounting_area: string; amount: number; expense_date: string; payment_method: string; status: string; notes: string | null; created_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; client_id?: string | null; supplier: string; concept: string; category?: string; accounting_area?: string; amount: number; expense_date?: string; payment_method?: string; status?: string; notes?: string | null; created_by?: string | null; created_at?: string; updated_at?: string }
+        Update: { client_id?: string | null; supplier?: string; concept?: string; category?: string; accounting_area?: string; amount?: number; expense_date?: string; payment_method?: string; status?: string; notes?: string | null; updated_at?: string }
+        Relationships: [{ foreignKeyName: "expenses_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
       invoice_audit: {
         Row: { id: string; invoice_id: string; actor_id: string | null; operation: string; old_record: Json | null; new_record: Json | null; created_at: string }
@@ -167,6 +173,8 @@ export type Database = {
     Functions: {
       mark_message_read: { Args: { p_message_id: string }; Returns: undefined }
       create_invoice_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string }; Returns: { id: string; number: string }[] }
+      create_billing_document_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string; p_document_type: string; p_accounting_area: string; p_transfer_instructions: string | null }; Returns: { id: string; number: string }[] }
+      issue_billing_document: { Args: { p_document_id: string; p_payment_url: string | null }; Returns: { id: string; number: string; status: string }[] }
       issue_invoice_with_payment_link: { Args: { p_invoice_id: string; p_payment_url: string | null }; Returns: { id: string; number: string; status: string }[] }
       mark_invoice_paid: { Args: { p_invoice_id: string }; Returns: boolean }
       start_admin_support_session: { Args: { p_client_id: string; p_token_hash: string; p_return_path: string }; Returns: SupportSessionRow[] }

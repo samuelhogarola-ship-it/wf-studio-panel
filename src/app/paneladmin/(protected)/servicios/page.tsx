@@ -120,6 +120,7 @@ export default async function AdminServiciosPage({
           <ServiceForm
             clients={data.clients}
             editingService={editingService ?? null}
+            defaultClientId={activeClient}
           />
         </div>
       )}

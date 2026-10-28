@@ -18,8 +18,13 @@ function getBillingEmail(company: string | null | undefined, fallbackEmail: stri
   return fiscalEmail ?? fallbackEmail ?? ''
 }
 
-export default async function AdminFacturasPage() {
+export default async function AdminFacturasPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ client?: string }>
+}) {
   const identity = await requireAdmin()
+  const params = searchParams ? await searchParams : {}
   const data = await getInvoicesPageData()
   const locale = await getLocale()
 
@@ -31,14 +36,14 @@ export default async function AdminFacturasPage() {
 
   return (
     <AdminShell
-      title={t(locale, 'invoices.title')}
-      description={t(locale, 'invoices.description')}
+      title="Bill-in · Facturas y propuestas"
+      description="Emite documentos, enlaza el cobro y conserva el histórico contable."
       currentPath="/paneladmin/facturas"
       userEmail={identity.email}
       locale={locale}
     >
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <InvoiceForm clients={data.clients} locale={locale} />
+        <InvoiceForm clients={data.clients} locale={locale} defaultClientId={params.client} />
 
         <Card className="overflow-hidden">
           <div className="border-b border-line px-6 py-5">
@@ -62,7 +67,10 @@ export default async function AdminFacturasPage() {
               <tbody className="divide-y divide-line">
                 {data.invoices.map((invoice) => (
                   <tr key={invoice.id}>
-                    <td className="px-6 py-4 font-mono text-sm font-semibold text-foreground">{invoice.number}</td>
+                    <td className="px-6 py-4 font-mono text-sm font-semibold text-foreground">
+                      <span className="block">{invoice.number}</span>
+                      <Badge className={invoice.document_type === 'proposal' ? 'mt-1 bg-violet-50 text-violet-700' : 'mt-1 bg-blue-50 text-blue-700'}>{invoice.document_type === 'proposal' ? 'Propuesta' : 'Factura'} · {invoice.accounting_area === 'classes' ? 'Clases' : 'General'}</Badge>
+                    </td>
                     <td className="px-6 py-4">
                       <p className="font-semibold text-foreground">{invoice.recipient_company?.split('\n')[0] ?? invoice.recipient_name ?? invoice.clients?.company?.split('\n')[0] ?? invoice.clients?.name ?? '—'}</p>
                       <p className="text-slate-500">{invoice.recipient_email ?? getBillingEmail(invoice.clients?.company, invoice.clients?.email)}</p>
@@ -89,7 +97,7 @@ export default async function AdminFacturasPage() {
                         >
                           {t(locale, 'invoices.list.print')}
                         </Link>
-                        {invoice.status === 'issued' ? (
+                        {invoice.status === 'issued' && invoice.document_type === 'invoice' ? (
                           <form action={markInvoicePaidAction}>
                             <input type="hidden" name="id" value={invoice.id} />
                             <button className="rounded-full bg-emerald-50 px-3 py-2 font-semibold text-emerald-700">{t(locale, 'invoices.list.markPaid')}</button>
