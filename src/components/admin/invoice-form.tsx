@@ -19,10 +19,11 @@ type ClientOption = {
   email: string
   status: string
 }
+type AccountOption = { id: string; name: string; account_type: string; status: string }
 
 const initialState: InvoiceFormState = {}
 
-export function InvoiceForm({ clients, locale, defaultClientId }: { clients: ClientOption[]; locale: Locale; defaultClientId?: string }) {
+export function InvoiceForm({ clients, accounts = [], locale, defaultClientId }: { clients: ClientOption[]; accounts?: AccountOption[]; locale: Locale; defaultClientId?: string }) {
   const [state, action, pending] = useActionState(createInvoiceAction, initialState)
   const [documentType, setDocumentType] = useState<'invoice' | 'proposal'>('invoice')
 
@@ -80,6 +81,13 @@ export function InvoiceForm({ clients, locale, defaultClientId }: { clients: Cli
             <option value="transfer">{t(locale, 'invoiceForm.method.transfer')}</option>
             <option value="card">{t(locale, 'invoiceForm.method.card')}</option>
             <option value="cash">{t(locale, 'invoiceForm.method.cash')}</option>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="billing_account_id">Cuenta de cobro</Label>
+          <Select id="billing_account_id" name="billing_account_id" defaultValue="">
+            <option value="">Sin cuenta asignada</option>
+            {accounts.filter((account) => account.status === 'active').map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
           </Select>
         </div>
         <div>

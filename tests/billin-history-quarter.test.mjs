@@ -22,6 +22,7 @@ test('invoice history applies month, document, status, and area filters and show
       return { clients: [], invoices: [
         { id: 'invoice-1', number: 'FAC-1', concept: 'Web', amount: 200, payment_method: 'transfer', status: 'paid', issued_at: '2026-10-10', recipient_name: 'Ana', recipient_email: 'ana@example.com', recipient_company: null, document_type: 'invoice', accounting_area: 'general', clients: null },
         { id: 'invoice-2', number: 'FAC-2', concept: 'Clase', amount: 100, payment_method: 'card', status: 'issued', issued_at: '2026-10-20', recipient_name: 'Luis', recipient_email: 'luis@example.com', recipient_company: null, document_type: 'invoice', accounting_area: 'classes', clients: null },
+        { id: 'invoice-3', number: 'BOR-1', concept: 'Sin emitir', amount: 999, payment_method: 'transfer', status: 'draft', issued_at: '2026-10-21', recipient_name: 'Eva', recipient_email: 'eva@example.com', recipient_company: null, document_type: 'invoice', accounting_area: 'general', clients: null },
       ], filteredTotal: 300 }
     } },
     '@/components/admin/invoice-form': { InvoiceForm: () => null },
@@ -30,9 +31,10 @@ test('invoice history applies month, document, status, and area filters and show
 
   const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ month: '2026-10', type: 'invoice', status: 'paid', area: 'general' }) }))
 
-  assert.deepEqual(received, { month: '2026-10', type: 'invoice', status: 'paid', area: 'general' })
+  assert.deepEqual(received, { month: '2026-10', type: 'invoice', status: 'paid', area: 'general', page: undefined })
   for (const name of ['month', 'type', 'status', 'area']) assert.match(html, new RegExp(`name="${name}"`))
-  assert.match(html, /2 documentos/)
+  assert.match(html, /3 documentos/)
+  assert.match(html, /Borrador/)
   assert.match(html, /Total filtrado/)
   assert.match(html, /300,00/)
   assert.match(html, /Limpiar filtros/)
@@ -41,7 +43,7 @@ test('invoice history applies month, document, status, and area filters and show
 test('quarter preparation separates ledgers and links a CSV export for the selected period', async () => {
   const Page = loadProjectModule('src/app/paneladmin/(protected)/billin/trimestres/page.tsx', {
     '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
-    '@/lib/data/billin': { getBillinPeriodData: async () => ({ summary, invoices: [], expenses: [] }) },
+    '@/lib/data/billin': { getBillinPeriodData: async () => ({ summary, invoices: [{ id: 'draft', number: 'BOR-1', concept: 'Sin emitir', amount: 99, status: 'draft', document_type: 'invoice', accounting_area: 'general', issued_at: '2026-10-15' }], collections: [], expenses: [] }) },
   }).default
   const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ year: '2026', quarter: '4' }) }))
 
@@ -51,6 +53,7 @@ test('quarter preparation separates ledgers and links a CSV export for the selec
   assert.match(html, /Contabilidad de clases/)
   assert.match(html, /href="\/paneladmin\/billin\/trimestres\/export\?year=2026&amp;quarter=4"/)
   assert.match(html, /No sustituye la revisión fiscal profesional/)
+  assert.match(html, /Borrador/)
 })
 
 test('quarter export returns a UTF-8 CSV ledger with professional headers', async () => {
@@ -58,7 +61,8 @@ test('quarter export returns a UTF-8 CSV ledger with professional headers', asyn
     '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
     '@/lib/data/billin': { getBillinPeriodData: async () => ({
       summary,
-      invoices: [{ number: 'FAC-1', issued_at: '2026-10-10', document_type: 'invoice', status: 'paid', accounting_area: 'general', concept: 'Web, profesional', amount: 200 }],
+      invoices: [{ number: 'FAC-1', issued_at: '2026-10-10', document_type: 'invoice', status: 'paid', accounting_area: 'general', concept: '=1+1', amount: 200 }, { number: 'BOR-1', issued_at: '2026-10-12', document_type: 'invoice', status: 'draft', accounting_area: 'general', concept: 'Sin emitir', amount: 99 }],
+      collections: [],
       expenses: [{ expense_date: '2026-10-11', supplier: 'Hosting', concept: 'Servidor', status: 'paid', accounting_area: 'general', expense_nature: 'fixed', amount: 50 }],
     }) },
   })
@@ -71,6 +75,7 @@ test('quarter export returns a UTF-8 CSV ledger with professional headers', asyn
   assert.match(response.headers.get('content-disposition'), /billin-2026-t4\.csv/)
   assert.deepEqual([...bytes.slice(0, 3)], [0xEF, 0xBB, 0xBF])
   assert.match(csv, /Tipo;Fecha;Documento\/Proveedor;Concepto;Área;Clasificación;Estado;Importe/)
-  assert.match(csv, /"Web, profesional"/)
+  assert.match(csv, /;'=1\+1;/)
+  assert.match(csv, /BOR-1;Sin emitir;General;Factura;Borrador/)
   assert.match(csv, /Gasto;2026-10-11;Hosting;Servidor;General;Fijo mensual;Pagado;"?50,00"?/)
 })

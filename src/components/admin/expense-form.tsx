@@ -11,9 +11,10 @@ import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 
 type ClientOption = { id: string; name: string; status: string }
+type AccountOption = { id: string; name: string; account_type: string; status: string }
 const initialState: ExpenseFormState = {}
 
-export function ExpenseForm({ clients, defaultClientId }: { clients: ClientOption[]; defaultClientId?: string }) {
+export function ExpenseForm({ clients, accounts = [], defaultClientId }: { clients: ClientOption[]; accounts?: AccountOption[]; defaultClientId?: string }) {
   const [state, action, pending] = useActionState(createExpenseAction, initialState)
 
   return (
@@ -75,6 +76,13 @@ export function ExpenseForm({ clients, defaultClientId }: { clients: ClientOptio
         <Label htmlFor="expense-status">Estado</Label>
         <Select id="expense-status" name="status" defaultValue="paid">
           <option value="paid">Pagado</option><option value="pending">Pendiente</option>
+        </Select>
+      </div>
+      <div>
+        <Label htmlFor="expense-account">Cuenta de pago</Label>
+        <Select id="expense-account" name="billing_account_id" defaultValue="">
+          <option value="">Sin cuenta asignada</option>
+          {accounts.filter((account) => account.status === 'active').map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
         </Select>
       </div>
       <div className="md:col-span-2">

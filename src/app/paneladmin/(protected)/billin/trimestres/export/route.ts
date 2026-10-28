@@ -6,7 +6,8 @@ const natureLabels: Record<string, string> = { fixed: 'Fijo mensual', recurring:
 const areaLabel = (area: string) => area === 'classes' ? 'Clases' : 'General'
 const money = (value: number | string) => Number(value).toFixed(2).replace('.', ',')
 const csvCell = (value: unknown) => {
-  const text = String(value ?? '')
+  let text = String(value ?? '')
+  if (/^[=+\-@\t\r]/.test(text) && !/^-?\d+,\d{2}$/.test(text)) text = `'${text}`
   return /[;",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
 }
 
@@ -20,7 +21,11 @@ export async function GET(request: Request) {
   for (const invoice of data.invoices) rows.push([
     invoice.document_type === 'proposal' ? 'Propuesta' : 'Factura', invoice.issued_at, invoice.number, invoice.concept,
     areaLabel(invoice.accounting_area), invoice.document_type === 'proposal' ? 'Propuesta' : 'Factura',
-    invoice.status === 'paid' ? 'Cobrada' : invoice.status === 'void' ? 'Anulada' : 'Pendiente', money(invoice.amount),
+    invoice.status === 'draft' ? 'Borrador' : invoice.status === 'paid' ? 'Cobrada' : invoice.status === 'void' ? 'Anulada' : 'Pendiente', money(invoice.amount),
+  ])
+  for (const collection of data.collections ?? []) rows.push([
+    'Cobro', collection.paid_at, collection.number, collection.concept, areaLabel(collection.accounting_area),
+    'Cobro de factura', 'Cobrado', money(collection.amount),
   ])
   for (const expense of data.expenses) rows.push([
     'Gasto', expense.expense_date, expense.supplier, expense.concept, areaLabel(expense.accounting_area),

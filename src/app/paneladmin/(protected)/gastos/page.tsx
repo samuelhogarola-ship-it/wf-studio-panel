@@ -43,7 +43,7 @@ export default async function AdminExpensesPage({ searchParams }: { searchParams
         <Card className="p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Nuevo apunte</p>
           <h2 className="mb-5 mt-2 text-xl font-bold text-foreground">Registrar gasto</h2>
-          <ExpenseForm clients={data.clients} defaultClientId={params.client} />
+          <ExpenseForm clients={data.clients} accounts={data.accounts} defaultClientId={params.client} />
         </Card>
         <Card className="overflow-hidden">
           <div className="border-b border-line px-6 py-5"><h2 className="text-xl font-bold text-foreground">Histórico de gastos</h2><p className="text-sm text-muted">{data.count} apuntes · página {data.page + 1} de {pageCount}.</p></div>

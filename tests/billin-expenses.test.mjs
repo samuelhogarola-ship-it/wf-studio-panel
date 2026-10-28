@@ -61,6 +61,6 @@ test('Bill-in expense action validates before writing and persists a valid entry
   assert.deepEqual(inserts[0], {
     client_id: clientId, supplier: 'Proveedor', concept: 'Material de clase', category: 'classes',
     accounting_area: 'classes', amount: 35.5, expense_date: '2026-10-28', payment_method: 'card',
-    expense_nature: 'one_off', status: 'paid', notes: 'Ticket guardado', created_by: 'admin-1',
+    expense_nature: 'one_off', billing_account_id: null, status: 'paid', notes: 'Ticket guardado', created_by: 'admin-1',
   })
 })

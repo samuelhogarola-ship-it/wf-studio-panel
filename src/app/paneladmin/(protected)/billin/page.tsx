@@ -30,7 +30,7 @@ export default async function BillinDashboardPage({ searchParams }: { searchPara
       id: `invoice-${invoice.id}`, date: invoice.issued_at,
       kind: invoice.document_type === 'proposal' ? 'Propuesta' : 'Factura', reference: invoice.number,
       concept: invoice.concept, area: invoice.accounting_area === 'classes' ? 'Clases' : 'General',
-      status: invoice.document_type === 'proposal' ? 'Emitida' : invoice.status === 'paid' ? 'Cobrada' : invoice.status === 'void' ? 'Anulada' : 'Pendiente',
+      status: invoice.status === 'draft' ? 'Borrador' : invoice.document_type === 'proposal' ? 'Emitida' : invoice.status === 'paid' ? 'Cobrada' : invoice.status === 'void' ? 'Anulada' : 'Pendiente',
       amount: Number(invoice.amount), href: `/paneladmin/facturas/${invoice.id}/print`,
     })),
     ...data.recentExpenses.map((expense) => ({
@@ -64,7 +64,17 @@ export default async function BillinDashboardPage({ searchParams }: { searchPara
 
       <Card className="mt-4 overflow-hidden">
         <div className="border-b border-line px-5 py-3"><h2 className="text-base font-bold text-foreground">Resumen por actividad</h2></div>
-        <div className="overflow-x-auto"><table className="min-w-full text-sm"><thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500"><tr><th className="px-5 py-3">Actividad</th><th className="px-5 py-3 text-right">Facturado</th><th className="px-5 py-3 text-right">Cobrado</th><th className="px-5 py-3 text-right">Gastos</th><th className="px-5 py-3 text-right">Resultado</th></tr></thead><tbody className="divide-y divide-line">{[['Contabilidad general', summary.areas.general], ['Contabilidad de clases', summary.areas.classes]].map(([label, raw]) => { const area = raw as typeof summary.areas.general; return <tr key={label as string}><td className="px-5 py-3 font-semibold text-foreground">{label as string}</td><td className="px-5 py-3 text-right">{euro(area.invoiced)}</td><td className="px-5 py-3 text-right">{euro(area.collected)}</td><td className="px-5 py-3 text-right">{euro(area.expenses)}</td><td className="px-5 py-3 text-right font-bold">{euro(area.net)}</td></tr> })}</tbody></table></div>
+        <div className="overflow-x-auto"><div className="min-w-[700px]"><div className="grid grid-cols-[minmax(180px,1fr)_repeat(4,minmax(110px,0.65fr))] bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500"><span>Actividad</span><span className="text-right">Facturado</span><span className="text-right">Cobrado</span><span className="text-right">Gastos</span><span className="text-right">Resultado</span></div>
+        <div className="divide-y divide-line">{[
+          { key: 'general' as const, label: 'Contabilidad general', area: summary.areas.general },
+          { key: 'classes' as const, label: 'Contabilidad de clases', area: summary.areas.classes },
+        ].map((item) => {
+          const accounts = data.accountBreakdown?.[item.key] ?? []
+          return <details key={item.key} className="group">
+            <summary className="grid cursor-pointer list-none grid-cols-[minmax(180px,1fr)_repeat(4,minmax(110px,0.65fr))] items-center px-5 py-3 text-sm hover:bg-slate-50"><span className="font-semibold text-foreground"><span className="mr-2 inline-block text-brand transition group-open:rotate-90">›</span>{item.label}</span><span className="text-right">{euro(item.area.invoiced)}</span><span className="text-right">{euro(item.area.collected)}</span><span className="text-right">{euro(item.area.expenses)}</span><span className="text-right font-bold">{euro(item.area.net)}</span></summary>
+            <div className="border-t border-line bg-slate-50/60 px-5 py-3"><p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Desglose por cuenta</p><table className="w-full text-sm"><thead className="text-left text-xs text-slate-500"><tr><th className="py-2">Cuenta</th><th className="py-2 text-right">Cobrado</th><th className="py-2 text-right">Pagado</th><th className="py-2 text-right">Neto</th></tr></thead><tbody>{accounts.map((account) => <tr key={account.id ?? 'unassigned'} className="border-t border-line"><td className="py-2 font-semibold">{account.name}</td><td className="py-2 text-right">{euro(account.collected)}</td><td className="py-2 text-right">{euro(account.expenses)}</td><td className="py-2 text-right font-bold">{euro(account.net)}</td></tr>)}</tbody></table>{accounts.length === 0 ? <p className="py-2 text-sm text-muted">No hay movimientos cobrados o pagados en esta actividad.</p> : null}</div>
+          </details>
+        })}</div></div></div>
       </Card>
 
       <Card className="mt-4 overflow-hidden">

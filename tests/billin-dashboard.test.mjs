@@ -14,6 +14,7 @@ test('Bill-in summary excludes proposals and void records from money while separ
       { amount: 80, status: 'paid', document_type: 'invoice', accounting_area: 'classes' },
       { amount: 500, status: 'issued', document_type: 'proposal', accounting_area: 'classes' },
       { amount: 1_000, status: 'void', document_type: 'invoice', accounting_area: 'general' },
+      { amount: 999, status: 'draft', document_type: 'invoice', accounting_area: 'general' },
     ],
     expenses: [
       { amount: 40, status: 'paid', accounting_area: 'general' },
@@ -27,6 +28,15 @@ test('Bill-in summary excludes proposals and void records from money while separ
   assert.deepEqual(summary.counts, { invoices: 3, proposals: 1, pendingInvoices: 1, expenses: 3 })
   assert.deepEqual(summary.areas.general, { invoiced: 150, collected: 100, expenses: 40, net: 60 })
   assert.deepEqual(summary.areas.classes, { invoiced: 80, collected: 80, expenses: 20, net: 60 })
+})
+
+test('Bill-in attributes collections to paid rows independently from issued documents', () => {
+  const summary = summarizeBillin({
+    invoices: [{ amount: 200, status: 'issued', document_type: 'invoice', accounting_area: 'general' }],
+    collections: [{ amount: 150, status: 'paid', document_type: 'invoice', accounting_area: 'general' }],
+    expenses: [],
+  })
+  assert.deepEqual(summary.totals, { invoiced: 200, collected: 150, expenses: 0, net: 150 })
 })
 
 test('Bill-in dashboard renders its totals, ledgers, and direct accounting actions', async () => {
@@ -44,6 +54,10 @@ test('Bill-in dashboard renders its totals, ledgers, and direct accounting actio
           classes: { invoiced: 80, collected: 80, expenses: 20, net: 60 },
         },
       },
+      accountBreakdown: {
+        general: [{ id: 'bank', name: 'Banco principal', collected: 100, expenses: 40, net: 60 }],
+        classes: [{ id: null, name: 'Sin cuenta asignada', collected: 80, expenses: 20, net: 60 }],
+      },
       recentInvoices: [{ id: 'invoice-1', number: 'FAC-2026-001', concept: 'Web', amount: 100, status: 'paid', document_type: 'invoice', accounting_area: 'general', issued_at: '2026-10-28' }],
       recentExpenses: [{ id: 'expense-1', supplier: 'Hosting', concept: 'Servidor', amount: 40, status: 'paid', accounting_area: 'general', expense_date: '2026-10-27' }],
       })
@@ -59,6 +73,9 @@ test('Bill-in dashboard renders its totals, ledgers, and direct accounting actio
     if (!['Facturas y propuestas recientes', 'Gastos recientes'].includes(label)) assert.match(html, new RegExp(label))
   }
   for (const label of ['Resumen por actividad', 'Movimientos recientes', 'Documento / proveedor', 'Área', 'Estado']) assert.match(html, new RegExp(label))
+  assert.match(html, /<details/)
+  assert.match(html, /Banco principal/)
+  assert.match(html, /Sin cuenta asignada/)
   assert.doesNotMatch(html, /Facturas y propuestas recientes|Gastos recientes/)
   assert.match(html, /230,00/)
   assert.match(html, /href="\/paneladmin\/facturas"/)

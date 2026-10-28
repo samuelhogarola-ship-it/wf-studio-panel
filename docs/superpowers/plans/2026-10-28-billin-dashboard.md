@@ -15,7 +15,7 @@
 - Existing invoice and expense pages remain the only authoring and full-history screens.
 - Proposals and void records never inflate financial totals.
 - General and class accounting remain separately visible.
-- No new tables, external services, Cloud writes, or automatic tax filing.
+- The only new table is the administrator-only Bill-in account catalog; no external services, Cloud writes, or automatic tax filing.
 
 ## Review Focus
 
@@ -60,7 +60,26 @@ Run: `node --test tests/billin-dashboard.test.mjs`
 
 Run: `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
 
-- [ ] **Step 5: Verify the dashboard in the local browser and commit**
+### Task 4: Supabase accounts and expandable activity breakdown
+
+**Files:**
+- Create: `supabase/migrations/20261028200000_billin_accounts.sql`
+- Create: `src/lib/actions/billing-accounts.ts`
+- Create: `src/components/admin/billing-account-form.tsx`
+- Create: `src/app/paneladmin/(protected)/billin/cuentas/page.tsx`
+- Modify: invoice and expense forms, actions, data modules, Supabase types, Bill-in dashboard, and sidebar.
+- Test: `tests/billin-accounts.test.mjs`
+
+**Interfaces:**
+- Consumes: existing invoice/expense creation and monthly summary data.
+- Produces: administrator-only `billing_accounts`, nullable account links on both ledgers, account selectors, and per-area expandable account totals.
+
+- [x] **Step 1: Write and run failing account persistence and UI tests**
+- [x] **Step 2: Add migration, account management, and ledger assignment**
+- [x] **Step 3: Add expandable per-account activity summaries**
+- [x] **Step 4: Apply locally, run full verification, inspect in browser, and commit**
+
+- [x] **Step 5: Verify the dashboard in the local browser and commit**
 
 Open `/paneladmin/billin`, check summary labels and navigation, then commit the implementation.
 
@@ -121,4 +140,14 @@ Assert month/type/status/area invoice filters, monthly totals, quarter selection
 - [ ] **Step 5: Run full verification, visually inspect Bill-in, and commit**
 
 Run: `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
+
+### Task 5: Accounting correctness and scale review
+
+**Files:** summary/data modules, invoice history, quarterly CSV, and regression tests.
+
+- [x] Attribute collections by `paid_at` instead of invoice issue date.
+- [x] Exclude drafts from invoiced totals.
+- [x] Paginate financial reads beyond Supabase's 1,000-row default limit.
+- [x] Paginate invoice history and calculate totals across all filtered rows.
+- [x] Neutralize spreadsheet-formula prefixes in CSV text cells.
 

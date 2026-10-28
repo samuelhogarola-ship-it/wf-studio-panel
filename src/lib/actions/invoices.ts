@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 
 import { requireAdmin } from '@/lib/auth'
 import { invoiceDraftSchema, parseStripePaymentLink } from '@/lib/payments/schema'
@@ -34,6 +35,8 @@ export async function createInvoiceAction(prevState: InvoiceFormState, formData:
     issuedAt: String(formData.get('issued_at') ?? '').trim() || undefined,
   })
   if (!parsed.success) return { error: 'Revisa destinatario, concepto e importe.' }
+  const billingAccountId = String(formData.get('billing_account_id') ?? '').trim() || null
+  if (billingAccountId && !z.string().uuid().safeParse(billingAccountId).success) return { error: 'Selecciona una cuenta de cobro válida.' }
   const paymentUrl = formData.get('payment_url')
   const link = paymentUrl ? parseStripePaymentLink(paymentUrl) : { success: true as const, data: null }
   if (!link.success) return { error: 'El enlace de pago debe ser un enlace Stripe HTTPS válido.' }
@@ -50,6 +53,7 @@ export async function createInvoiceAction(prevState: InvoiceFormState, formData:
     p_payment_method: parsed.data.paymentMethod,
     p_document_type: parsed.data.documentType,
     p_accounting_area: parsed.data.accountingArea,
+    p_billing_account_id: billingAccountId,
     p_transfer_instructions: parsed.data.transferInstructions ?? null,
     p_notes: parsed.data.notes ?? null,
     p_issued_at: parsed.data.issuedAt ?? new Date().toISOString().slice(0, 10),
