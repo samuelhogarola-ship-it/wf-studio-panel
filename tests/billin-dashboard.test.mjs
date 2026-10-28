@@ -43,6 +43,7 @@ test('Bill-in dashboard renders its totals, ledgers, and direct accounting actio
   let requestedPeriod
   const Page = loadProjectModule('src/app/paneladmin/(protected)/billin/page.tsx', {
     '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
+    '@/components/layout/app-shell': { AdminShell: ({ header, children, title }) => React.createElement('main', null, header ?? React.createElement('h1', null, title), children) },
     '@/lib/data/billin': { getBillinDashboardData: async (period) => {
       requestedPeriod = period
       return ({
@@ -82,6 +83,7 @@ test('Bill-in dashboard renders its totals, ledgers, and direct accounting actio
   assert.match(html, /href="\/paneladmin\/gastos"/)
   assert.match(html, /Preparar trimestre/)
   assert.match(html, /href="\/paneladmin\/facturas"[^>]*>Histórico de facturas/)
+  assert.match(html, /data-billin-header="true"/)
 })
 
 test('Bill-in dashboard applies historical, quarterly, annual, and custom periods', async () => {

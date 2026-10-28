@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { BillinPageHeader } from '@/components/admin/billin-page-header'
 import { BillinPeriodFilter } from '@/components/admin/billin-period-filter'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
@@ -45,7 +46,7 @@ export default async function BillinDashboardPage({ searchParams }: { searchPara
   ].sort((left, right) => right.date.localeCompare(left.date)).slice(0, 10)
 
   return (
-    <AdminShell title="Bill-in" description="Facturación y contabilidad del estudio en un solo lugar." currentPath="/paneladmin/billin" userEmail={identity.email} locale={locale}>
+    <AdminShell title="Bill-in" description="Facturación y contabilidad del estudio en un solo lugar." currentPath="/paneladmin/billin" userEmail={identity.email} locale={locale} header={<BillinPageHeader />}>
       <Card className="mb-4 p-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Periodo contable</p><h2 className="mt-1 text-xl font-bold text-foreground">Resumen de {period.label}</h2></div>

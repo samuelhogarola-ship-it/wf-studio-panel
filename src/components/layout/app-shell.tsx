@@ -14,6 +14,7 @@ export function AdminShell({
   currentPath,
   userEmail,
   locale,
+  header,
   children,
 }: {
   title: string
@@ -21,6 +22,7 @@ export function AdminShell({
   currentPath: string
   userEmail: string
   locale: Locale
+  header?: ReactNode
   children: ReactNode
 }) {
   const panelIcon = (
@@ -289,10 +291,12 @@ export function AdminShell({
         </nav>
 
         {/* Page header */}
-        <div className="shrink-0 border-b border-line bg-white px-6 py-5">
-          <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
-          <p className="mt-1 text-sm text-muted">{description}</p>
-        </div>
+        {header ?? (
+          <div className="shrink-0 border-b border-line bg-white px-6 py-5">
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">{title}</h1>
+            <p className="mt-1 text-sm text-muted">{description}</p>
+          </div>
+        )}
 
         <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto px-6 py-8">{children}</main>
       </div>
