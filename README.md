@@ -78,6 +78,22 @@ IMKONTEXT_SERVICE_KEY=
 npm run dev
 ```
 
+## Entorno local aislado
+
+Para trabajar sin tocar datos de producción, instala un runtime compatible con Docker (Docker Desktop o Colima) y ejecuta:
+
+```bash
+npm ci
+npm run setup:local
+npm run dev
+```
+
+`setup:local` levanta el Supabase definido en `supabase/config.toml`, aplica todas las migraciones, genera un `.env.local` privado y crea el administrador local indicado al final del comando. El archivo queda ignorado por Git. El panel estará disponible en `http://localhost:3000/paneladmin`.
+
+La sección **Facturas** persiste cada factura en Supabase con numeración, destinatario, estado, enlace de pago y auditoría. En local el historial vive en el Supabase aislado; en despliegue, las mismas migraciones y variables apuntan al proyecto Supabase en la nube, que conserva el historial entre equipos y despliegues.
+
+Los dominios se guardan como contratos del cliente (`pack_type = 'domain'`), lo que permite varios dominios por cliente con precio, fecha de compra, caducidad, estado de pago, factura y notas sin duplicar datos en la ficha principal.
+
 ## Rutas
 
 - `/paneladmin`

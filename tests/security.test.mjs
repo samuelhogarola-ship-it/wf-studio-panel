@@ -175,6 +175,23 @@ test("forwarded origin consistency rejects ambiguous and contradictory public ho
   }
 });
 
+test("forwarded origin consistency accepts the matching local development host", () => {
+  for (const requestOrigin of ["http://localhost:3000", "http://127.0.0.1:3000"]) {
+    const requestUrl = new URL(requestOrigin);
+    assert.equal(hasConsistentForwardedOrigin({
+      forwardedHost: requestUrl.host,
+      forwardedProto: "http",
+      requestOrigin,
+    }), true);
+  }
+
+  assert.equal(hasConsistentForwardedOrigin({
+    forwardedHost: "admin.webfuengirola.com",
+    forwardedProto: "http",
+    requestOrigin: "http://localhost:3000",
+  }), false);
+});
+
 test("resolveRequestOrigin restores HTTPS only when the proxy confirms the same public host", () => {
   assert.equal(
     resolveRequestOrigin({

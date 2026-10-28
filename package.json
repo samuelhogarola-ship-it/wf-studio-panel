@@ -6,6 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "setup:local": "node scripts/setup-local.mjs",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "blogger:hash-password": "node scripts/hash-blogger-password.mjs",

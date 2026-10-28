@@ -8,6 +8,11 @@ alter table public.packs
 add constraint packs_pack_type_check
 check (pack_type in ('hours', 'tasks'));
 
+-- PostgreSQL cannot insert or rename columns in-place with CREATE OR REPLACE
+-- VIEW. The previous view used the legacy hours_* columns, so recreate it
+-- explicitly before introducing pack_type and minutes_*.
+drop view if exists public.pack_summary;
+
 create or replace view public.pack_summary
 with (security_invoker = true)
 as

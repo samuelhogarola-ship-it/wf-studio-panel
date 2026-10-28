@@ -170,6 +170,10 @@ begin
 end;
 $$;
 
+-- The legacy view exposes hours_* names. Recreate it because PostgreSQL does
+-- not allow CREATE OR REPLACE VIEW to rename existing columns.
+drop view if exists public.client_summary;
+
 create or replace view public.client_summary
 with (security_invoker = true)
 as

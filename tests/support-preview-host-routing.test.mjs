@@ -35,6 +35,23 @@ function loadMiddleware() {
   return { middleware: module.middleware, passed }
 }
 
+test('local development host reaches the application through Next forwarded headers', async () => {
+  const { middleware, passed } = loadMiddleware()
+  const request = {
+    method: 'GET',
+    headers: new Headers({
+      host: 'localhost:3000',
+      'x-forwarded-host': 'localhost:3000',
+      'x-forwarded-proto': 'http',
+    }),
+    nextUrl: new URL('http://localhost:3000/paneladmin'),
+    cookies: { get() { return undefined }, getAll() { return [] }, set() {} },
+  }
+
+  assert.equal((await middleware(request)).status, 204)
+  assert.deepEqual(passed, ['http://localhost:3000/paneladmin'])
+})
+
 test('production hosts keep support entry, navigation and exit on the admin host without weakening ordinary separation', async () => {
   const { middleware, passed } = loadMiddleware()
   const cases = [
