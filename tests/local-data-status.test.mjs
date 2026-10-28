@@ -27,7 +27,7 @@ test('local context resolves the labelled Supabase database container and return
   const run = async (command, args) => {
     calls.push([command, args])
     if (command === 'npx') return { stdout: localStatus }
-    return { stdout: 'abc123\tsupabase/postgres:17.6.1.007\nother\tpostgres:17\n' }
+    return { stdout: 'abc123\tpublic.ecr.aws/supabase/postgres:17.6.1.132\nother\tpostgres:17\n' }
   }
 
   assert.deepEqual(await readSupabaseLocalContext({ run, root }), {

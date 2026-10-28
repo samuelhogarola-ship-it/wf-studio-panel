@@ -6,6 +6,7 @@ import { relative, resolve } from 'node:path'
 
 import { createLocalBackup, verifyLocalBackup } from './local-data-backup.mjs'
 import { collectLocalDataStatus, createLocalDataDb } from './local-data-db.mjs'
+import { collectRecoveryStatus, restoreLocalBackup, validateRestoreRequest } from './local-data-restore.mjs'
 import { assertLoopbackDatabaseUrl, assertLoopbackHttpUrl, classifyKnownDemoRecords } from './local-data-safety.mjs'
 import { parseSupabaseEnv } from './setup-local.mjs'
 
@@ -26,6 +27,10 @@ function readProjectId(config) {
   return projectId
 }
 
+function isSupabasePostgresImage(image) {
+  return typeof image === 'string' && (image.startsWith('supabase/postgres:') || image.includes('/supabase/postgres:'))
+}
+
 export async function readSupabaseLocalContext({ run = defaultRun, root = defaultRoot } = {}) {
   const config = await readFile(resolve(root, 'supabase/config.toml'), 'utf8')
   const projectId = readProjectId(config)
@@ -43,7 +48,7 @@ export async function readSupabaseLocalContext({ run = defaultRun, root = defaul
   const containerId = String(containersResult.stdout)
     .split(/\r?\n/)
     .map((line) => line.trim().split(/\s+/))
-    .find(([, image]) => image?.startsWith('supabase/postgres:'))?.[0]
+    .find(([, image]) => isSupabasePostgresImage(image))?.[0]
   if (!containerId) throw new Error('No se encontró el contenedor PostgreSQL del Supabase local.')
 
   return { projectId, apiUrl: values.API_URL, dbUrl: values.DB_URL, containerId }
@@ -62,9 +67,27 @@ export function formatLocalDataStatus({ context, status }) {
   return `${lines.join('\n')}\n`
 }
 
+export async function readRestoreTargetContext({ run = defaultRun, root = defaultRoot, environment = process.env } = {}) {
+  const projectId = environment.LOCAL_RESTORE_PROJECT_ID
+  const dbUrl = environment.LOCAL_RESTORE_DATABASE_URL
+  if (!projectId || !/^[a-z0-9][a-z0-9_-]*$/i.test(projectId) || !dbUrl) throw new Error('Falta definir el destino local de recuperación.')
+  assertLoopbackDatabaseUrl(dbUrl)
+  const containersResult = await run('docker', [
+    'ps',
+    '--filter', `label=com.supabase.cli.project=${projectId}`,
+    '--format', '{{.ID}}\t{{.Image}}',
+  ], { cwd: root })
+  const containerId = String(containersResult.stdout)
+    .split(/\r?\n/)
+    .map((line) => line.trim().split(/\s+/))
+    .find(([, image]) => isSupabasePostgresImage(image))?.[0]
+  if (!containerId) throw new Error('No se encontró el contenedor PostgreSQL del destino local.')
+  return { projectId, dbUrl, containerId }
+}
+
 export async function runLocalDataCli(argv = process.argv.slice(2), dependencies = {}) {
   const command = argv[0]
-  if (!['status', 'backup', 'verify'].includes(command)) throw new Error('Comando de datos no reconocido.')
+  if (!['status', 'backup', 'verify', 'restore'].includes(command)) throw new Error('Comando de datos no reconocido.')
   const root = dependencies.root ?? defaultRoot
   const run = dependencies.run ?? defaultRun
   const context = await readSupabaseLocalContext({ run, root })
@@ -75,6 +98,29 @@ export async function runLocalDataCli(argv = process.argv.slice(2), dependencies
     const manifestPath = resolve(root, argv[1])
     await verifyLocalBackup({ manifestPath, backupRoot, run, context })
     return `Copia local válida: ${relative(root, manifestPath)}\n`
+  }
+
+  if (command === 'restore') {
+    if (!argv[1]) throw new Error('Indica la ruta del manifest.json que quieres restaurar.')
+    const manifestPath = resolve(root, argv[1])
+    const manifest = await verifyLocalBackup({ manifestPath, backupRoot, run, context })
+    const targetContext = await readRestoreTargetContext({ run, root, environment: dependencies.environment })
+    const targetDb = dependencies.targetDb ?? createLocalDataDb(targetContext.dbUrl)
+    await targetDb.connect?.()
+    try {
+      const targetStatus = await collectLocalDataStatus({ db: targetDb })
+      validateRestoreRequest({ source: context, target: targetContext, manifest, confirmation: argv[2], targetStatus })
+      await restoreLocalBackup({
+        manifestPath,
+        backupRoot,
+        targetContext,
+        run,
+        readTargetStatus: () => collectRecoveryStatus({ db: targetDb }),
+      })
+      return `Copia restaurada en el destino local desechable: ${targetContext.projectId}\n`
+    } finally {
+      await targetDb.close?.()
+    }
   }
 
   const db = dependencies.db ?? createLocalDataDb(context.dbUrl)
