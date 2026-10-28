@@ -81,6 +81,17 @@ test('restore target binds the supplied loopback database URL to the labelled Do
     ? { stdout: 'target123\tpublic.ecr.aws/supabase/postgres:17.6.1.132\n' }
     : { stdout: '127.0.0.1\t57322\n' }
   await assert.rejects(() => readRestoreTargetContext({ run: mismatchRun, root, environment }), /URL|contenedor|puerto/i)
+  const hostMismatchRun = async (_command, args) => args[0] === 'ps'
+    ? { stdout: 'target123\tpublic.ecr.aws/supabase/postgres:17.6.1.132\n' }
+    : { stdout: '127.0.0.2\t56322\n' }
+  await assert.rejects(() => readRestoreTargetContext({ run: hostMismatchRun, root, environment }), /URL|contenedor|dirección/i)
+  for (const suffix of ['?host=remote.example.com', '?port=57322']) {
+    await assert.rejects(() => readRestoreTargetContext({
+      run,
+      root,
+      environment: { ...environment, LOCAL_RESTORE_DATABASE_URL: `${environment.LOCAL_RESTORE_DATABASE_URL}${suffix}` },
+    }), /parámetros|URL/i)
+  }
   await assert.rejects(() => readRestoreTargetContext({ run, root, environment: { ...environment, LOCAL_RESTORE_DATABASE_URL: 'postgresql://postgres:private@127.0.0.1:56322/other' } }), /postgres/i)
 })
 

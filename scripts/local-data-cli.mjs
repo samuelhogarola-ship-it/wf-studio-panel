@@ -31,6 +31,19 @@ function isSupabasePostgresImage(image) {
   return typeof image === 'string' && (image.startsWith('supabase/postgres:') || image.includes('/supabase/postgres:'))
 }
 
+function normalizeHost(value) {
+  return String(value).replace(/^\[|\]$/g, '').toLowerCase()
+}
+
+function publishedHostMatches(databaseHost, publishedHost) {
+  const requested = normalizeHost(databaseHost)
+  const published = normalizeHost(publishedHost)
+  if (requested === '127.0.0.1') return published === '127.0.0.1' || published === '0.0.0.0'
+  if (requested === '::1') return published === '::1' || published === '::'
+  if (requested === 'localhost') return ['127.0.0.1', '0.0.0.0', '::1', '::'].includes(published)
+  return false
+}
+
 export async function readSupabaseLocalContext({ run = defaultRun, root = defaultRoot } = {}) {
   const config = await readFile(resolve(root, 'supabase/config.toml'), 'utf8')
   const projectId = readProjectId(config)
@@ -73,6 +86,7 @@ export async function readRestoreTargetContext({ run = defaultRun, root = defaul
   if (!projectId || !/^[a-z0-9][a-z0-9_-]*$/i.test(projectId) || !dbUrl) throw new Error('Falta definir el destino local de recuperación.')
   const parsedDatabaseUrl = assertLoopbackDatabaseUrl(dbUrl)
   if (parsedDatabaseUrl.pathname !== '/postgres') throw new Error('El destino debe ser la base postgres del contenedor local.')
+  if (parsedDatabaseUrl.search || parsedDatabaseUrl.hash) throw new Error('La URL local de restauración no admite parámetros de conexión.')
   const containersResult = await run('docker', [
     'ps',
     '--filter', `label=com.supabase.cli.project=${projectId}`,
@@ -93,8 +107,8 @@ export async function readRestoreTargetContext({ run = defaultRun, root = defaul
     .split(/\r?\n/)
     .map((line) => line.trim().split(/\s+/))
     .filter(([, port]) => port)
-  if (!publishedPorts.some(([, port]) => port === expectedPort)) {
-    throw new Error('La URL del destino no corresponde al puerto publicado por su contenedor.')
+  if (!publishedPorts.some(([host, port]) => port === expectedPort && publishedHostMatches(parsedDatabaseUrl.hostname, host))) {
+    throw new Error('La URL del destino no corresponde a la dirección y puerto publicados por su contenedor.')
   }
   return { projectId, dbUrl, containerId }
 }
