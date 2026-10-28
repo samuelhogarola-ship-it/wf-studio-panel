@@ -18,6 +18,7 @@ Turn Bill-in into a first-class module in the administrator panel instead of lea
 - Add a quarterly preparation view that selects a year and quarter, separates General and Clases, and produces a printable/exportable ledger summary.
 - Classify every expense as `Fijo`, `Recurrente variable`, or `Único`; existing expenses default to `Único`.
 - Empty ledgers render zero values and useful calls to action, never errors.
+- Use a compact, full-width accounting layout: one activity summary table and one unified movement ledger instead of sparse split cards.
 
 ## Data and architecture
 

@@ -56,8 +56,10 @@ test('Bill-in dashboard renders its totals, ledgers, and direct accounting actio
   assert.match(html, /Resumen de octubre de 2026/)
   assert.match(html, /name="month"/)
   for (const label of ['Facturado', 'Cobrado', 'Gastos pagados', 'Resultado de caja', 'Contabilidad general', 'Contabilidad de clases', 'Facturas y propuestas recientes', 'Gastos recientes']) {
-    assert.match(html, new RegExp(label))
+    if (!['Facturas y propuestas recientes', 'Gastos recientes'].includes(label)) assert.match(html, new RegExp(label))
   }
+  for (const label of ['Resumen por actividad', 'Movimientos recientes', 'Documento / proveedor', 'Área', 'Estado']) assert.match(html, new RegExp(label))
+  assert.doesNotMatch(html, /Facturas y propuestas recientes|Gastos recientes/)
   assert.match(html, /230,00/)
   assert.match(html, /href="\/paneladmin\/facturas"/)
   assert.match(html, /href="\/paneladmin\/gastos"/)
