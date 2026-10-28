@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 
 import { DirectBloggerLogin } from '@/components/blogger/direct-blogger-login'
@@ -9,6 +10,42 @@ import { getOptionalIdentity } from '@/lib/auth'
 import { getBloggerSite } from '@/lib/blogger/sites.mjs'
 
 export const dynamic = 'force-dynamic'
+
+const sportBloggerOrigin = 'https://blogger.sportmassagefuengirola.com'
+const sportBloggerPreview = `${sportBloggerOrigin}/brands/sportmassage/wf-blogger-preview.png`
+
+export async function generateMetadata({ params }: { params: Promise<{ siteKey: string }> }): Promise<Metadata> {
+  const { siteKey } = await params
+  if (siteKey !== 'sportmassagefuengirola') return {}
+
+  const title = 'WF-Blogger · Sport Massage Fuengirola'
+  const description = 'Create and manage multilingual articles for Sport Massage Fuengirola.'
+  return {
+    metadataBase: new URL(sportBloggerOrigin),
+    title,
+    description,
+    alternates: { canonical: '/' },
+    openGraph: {
+      title,
+      description,
+      url: `${sportBloggerOrigin}/`,
+      siteName: 'WF-Blogger',
+      type: 'website',
+      images: [{
+        url: sportBloggerPreview,
+        width: 900,
+        height: 900,
+        alt: 'Sport Massage Fuengirola WF-Blogger preview',
+      }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [sportBloggerPreview],
+    },
+  }
+}
 
 export default async function DirectBloggerPage({
   params,

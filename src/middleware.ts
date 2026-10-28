@@ -17,6 +17,7 @@ function customHostCandidate(forwardedHost: string | null, requestHost: string) 
 
 function customBloggerPathAllowed(site: { key: string; blogger?: { runtime?: string } }, pathname: string) {
   if (pathname === '/api/blogger/direct-session' || pathname === '/api/blogger/handoff') return true
+  if (site.key === 'sportmassagefuengirola' && pathname === '/brands/sportmassage/wf-blogger-preview.png') return true
   if (site.blogger?.runtime === 'central-legacy') {
     return ['/blogger/index.html', '/blogger/styles.css', '/blogger/app.js', '/api/build'].includes(pathname) ||
       pathname === '/api/posts' || pathname.startsWith('/api/posts/')
