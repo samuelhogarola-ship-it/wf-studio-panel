@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "setup:local": "node scripts/setup-local.mjs",
+    "data:status": "node scripts/local-data-cli.mjs status",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "blogger:hash-password": "node scripts/hash-blogger-password.mjs",
