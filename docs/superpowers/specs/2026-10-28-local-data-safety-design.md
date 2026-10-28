@@ -86,7 +86,7 @@ Reduce trabajo local, pero mezcla dos cambios de riesgo: migración de datos y c
 - ejecuta después los recuentos del manifiesto y las invariantes de facturación;
 - nunca se invoca automáticamente desde `setup:local`.
 
-El primer ensayo real forma parte de esta entrega y se hará sobre una segunda instancia local desechable con project ID y puertos aislados. La prueba levantará el destino, restaurará, comparará recuentos e invariantes y lo retirará sin tocar la instancia de trabajo.
+El primer ensayo real forma parte de esta entrega y se ejecuta sobre una segunda instancia local desechable con project ID y puertos aislados. La prueba levanta el destino, desactiva las protecciones de auditoría únicamente dentro de la transacción que vacía ese stack recién creado, restaura con el rol administrador local de Supabase, compara recuentos e invariantes y lo retira sin tocar la instancia de trabajo.
 
 ### Datos de demostración
 
@@ -101,8 +101,12 @@ El manifiesto incluirá una entrada por cada tabla de usuario de `public`, no so
 ## Estructura propuesta
 
 - `scripts/local-data-safety.mjs`: lógica pura de validación, manifiesto, rutas y clasificación.
+- `scripts/local-data-db.mjs`: inventario reproducible de migraciones, tablas y recuentos.
+- `scripts/local-data-backup.mjs`: creación y verificación offline del volcado.
+- `scripts/local-data-restore.mjs`: barreras y comprobaciones de recuperación.
 - `scripts/local-data-cli.mjs`: comandos y ejecución de Supabase/PostgreSQL.
-- `tests/local-data-safety.test.mjs`: pruebas de destino local, rutas, manifiestos, checksum, permisos y clasificación conservadora.
+- `scripts/test-local-data-recovery.mjs`: ensayo completo sobre un stack poseído y desechable.
+- `tests/local-data-*.test.mjs`: pruebas de destino local, rutas, manifiestos, checksum, permisos, restauración y clasificación conservadora.
 - `storage/local-backups/`: salida privada ignorada por Git.
 - `README.md`: uso, límites y futura transición a Cloud.
 

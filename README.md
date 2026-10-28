@@ -94,6 +94,52 @@ La sección **Facturas** persiste cada factura en Supabase con numeración, dest
 
 Los dominios se guardan como contratos del cliente (`pack_type = 'domain'`), lo que permite varios dominios por cliente con precio, fecha de compra, caducidad, estado de pago, factura y notas sin duplicar datos en la ficha principal.
 
+### Seguridad y recuperación de los datos locales
+
+Estas herramientas solo aceptan Supabase en loopback (`localhost`, `127.0.0.1` o `::1`). No imprimen claves, contraseñas ni el contenido de facturas y mensajes.
+
+Para revisar el proyecto activo, los recuentos de todas las tablas conservadas y los identificadores de posibles datos de validación:
+
+```bash
+npm run data:status
+```
+
+Para crear una copia privada:
+
+```bash
+npm run data:backup
+```
+
+Cada copia se guarda en `storage/local-backups/<fecha>/` con una carpeta `0700`, un volcado PostgreSQL `0600` y un `manifest.json` `0600`. La carpeta completa está ignorada por Git. El volcado contiene datos personales: incluye todas las tablas de `public` y únicamente `auth.users` y `auth.identities` de Auth. Excluye sesiones, refresh tokens, MFA, auditoría interna y otras tablas volátiles de Auth. No lo adjuntes a incidencias, correos ni commits.
+
+Verifica siempre el manifiesto antes de confiar en la copia:
+
+```bash
+npm run data:verify -- storage/local-backups/<fecha>/manifest.json
+```
+
+La verificación comprueba formato, confinamiento de rutas, permisos privados, tamaño, SHA-256 y que PostgreSQL puede leer el archivo sin restaurarlo. Para probar el proceso completo sobre un segundo Supabase local con identidad y puertos temporales:
+
+```bash
+npm run test:data-recovery
+```
+
+El ensayo crea una nueva copia, levanta un stack desechable, restaura allí, compara migraciones, tablas, recuentos e invariantes de Bill-in y elimina únicamente ese stack. No restaura sobre la base de trabajo.
+
+La restauración manual está reservada a otro stack local, distinto y vacío. Hay que indicar su URL y project ID de forma explícita y escribir el indicador exacto:
+
+```bash
+LOCAL_RESTORE_DATABASE_URL='postgresql://…@127.0.0.1:<puerto>/postgres' \
+LOCAL_RESTORE_PROJECT_ID='mi-stack-desechable' \
+npm run data:restore -- storage/local-backups/<fecha>/manifest.json --confirm-local-restore
+```
+
+El comando se niega a continuar si el destino no es loopback, coincide con el origen, tiene otras migraciones, contiene datos o no corresponde exactamente al contrato de tablas de la copia. `setup:local` nunca ejecuta una restauración.
+
+`data:status` solo marca como candidatos de demostración las huellas exactas del cliente `cliente.demo@local.test`, la propuesta `prueba@local.test` y el gasto local identificado. No borra ni modifica nada. El administrador local y las tres facturas históricas quedan excluidos de esa clasificación.
+
+Supabase Cloud es una fase posterior: partirá de una copia local verificada y tendrá su propio procedimiento de migración. Estos comandos locales rechazan deliberadamente una URL cloud.
+
 ## Rutas
 
 - `/paneladmin`
