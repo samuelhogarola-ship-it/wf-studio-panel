@@ -173,10 +173,7 @@ export default async function AdminClientsPage({
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
                         <Link href={`/paneladmin/clientes/${client.id}`} className="rounded-full bg-brand/10 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/20 transition">
-                          Ver
-                        </Link>
-                        <Link href={`/paneladmin/clientes/${client.id}`} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition">
-                          {t(locale, 'clients.list.edit')}
+                          Abrir ficha
                         </Link>
                         {client.status === 'active' && (
                           <form action={deactivateClientAction}>

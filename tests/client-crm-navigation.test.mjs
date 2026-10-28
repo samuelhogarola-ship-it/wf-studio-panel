@@ -15,7 +15,7 @@ const client = {
   created_at: '2026-10-01',
 }
 
-test('client list view and edit actions both open the standalone client record', async () => {
+test('client list exposes one clear action to open the standalone editable record', async () => {
   const Page = loadProjectModule('src/app/paneladmin/(protected)/clientes/page.tsx', {
     '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
     '@/lib/data/admin': { getAdminClientsPageData: async () => ({
@@ -29,7 +29,9 @@ test('client list view and edit actions both open the standalone client record',
   const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({}) }))
   const destination = `/paneladmin/clientes/${clientId}`
 
-  assert.equal(html.match(new RegExp(`href="${destination}"`, 'g'))?.length, 3)
+  assert.equal(html.match(new RegExp(`href="${destination}"`, 'g'))?.length, 2)
+  assert.equal(html.match(/Abrir ficha/g)?.length, 1)
+  assert.doesNotMatch(html, />Ver<|clients\.list\.edit/)
   assert.doesNotMatch(html, /clientes\?edit=/)
 })
 
