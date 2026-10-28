@@ -141,6 +141,12 @@ export default async function AdminClientDetailPage({ params }: { params: Promis
         <Link href="/paneladmin/clientes" className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
           {t(locale, 'clientDetail.back')}
         </Link>
+        <Link
+          href={`/paneladmin/bonos?new=1&tab=dominios&client=${client.id}`}
+          className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+        >
+          Añadir dominio
+        </Link>
         <Badge className={client.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>
           {client.status}
         </Badge>
