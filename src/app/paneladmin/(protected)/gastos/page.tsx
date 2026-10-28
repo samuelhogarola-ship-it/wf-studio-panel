@@ -16,14 +16,16 @@ const categoryLabels: Record<string, string> = {
   office: 'Oficina', marketing: 'Marketing', classes: 'Clases', other: 'Otros',
 }
 
-export default async function AdminExpensesPage({ searchParams }: { searchParams?: Promise<{ client?: string; area?: string }> }) {
+export default async function AdminExpensesPage({ searchParams }: { searchParams?: Promise<{ client?: string; area?: string; page?: string }> }) {
   const identity = await requireAdmin()
   const locale = await getLocale()
   const params = searchParams ? await searchParams : {}
-  const data = await getExpensesPageData()
   const area = params.area === 'classes' ? 'classes' : params.area === 'general' ? 'general' : null
-  const expenses = data.expenses.filter((expense) => !area || expense.accounting_area === area)
-  const total = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0)
+  const requestedPage = Math.max(0, Number.parseInt(params.page ?? '1', 10) - 1 || 0)
+  const data = await getExpensesPageData({ area, page: requestedPage })
+  const expenses = data.expenses
+  const pageCount = Math.max(1, Math.ceil(data.count / data.pageSize))
+  const areaQuery = area ? `&area=${area}` : ''
 
   return (
     <AdminShell title="Bill-in · Gastos" description="Registra y consulta los gastos de la actividad general y de clases." currentPath="/paneladmin/gastos" userEmail={identity.email} locale={locale}>
@@ -31,7 +33,7 @@ export default async function AdminExpensesPage({ searchParams }: { searchParams
         <Link href="/paneladmin/gastos" className={`rounded-full px-4 py-2 text-sm font-semibold ${!area ? 'bg-brand text-white' : 'bg-slate-100 text-slate-700'}`}>Todos</Link>
         <Link href="/paneladmin/gastos?area=general" className={`rounded-full px-4 py-2 text-sm font-semibold ${area === 'general' ? 'bg-brand text-white' : 'bg-slate-100 text-slate-700'}`}>General</Link>
         <Link href="/paneladmin/gastos?area=classes" className={`rounded-full px-4 py-2 text-sm font-semibold ${area === 'classes' ? 'bg-brand text-white' : 'bg-slate-100 text-slate-700'}`}>Clases</Link>
-        <span className="ml-auto text-sm font-semibold text-foreground">Total visible: {total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
+        <span className="ml-auto text-sm font-semibold text-foreground">Total del histórico: {data.total.toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</span>
       </div>
       <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
         <Card className="p-6">
@@ -40,7 +42,7 @@ export default async function AdminExpensesPage({ searchParams }: { searchParams
           <ExpenseForm clients={data.clients} defaultClientId={params.client} />
         </Card>
         <Card className="overflow-hidden">
-          <div className="border-b border-line px-6 py-5"><h2 className="text-xl font-bold text-foreground">Histórico de gastos</h2><p className="text-sm text-muted">{expenses.length} apuntes en la vista actual.</p></div>
+          <div className="border-b border-line px-6 py-5"><h2 className="text-xl font-bold text-foreground">Histórico de gastos</h2><p className="text-sm text-muted">{data.count} apuntes · página {data.page + 1} de {pageCount}.</p></div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500"><tr><th className="px-5 py-4">Fecha</th><th className="px-5 py-4">Proveedor / concepto</th><th className="px-5 py-4">Cliente</th><th className="px-5 py-4">Área</th><th className="px-5 py-4">Importe</th><th className="px-5 py-4">Estado</th></tr></thead>
@@ -56,6 +58,10 @@ export default async function AdminExpensesPage({ searchParams }: { searchParams
               </tbody>
             </table>
             {expenses.length === 0 ? <p className="px-6 py-8 text-sm text-muted">Todavía no hay gastos en esta vista.</p> : null}
+          </div>
+          <div className="flex items-center justify-between border-t border-line px-6 py-4 text-sm">
+            {data.page > 0 ? <Link href={`/paneladmin/gastos?page=${data.page}${areaQuery}`} className="font-semibold text-brand">Página anterior</Link> : <span />}
+            {data.page + 1 < pageCount ? <Link href={`/paneladmin/gastos?page=${data.page + 2}${areaQuery}`} className="font-semibold text-brand">Página siguiente</Link> : <span />}
           </div>
         </Card>
       </div>

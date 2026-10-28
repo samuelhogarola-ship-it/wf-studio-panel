@@ -63,6 +63,9 @@ export default async function AdminClientDetailPage({
   }
 
   const client = data.client
+  const services = data.services ?? []
+  const invoices = data.invoices ?? []
+  const expenses = data.expenses ?? []
   const supportCopy = supportPreviewTranslations[locale]
   const supportDisabledReason = process.env.WF_SUPPORT_PREVIEW_ENABLED !== 'true'
     ? supportCopy.featureDisabled
@@ -85,6 +88,9 @@ export default async function AdminClientDetailPage({
     { id: 'dominios', label: 'Dominios', count: allDomainPacks.length },
     { id: 'hosting', label: 'Hosting', count: hostingPacks.length },
     { id: 'packs-servicios', label: 'Packs y servicios', count: servicePacks.length },
+    { id: 'servicios-activos', label: 'Servicios', count: services.length },
+    { id: 'facturas-cliente', label: 'Facturas y propuestas', count: invoices.length },
+    { id: 'gastos-cliente', label: 'Gastos', count: expenses.length },
     { id: 'historial-contratado', label: 'Historial contratado', count: data.packs.length },
   ]
 
@@ -205,7 +211,7 @@ export default async function AdminClientDetailPage({
             <ClientForm editingClient={client} locale={locale} />
           </div>
 
-          <Card id="mensajes" className="scroll-mt-24 p-6">
+          <Card className="p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Contratación</p>
             <h2 className="mt-2 text-xl font-bold text-foreground">Menú de servicios del cliente</h2>
             <p className="mt-1 text-sm text-slate-500">Separado por tipo para no mezclar bonos de horas con dominios, hosting o packs.</p>
@@ -219,7 +225,7 @@ export default async function AdminClientDetailPage({
             </div>
           </Card>
 
-          <Card className="p-6">
+          <Card id="mensajes" className="scroll-mt-24 p-6">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Comunicación</p>
@@ -339,6 +345,58 @@ export default async function AdminClientDetailPage({
             {renderContractSection('Dominios', 'Registros o renovaciones de dominio contratados, ordenados por próxima caducidad.', domainPacks, 'dominios', true)}
             {renderContractSection('Hosting', 'Alojamientos, mantenimiento técnico o cuotas de hosting.', hostingPacks, 'hosting')}
             {renderContractSection('Packs y servicios', 'Packs cerrados, servicios, suscripciones o membresías activas.', servicePacks, 'packs-servicios')}
+          </Card>
+
+          <Card id="servicios-activos" className="scroll-mt-24 overflow-hidden">
+            <div className="border-b border-line px-6 py-5">
+              <h2 className="text-xl font-bold text-foreground">Servicios activos</h2>
+              <p className="text-sm text-muted">Servicios registrados directamente para este cliente.</p>
+            </div>
+            <div className="divide-y divide-line">
+              {services.map((service) => (
+                <div key={service.id} className="px-6 py-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold text-foreground">{service.name}</p>
+                    <Badge className={service.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}>{service.status}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-500">{service.service_type} · {formatDate(service.service_date)} · {service.price !== null ? `${service.price} €` : 'Sin precio'}</p>
+                  {service.notes ? <p className="mt-2 text-sm text-muted">{service.notes}</p> : null}
+                </div>
+              ))}
+              {services.length === 0 ? <p className="px-6 py-8 text-sm text-muted">Sin servicios registrados.</p> : null}
+            </div>
+          </Card>
+
+          <Card id="facturas-cliente" className="scroll-mt-24 overflow-hidden">
+            <div className="border-b border-line px-6 py-5">
+              <h2 className="text-xl font-bold text-foreground">Facturas y propuestas</h2>
+              <p className="text-sm text-muted">Documentos emitidos desde Bill-in para este cliente.</p>
+            </div>
+            <div className="divide-y divide-line">
+              {invoices.map((invoice) => (
+                <Link key={invoice.id} href={`/paneladmin/facturas/${invoice.id}/print`} target="_blank" className="block px-6 py-5 transition hover:bg-slate-50">
+                  <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-foreground">{invoice.number} · {invoice.concept}</p><Badge className={invoice.document_type === 'proposal' ? 'bg-violet-50 text-violet-700' : 'bg-blue-50 text-blue-700'}>{invoice.document_type === 'proposal' ? 'Propuesta' : 'Factura'}</Badge></div>
+                  <p className="mt-2 text-sm text-slate-500">{formatDate(invoice.issued_at)} · {Number(invoice.amount).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })} · {invoice.status}</p>
+                </Link>
+              ))}
+              {invoices.length === 0 ? <p className="px-6 py-8 text-sm text-muted">Sin documentos emitidos.</p> : null}
+            </div>
+          </Card>
+
+          <Card id="gastos-cliente" className="scroll-mt-24 overflow-hidden">
+            <div className="border-b border-line px-6 py-5">
+              <h2 className="text-xl font-bold text-foreground">Gastos relacionados</h2>
+              <p className="text-sm text-muted">Gastos de Bill-in vinculados a este cliente.</p>
+            </div>
+            <div className="divide-y divide-line">
+              {expenses.map((expense) => (
+                <div key={expense.id} className="px-6 py-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-foreground">{expense.supplier} · {expense.concept}</p><Badge className={expense.accounting_area === 'classes' ? 'bg-violet-50 text-violet-700' : 'bg-slate-100 text-slate-700'}>{expense.accounting_area === 'classes' ? 'Clases' : 'General'}</Badge></div>
+                  <p className="mt-2 text-sm text-slate-500">{formatDate(expense.expense_date)} · {Number(expense.amount).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })} · {expense.status}</p>
+                </div>
+              ))}
+              {expenses.length === 0 ? <p className="px-6 py-8 text-sm text-muted">Sin gastos relacionados.</p> : null}
+            </div>
           </Card>
 
           <Card id="historial-contratado" className="scroll-mt-24 overflow-hidden">

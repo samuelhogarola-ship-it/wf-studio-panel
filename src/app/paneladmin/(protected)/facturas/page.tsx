@@ -84,7 +84,7 @@ export default async function AdminFacturasPage({
                     <td className="px-6 py-4 text-slate-500">{PAYMENT_METHOD_LABELS[invoice.payment_method] ?? invoice.payment_method}</td>
                     <td className="px-6 py-4">
                       <Badge className={invoice.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : invoice.status === 'void' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-700'}>
-                        {invoice.status === 'paid' ? t(locale, 'invoices.list.paid') : invoice.status === 'void' ? 'Anulada' : t(locale, 'invoices.list.pending')}
+                        {invoice.document_type === 'proposal' ? 'Emitida' : invoice.status === 'paid' ? t(locale, 'invoices.list.paid') : invoice.status === 'void' ? 'Anulada' : t(locale, 'invoices.list.pending')}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 text-slate-500">{formatDate(invoice.issued_at)}</td>

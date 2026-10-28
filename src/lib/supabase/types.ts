@@ -175,6 +175,7 @@ export type Database = {
       create_invoice_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string }; Returns: { id: string; number: string }[] }
       create_billing_document_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string; p_document_type: string; p_accounting_area: string; p_transfer_instructions: string | null }; Returns: { id: string; number: string }[] }
       issue_billing_document: { Args: { p_document_id: string; p_payment_url: string | null }; Returns: { id: string; number: string; status: string }[] }
+      get_expense_ledger_summary: { Args: { p_area: string | null }; Returns: { total: number; entry_count: number }[] }
       issue_invoice_with_payment_link: { Args: { p_invoice_id: string; p_payment_url: string | null }; Returns: { id: string; number: string; status: string }[] }
       mark_invoice_paid: { Args: { p_invoice_id: string }; Returns: boolean }
       start_admin_support_session: { Args: { p_client_id: string; p_token_hash: string; p_return_path: string }; Returns: SupportSessionRow[] }
