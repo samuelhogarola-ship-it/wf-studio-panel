@@ -2,8 +2,9 @@ import { execFile } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
-import { resolve } from 'node:path'
+import { relative, resolve } from 'node:path'
 
+import { createLocalBackup, verifyLocalBackup } from './local-data-backup.mjs'
 import { collectLocalDataStatus, createLocalDataDb } from './local-data-db.mjs'
 import { assertLoopbackDatabaseUrl, assertLoopbackHttpUrl, classifyKnownDemoRecords } from './local-data-safety.mjs'
 import { parseSupabaseEnv } from './setup-local.mjs'
@@ -63,13 +64,27 @@ export function formatLocalDataStatus({ context, status }) {
 
 export async function runLocalDataCli(argv = process.argv.slice(2), dependencies = {}) {
   const command = argv[0]
-  if (command !== 'status') throw new Error('Comando de datos no reconocido.')
-  const context = await readSupabaseLocalContext({ run: dependencies.run, root: dependencies.root })
+  if (!['status', 'backup', 'verify'].includes(command)) throw new Error('Comando de datos no reconocido.')
+  const root = dependencies.root ?? defaultRoot
+  const run = dependencies.run ?? defaultRun
+  const context = await readSupabaseLocalContext({ run, root })
+  const backupRoot = resolve(root, 'storage/local-backups')
+
+  if (command === 'verify') {
+    if (!argv[1]) throw new Error('Indica la ruta del manifest.json que quieres verificar.')
+    const manifestPath = resolve(root, argv[1])
+    await verifyLocalBackup({ manifestPath, backupRoot, run, context })
+    return `Copia local válida: ${relative(root, manifestPath)}\n`
+  }
+
   const db = dependencies.db ?? createLocalDataDb(context.dbUrl)
   await db.connect?.()
   try {
-    const status = await collectLocalDataStatus({ db })
-    return formatLocalDataStatus({ context, status })
+    const readStatus = () => collectLocalDataStatus({ db })
+    const status = await readStatus()
+    if (command === 'status') return formatLocalDataStatus({ context, status })
+    const result = await createLocalBackup({ context, status, backupRoot, run, readStatus })
+    return `Copia local creada: ${relative(root, result.manifestPath)}\n`
   } finally {
     await db.close?.()
   }
@@ -79,7 +94,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   runLocalDataCli()
     .then((output) => process.stdout.write(output))
     .catch(() => {
-      console.error('No se pudo leer el estado seguro de los datos locales.')
+      console.error('No se pudo ejecutar la operación segura de datos locales.')
       process.exitCode = 1
     })
 }
