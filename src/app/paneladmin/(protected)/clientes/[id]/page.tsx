@@ -349,8 +349,8 @@ export default async function AdminClientDetailPage({
 
           <Card id="servicios-activos" className="scroll-mt-24 overflow-hidden">
             <div className="border-b border-line px-6 py-5">
-              <h2 className="text-xl font-bold text-foreground">Servicios activos</h2>
-              <p className="text-sm text-muted">Servicios registrados directamente para este cliente.</p>
+              <h2 className="text-xl font-bold text-foreground">Servicios registrados</h2>
+              <p className="text-sm text-muted">Servicios activos, finalizados o cancelados registrados directamente para este cliente.</p>
             </div>
             <div className="divide-y divide-line">
               {services.map((service) => (

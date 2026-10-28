@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 
 import { createInvoiceAction, type InvoiceFormState } from '@/lib/actions/invoices'
 import { type Locale, t } from '@/lib/i18n'
@@ -24,6 +24,7 @@ const initialState: InvoiceFormState = {}
 
 export function InvoiceForm({ clients, locale, defaultClientId }: { clients: ClientOption[]; locale: Locale; defaultClientId?: string }) {
   const [state, action, pending] = useActionState(createInvoiceAction, initialState)
+  const [documentType, setDocumentType] = useState<'invoice' | 'proposal'>('invoice')
 
   return (
     <Card className="p-6">
@@ -34,7 +35,7 @@ export function InvoiceForm({ clients, locale, defaultClientId }: { clients: Cli
       <form action={action} className="grid gap-4 md:grid-cols-2">
         <div>
           <Label htmlFor="document_type">Tipo de documento</Label>
-          <Select id="document_type" name="document_type" defaultValue="invoice">
+          <Select id="document_type" name="document_type" value={documentType} onChange={(event) => setDocumentType(event.target.value as 'invoice' | 'proposal')}>
             <option value="invoice">Factura</option>
             <option value="proposal">Propuesta</option>
           </Select>
@@ -97,11 +98,15 @@ export function InvoiceForm({ clients, locale, defaultClientId }: { clients: Cli
           <Label htmlFor="transfer_instructions">Datos para transferencia (opcional)</Label>
           <Textarea id="transfer_instructions" name="transfer_instructions" placeholder="IBAN, titular y referencia que debe indicar" />
         </div>
-        <div className="md:col-span-2">
-          <Label htmlFor="payment_url">Enlace de pago con tarjeta mediante Stripe (opcional)</Label>
-          <Input id="payment_url" name="payment_url" type="url" placeholder="https://buy.stripe.com/..." />
-          <p className="mt-2 text-xs text-muted">Déjalo vacío para efectivo o transferencia. El enlace Stripe corresponde al pago con tarjeta.</p>
-        </div>
+        {documentType === 'invoice' ? (
+          <div className="md:col-span-2">
+            <Label htmlFor="payment_url">Enlace de pago con tarjeta mediante Stripe (opcional)</Label>
+            <Input id="payment_url" name="payment_url" type="url" placeholder="https://buy.stripe.com/..." />
+            <p className="mt-2 text-xs text-muted">Déjalo vacío para efectivo o transferencia. El enlace Stripe corresponde al pago con tarjeta.</p>
+          </div>
+        ) : (
+          <p className="md:col-span-2 rounded-2xl bg-violet-50 px-4 py-3 text-sm text-violet-800">La propuesta es informativa y no incluye enlace de cobro. Podrás emitir una factura cuando sea aceptada.</p>
+        )}
         <div className="md:col-span-2">
           <FormMessage error={state.error} success={state.success} />
         </div>
