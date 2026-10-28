@@ -39,4 +39,3 @@ Bill-in reutiliza el CRM y Supabase:
 - Todas las mutaciones requieren administrador.
 - RLS limita CRM y contabilidad al administrador; los clientes solo ven sus documentos permitidos.
 - El entorno local usa Supabase aislado y la misma estructura se puede conectar al Supabase cloud para conservar el historial.
-

@@ -27,4 +27,3 @@ export async function createBillingAccountAction(_state: BillingAccountFormState
   revalidatePath('/paneladmin/gastos')
   return { success: 'Cuenta guardada correctamente.' }
 }
-

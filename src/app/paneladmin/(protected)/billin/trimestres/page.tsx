@@ -50,4 +50,3 @@ export default async function BillinQuarterPage({ searchParams }: { searchParams
     </AdminShell>
   )
 }
-

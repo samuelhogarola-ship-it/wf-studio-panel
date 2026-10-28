@@ -6,7 +6,6 @@ function configuredOrigins() {
     process.env.UMAMI_PERSONAL_URL,
     process.env.UMAMI_AGAMA_URL,
     process.env.STAT_REPORT_UMAMI_URL,
-    'https://hocdlmxzghwymamientc.supabase.co',
   ]
 
   return values.flatMap((value) => {

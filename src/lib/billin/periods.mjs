@@ -21,7 +21,6 @@ export function monthBounds(value, now = new Date()) {
     label: `${monthNames[month - 1]} de ${year}`,
   }
 }
-
 export function quarterBounds(yearValue, quarterValue, now = new Date()) {
   const candidateYear = Number(yearValue)
   const candidateQuarter = Number(quarterValue)
@@ -34,4 +33,3 @@ export function quarterBounds(yearValue, quarterValue, now = new Date()) {
   const end = new Date(Date.UTC(year, startMonth + 3, 1))
   return { year, quarter, start: dateKey(start), end: dateKey(end), label: `${quarter}.º trimestre de ${year}` }
 }
-

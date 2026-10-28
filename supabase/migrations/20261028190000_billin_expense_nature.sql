@@ -13,4 +13,3 @@ create index if not exists expenses_expense_nature_idx
 
 comment on column public.expenses.expense_nature is
   'Bill-in classification only: fixed, recurring variable, or one-off. It does not generate future entries.';
-

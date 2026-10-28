@@ -3,12 +3,10 @@ const emptyArea = () => ({ invoiced: 0, collected: 0, expenses: 0, net: 0 })
 function areaKey(value) {
   return value === 'classes' ? 'classes' : 'general'
 }
-
 function amount(value) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
-
 export function summarizeBillin({ invoices = [], collections, expenses = [] } = {}) {
   const summary = {
     totals: emptyArea(),
@@ -61,7 +59,6 @@ export function summarizeBillin({ invoices = [], collections, expenses = [] } = 
 
   return summary
 }
-
 export function summarizeAccounts({ accounts = [], invoices = [], collections, expenses = [] } = {}) {
   const names = new Map(accounts.map((account) => [account.id, account.name]))
   const areas = { general: new Map(), classes: new Map() }
@@ -86,4 +83,3 @@ export function summarizeAccounts({ accounts = [], invoices = [], collections, e
   const finish = (rows) => [...rows.values()].map((row) => ({ ...row, net: row.collected - row.expenses }))
   return { general: finish(areas.general), classes: finish(areas.classes) }
 }
-

@@ -244,3 +244,25 @@ test("getProtectedArea marks client routes as protected except public entrypoint
   assert.equal(getProtectedArea("/cliente/servicios"), "client");
   assert.equal(getProtectedArea("/cliente/registro"), null);
 });
+
+test("premium code administration keeps the retired Supabase backend out of the browser", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { fileURLToPath } = await import("node:url");
+  const path = await import("node:path");
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const [page, config] = await Promise.all([
+    readFile(
+      path.join(
+        root,
+        "src/app/paneladmin/(protected)/samuel-coach/premium/page.tsx",
+      ),
+      "utf8",
+    ),
+    readFile(path.join(root, "next.config.ts"), "utf8"),
+  ]);
+
+  assert.doesNotMatch(page, /hocdlmxzghwymamientc/);
+  assert.doesNotMatch(config, /hocdlmxzghwymamientc/);
+  assert.doesNotMatch(page, /@supabase\/supabase-js/);
+  assert.match(page, /generatePremiumCodeAction/);
+});

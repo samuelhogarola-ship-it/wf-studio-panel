@@ -43,7 +43,6 @@ export const getBillinDashboardData = cache(async (period?: PeriodBounds) => {
     recentExpenses: expenses.slice(0, 10),
   }
 })
-
 export const getBillinPeriodData = cache(async (period: PeriodBounds) => {
   const supabase = await createSupabaseServerClient()
   const [invoices, collections, expenses] = await Promise.all([
@@ -65,7 +64,6 @@ export const getBillinPeriodData = cache(async (period: PeriodBounds) => {
   ])
   return { summary: summarizeBillin({ invoices, collections, expenses }), invoices, collections, expenses }
 })
-
 export const getBillingAccounts = cache(async () => {
   const supabase = await createSupabaseServerClient()
   return collectAllPages(async (from, to) => {
@@ -74,4 +72,3 @@ export const getBillingAccounts = cache(async () => {
     return data ?? []
   })
 })
-

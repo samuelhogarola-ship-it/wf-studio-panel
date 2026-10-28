@@ -33,4 +33,3 @@ The current invoice and expense pages remain the authoring and full-history scre
 - Automatic tax filing, tax advice, bank reconciliation, automatic recurring-entry generation, recurring invoices, and external payment-provider synchronization.
 - Cloud migration or remote Supabase provisioning.
 - Deleting the current demo records.
-

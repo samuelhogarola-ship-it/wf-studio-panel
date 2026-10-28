@@ -1,17 +1,25 @@
-'use client'
+import Link from 'next/link'
 
-import { useEffect, useState, useCallback } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { ConnectionIssueCard } from '@/components/admin/connection-issue-card'
+import { PremiumCodeCancelForm } from '@/components/admin/premium-code-cancel-form'
 import { AdminShell } from '@/components/layout/app-shell'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import { generatePremiumCodeAction } from '@/lib/actions/premium-codes'
+import { requireAdmin } from '@/lib/auth'
+import { getLocale } from '@/lib/locale'
+import { createAppsUsersAdminClient } from '@/lib/supabase/server'
+import { formatDate } from '@/lib/utils'
 
-const supabase = createClient(
-  'https://hocdlmxzghwymamientc.supabase.co',
-  'sb_publishable_d2RkD-vcqXebnAFs31AdHw_ti2Eb5qO'
-)
+export const dynamic = 'force-dynamic'
 
-interface PremiumCode {
+type PremiumCode = {
   code: string
-  customer_email: string
+  customer_email: string | null
   duration_days: number
   status: string
   created_at: string
@@ -19,207 +27,151 @@ interface PremiumCode {
   redeemed_by: string | null
 }
 
-export default function PremiumCodesPage() {
-  const [codes, setCodes] = useState<PremiumCode[]>([])
-  const [filter, setFilter] = useState('active')
-  const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({
-    email: '',
-    duration: '30',
-    createdByType: 'studio-panel'
+const STATUS_OPTIONS = [
+  ['active', 'Activos'],
+  ['used', 'Usados'],
+  ['cancelled', 'Cancelados'],
+  ['all', 'Todos'],
+] as const
+
+function codeStatus(code: PremiumCode) {
+  if (code.redeemed_at) return 'Usado'
+  if (code.status === 'active') return 'Activo'
+  if (code.status === 'cancelled') return 'Cancelado'
+  return code.status
+}
+
+function codeStatusClass(code: PremiumCode) {
+  if (code.redeemed_at) return 'bg-blue-50 text-blue-700'
+  if (code.status === 'active') return 'bg-emerald-50 text-emerald-700'
+  if (code.status === 'cancelled') return 'bg-rose-50 text-rose-700'
+  return 'bg-slate-100 text-slate-600'
+}
+
+async function getPremiumCodes(status: string) {
+  const db = createAppsUsersAdminClient()
+  const { data, error } = await db.rpc('list_premium_codes', {
+    p_status: status === 'all' ? null : status,
   })
-  const [message, setMessage] = useState('')
+  if (error) throw error
+  return (data ?? []) as PremiumCode[]
+}
 
-  const loadCodes = useCallback(async () => {
-    setLoading(true)
-    try {
-      const { data, error } = await supabase.rpc('list_premium_codes', {
-        p_status: filter === 'all' ? null : filter
-      })
-      if (error) throw error
-      setCodes(data || [])
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
-      setMessage('❌ Error cargando códigos: ' + errorMsg)
-    }
-    setLoading(false)
-  }, [filter])
+export default async function Page({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  const identity = await requireAdmin()
+  const locale = await getLocale()
+  const params = await searchParams
+  const status = STATUS_OPTIONS.some(([value]) => value === params.status) ? params.status ?? 'active' : 'active'
+  let codes: PremiumCode[] = []
+  let error: string | null = null
 
-  useEffect(() => {
-    loadCodes()
-  }, [loadCodes])
-
-  const generateCode = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      const { data: code, error } = await supabase.rpc('generate_premium_code', {
-        p_duration_days: parseInt(form.duration),
-        p_customer_email: form.email,
-        p_created_by_type: form.createdByType
-      })
-
-      if (error) throw error
-      setMessage(`✅ Código generado: ${code}`)
-      setForm({ email: '', duration: '30', createdByType: 'studio-panel' })
-      loadCodes()
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
-      setMessage('❌ Error: ' + errorMsg)
-    }
-    setLoading(false)
-  }
-
-  const cancelCode = async (code: string) => {
-    if (!confirm(`¿Cancelar código ${code}?`)) return
-
-    setLoading(true)
-    try {
-      const { error } = await supabase.rpc('cancel_premium_code', {
-        p_code: code
-      })
-
-      if (error) throw error
-      setMessage('✅ Código cancelado')
-      loadCodes()
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error'
-      setMessage('❌ Error al cancelar: ' + errorMsg)
-    }
-    setLoading(false)
+  try {
+    codes = await getPremiumCodes(status)
+  } catch (cause) {
+    error = cause instanceof Error ? cause.message : 'No se pudieron cargar los códigos premium.'
   }
 
   return (
-    <AdminShell title="Gestión de Códigos Premium" description="Genera, cancela y monitorea códigos de acceso premium para alumnos" currentPath="/paneladmin/samuel-coach/premium" userEmail="admin" locale="es">
-    <div className="max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2">Gestión de Códigos Premium</h1>
-      <p className="text-gray-600 mb-6">Genera, cancela y monitorea códigos de acceso premium para alumnos</p>
-
-      {message && (
-        <div role={message.startsWith('✅') ? 'status' : 'alert'} aria-live={message.startsWith('✅') ? 'polite' : 'assertive'} className={`mb-4 p-4 rounded border ${
-          message.startsWith('✅')
-            ? 'bg-green-50 border-green-300 text-green-800'
-            : 'bg-red-50 border-red-300 text-red-800'
-        }`}>
-          {message}
+    <AdminShell
+      title="Premium educativo"
+      description="Códigos compartidos del ecosistema educativo"
+      currentPath="/paneladmin/samuel-coach/premium"
+      userEmail={identity.email}
+      locale={locale}
+    >
+      {error ? (
+        <div className="mb-8">
+          <ConnectionIssueCard
+            message="Revisa APPS_USERS_URL, APPS_USERS_SERVICE_KEY y las RPC de premium."
+            detail={error}
+          />
         </div>
-      )}
+      ) : null}
 
-      <div className="mb-6 p-6 bg-white rounded-lg border shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Generar Nuevo Código</h2>
-        <form onSubmit={generateCode} className="flex gap-3 flex-wrap items-end">
+      <Card className="mb-8 p-6">
+        <div className="mb-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Ecosistema educativo</p>
+          <h2 className="mt-2 text-xl font-bold text-foreground">Generar código premium</h2>
+        </div>
+        <form action={generatePremiumCodeAction} className="grid gap-4 md:grid-cols-[1fr_180px_180px_auto] md:items-end">
           <div>
-            <label htmlFor="premium-email" className="block text-sm font-medium mb-1">Email del alumno</label>
-            <input
-              id="premium-email"
-              type="email"
-              placeholder="alumno@example.com"
-              value={form.email}
-              onChange={(e) => setForm({...form, email: e.target.value})}
-              required
-              className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <Label htmlFor="customer_email">Email del alumno</Label>
+            <Input id="customer_email" name="customer_email" type="email" placeholder="alumno@example.com" required />
           </div>
           <div>
-            <label htmlFor="premium-duration" className="block text-sm font-medium mb-1">Duración</label>
-            <select
-              id="premium-duration"
-              value={form.duration}
-              onChange={(e) => setForm({...form, duration: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
+            <Label htmlFor="duration_days">Duración</Label>
+            <Select id="duration_days" name="duration_days" defaultValue="30">
               <option value="30">1 mes</option>
               <option value="90">3 meses</option>
               <option value="180">6 meses</option>
               <option value="365">1 año</option>
-              <option value="999">Ilimitado (2+ años)</option>
-            </select>
+              <option value="999">Ilimitado</option>
+            </Select>
           </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-2 bg-blue-600 text-white rounded font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Generando...' : 'Generar Código'}
-          </button>
+          <div>
+            <Label htmlFor="created_by_type">Origen</Label>
+            <Select id="created_by_type" name="created_by_type" defaultValue="studio-panel">
+              <option value="studio-panel">Studio Panel</option>
+              <option value="manual">Manual</option>
+            </Select>
+          </div>
+          <Button type="submit">Generar</Button>
         </form>
-      </div>
+      </Card>
 
-      <div className="mb-4 flex gap-2 flex-wrap">
-        {[
-          { value: 'active', label: '🟢 Activos' },
-          { value: 'used', label: '✅ Usados' },
-          { value: 'cancelled', label: '❌ Cancelados' },
-          { value: 'all', label: 'Todos' }
-        ].map((option) => (
-          <button
-            key={option.value}
-            onClick={() => setFilter(option.value)}
-            className={`px-4 py-2 rounded font-medium transition ${
-              filter === option.value
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
+      <div className="mb-6 flex flex-wrap gap-2">
+        {STATUS_OPTIONS.map(([value, label]) => (
+          <Link
+            key={value}
+            href={`/paneladmin/samuel-coach/premium?status=${value}`}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${status === value ? 'bg-brand text-white' : 'bg-slate-100 text-slate-700'}`}
           >
-            {option.label}
-          </button>
+            {label}
+          </Link>
         ))}
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-100 border-b">
-                <th className="px-4 py-3 text-left font-semibold text-sm">Código</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm">Email</th>
-                <th className="px-4 py-3 text-center font-semibold text-sm">Duración</th>
-                <th className="px-4 py-3 text-center font-semibold text-sm">Estado</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm">Creado</th>
-                <th className="px-4 py-3 text-left font-semibold text-sm">Usado</th>
-                <th className="px-4 py-3 text-center font-semibold text-sm">Acciones</th>
+          <table className="min-w-full text-sm">
+            <thead className="bg-slate-50 text-left text-xs uppercase tracking-[0.12em] text-slate-500">
+              <tr>
+                <th className="px-6 py-4">Código</th>
+                <th className="px-6 py-4">Email</th>
+                <th className="px-6 py-4">Duración</th>
+                <th className="px-6 py-4">Estado</th>
+                <th className="px-6 py-4">Creado</th>
+                <th className="px-6 py-4">Usado</th>
+                <th className="px-6 py-4">Acciones</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-line">
               {codes.map((code) => (
-                <tr key={code.code} className="border-b hover:bg-gray-50 transition">
-                  <td className="px-4 py-3 font-mono text-sm bg-gray-50">{code.code}</td>
-                  <td className="px-4 py-3 text-sm">{code.customer_email || '—'}</td>
-                  <td className="px-4 py-3 text-center text-sm">{code.duration_days}d</td>
-                  <td className="px-4 py-3 text-center text-sm">
-                    {code.redeemed_at ? '✅ Usado' : code.status === 'active' ? '🟢 Activo' : '❌ Cancelado'}
+                <tr key={code.code} className="transition-colors hover:bg-slate-50">
+                  <td className="px-6 py-4 font-mono text-sm font-semibold text-foreground">{code.code}</td>
+                  <td className="px-6 py-4 text-slate-600">{code.customer_email ?? '-'}</td>
+                  <td className="px-6 py-4 text-slate-600">{code.duration_days} días</td>
+                  <td className="px-6 py-4">
+                    <Badge className={codeStatusClass(code)}>{codeStatus(code)}</Badge>
                   </td>
-                  <td className="px-4 py-3 text-sm">{new Date(code.created_at).toLocaleDateString('es-ES')}</td>
-                  <td className="px-4 py-3 text-sm">{code.redeemed_at ? new Date(code.redeemed_at).toLocaleDateString('es-ES') : '—'}</td>
-                  <td className="px-4 py-3 text-center">
-                    {!code.redeemed_at && code.status === 'active' && (
-                      <button
-                        onClick={() => cancelCode(code.code)}
-                        className="text-red-600 hover:text-red-800 font-medium text-sm"
-                      >
-                        Cancelar
-                      </button>
+                  <td className="px-6 py-4 text-slate-500">{formatDate(code.created_at)}</td>
+                  <td className="px-6 py-4 text-slate-500">{code.redeemed_at ? formatDate(code.redeemed_at) : '-'}</td>
+                  <td className="px-6 py-4">
+                    {!code.redeemed_at && code.status === 'active' ? (
+                      <PremiumCodeCancelForm code={code.code} />
+                    ) : (
+                      <span className="text-xs text-muted">Sin acciones</span>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          {codes.length === 0 ? (
+            <p className="px-6 py-10 text-sm text-muted">No hay códigos en esta categoría.</p>
+          ) : null}
         </div>
-
-        {codes.length === 0 && !loading && (
-          <div className="text-center py-8 text-gray-500">
-            Sin códigos en esta categoría
-          </div>
-        )}
-
-        {loading && (
-          <div className="text-center py-8 text-gray-500">
-            Cargando...
-          </div>
-        )}
-      </div>
-    </div>
+      </Card>
     </AdminShell>
   )
 }

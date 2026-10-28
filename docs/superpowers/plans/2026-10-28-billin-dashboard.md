@@ -150,4 +150,3 @@ Run: `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
 - [x] Paginate financial reads beyond Supabase's 1,000-row default limit.
 - [x] Paginate invoice history and calculate totals across all filtered rows.
 - [x] Neutralize spreadsheet-formula prefixes in CSV text cells.
-

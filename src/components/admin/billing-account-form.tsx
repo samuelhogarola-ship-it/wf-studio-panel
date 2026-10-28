@@ -21,4 +21,3 @@ export function BillingAccountForm() {
     <div className="flex items-end justify-end"><Button type="submit" disabled={pending}>{pending ? 'Guardando…' : 'Añadir cuenta'}</Button></div>
   </form>
 }
-
