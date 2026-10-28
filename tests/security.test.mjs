@@ -175,6 +175,23 @@ test("forwarded origin consistency rejects ambiguous and contradictory public ho
   }
 });
 
+test("forwarded origin consistency accepts the matching local development host", () => {
+  for (const requestOrigin of ["http://localhost:3000", "http://127.0.0.1:3000"]) {
+    const requestUrl = new URL(requestOrigin);
+    assert.equal(hasConsistentForwardedOrigin({
+      forwardedHost: requestUrl.host,
+      forwardedProto: "http",
+      requestOrigin,
+    }), true);
+  }
+
+  assert.equal(hasConsistentForwardedOrigin({
+    forwardedHost: "admin.webfuengirola.com",
+    forwardedProto: "http",
+    requestOrigin: "http://localhost:3000",
+  }), false);
+});
+
 test("resolveRequestOrigin restores HTTPS only when the proxy confirms the same public host", () => {
   assert.equal(
     resolveRequestOrigin({
@@ -226,4 +243,26 @@ test("getProtectedArea marks admin routes as protected", () => {
 test("getProtectedArea marks client routes as protected except public entrypoints", () => {
   assert.equal(getProtectedArea("/cliente/servicios"), "client");
   assert.equal(getProtectedArea("/cliente/registro"), null);
+});
+
+test("premium code administration keeps the retired Supabase backend out of the browser", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const { fileURLToPath } = await import("node:url");
+  const path = await import("node:path");
+  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const [page, config] = await Promise.all([
+    readFile(
+      path.join(
+        root,
+        "src/app/paneladmin/(protected)/samuel-coach/premium/page.tsx",
+      ),
+      "utf8",
+    ),
+    readFile(path.join(root, "next.config.ts"), "utf8"),
+  ]);
+
+  assert.doesNotMatch(page, /hocdlmxzghwymamientc/);
+  assert.doesNotMatch(config, /hocdlmxzghwymamientc/);
+  assert.doesNotMatch(page, /@supabase\/supabase-js/);
+  assert.match(page, /generatePremiumCodeAction/);
 });

@@ -50,7 +50,7 @@ BLOGGER_GITHUB_TOKEN=
 BLOGGER_GITHUB_REPOSITORY=samuelhogarola-ship-it/sportmassage
 BLOGGER_GITHUB_BRANCH=main
 DEEPL_AUTH_KEY=
-DEEPL_API_URL=https://api.deepl.com/v2/translate
+DEEPL_API_URL=
 CRON_SECRET=
 PENDING_REMINDERS_CRON_SECRET=
 TODO_PLASTICO_URL=
@@ -77,6 +77,70 @@ IMKONTEXT_SERVICE_KEY=
 ```bash
 npm run dev
 ```
+
+## Entorno local aislado
+
+Para trabajar sin tocar datos de producción, instala un runtime compatible con Docker (Docker Desktop o Colima) y ejecuta:
+
+```bash
+npm ci
+npm run setup:local
+npm run dev
+```
+
+`setup:local` levanta el Supabase definido en `supabase/config.toml`, aplica todas las migraciones, genera un `.env.local` privado y crea el administrador local indicado al final del comando. El archivo queda ignorado por Git. El panel estará disponible en `http://localhost:3000/paneladmin`.
+
+La sección **Facturas** persiste cada factura en Supabase con numeración, destinatario, estado, enlace de pago y auditoría. En local el historial vive en el Supabase aislado; en despliegue, las mismas migraciones y variables apuntan al proyecto Supabase en la nube, que conserva el historial entre equipos y despliegues.
+
+Los dominios se guardan como contratos del cliente (`pack_type = 'domain'`), lo que permite varios dominios por cliente con precio, fecha de compra, caducidad, estado de pago, factura y notas sin duplicar datos en la ficha principal.
+
+### Seguridad y recuperación de los datos locales
+
+Estas herramientas solo aceptan Supabase en loopback (`localhost`, `127.0.0.1` o `::1`). No imprimen claves, contraseñas ni el contenido de facturas y mensajes.
+
+Para revisar el proyecto activo, los recuentos de todas las tablas conservadas y los identificadores de posibles datos de validación:
+
+```bash
+npm run data:status
+```
+
+Para crear una copia privada:
+
+```bash
+npm run data:backup
+```
+
+Cada copia se guarda en `storage/local-backups/<fecha>/` con una carpeta `0700`, un volcado PostgreSQL `0600` y un `manifest.json` `0600`. La carpeta completa está ignorada por Git. El volcado contiene datos personales: incluye todas las tablas de `public` y únicamente `auth.users` y `auth.identities` de Auth. Excluye sesiones, refresh tokens, MFA, auditoría interna y otras tablas volátiles de Auth. No lo adjuntes a incidencias, correos ni commits.
+
+Verifica siempre el manifiesto antes de confiar en la copia:
+
+```bash
+npm run data:verify -- storage/local-backups/<fecha>/manifest.json
+```
+
+La verificación comprueba formato, confinamiento de rutas, permisos privados, tamaño, SHA-256 y que PostgreSQL puede leer el archivo sin restaurarlo. Para probar el proceso completo sobre un segundo Supabase local con identidad y puertos temporales:
+
+```bash
+npm run test:data-recovery
+```
+
+El ensayo crea una nueva copia, levanta un stack desechable, restaura allí, compara migraciones, tablas, recuentos e invariantes de Bill-in y elimina únicamente ese stack. No restaura sobre la base de trabajo.
+
+Si el proceso se corta de forma abrupta y un intento posterior informa de que ya hay un ensayo en curso, no elimines el bloqueo mientras exista el proceso o algún contenedor `supabase_*_wf-recovery-*`. Después de confirmar que no queda ningún ensayo activo, puede retirarse únicamente `storage/.local-data-recovery.lock` y repetirse el comando.
+
+La restauración manual está reservada a otro stack local, distinto y vacío. Hay que indicar su URL y project ID de forma explícita y escribir el indicador exacto. Para evitar ambigüedad IPv4/IPv6, el destino debe usar `127.0.0.1` o `::1`, no `localhost`:
+
+```bash
+LOCAL_RESTORE_DATABASE_URL='postgresql://…@127.0.0.1:<puerto>/postgres' \
+LOCAL_RESTORE_PROJECT_ID='mi-stack-desechable' \
+npm run data:restore -- storage/local-backups/<fecha>/manifest.json --confirm-local-restore
+```
+
+El comando se niega a continuar si el destino no es loopback, coincide con el origen, tiene otras migraciones, contiene datos o no corresponde exactamente al contrato de tablas de la copia. `setup:local` nunca ejecuta una restauración.
+
+`data:status` solo marca como candidatos de demostración las huellas exactas del cliente `cliente.demo@local.test`, la propuesta `prueba@local.test` y el gasto local identificado. No borra ni modifica nada. El administrador local y las tres facturas históricas quedan excluidos de esa clasificación.
+
+Supabase Cloud es una fase posterior: partirá de una copia local verificada y tendrá su propio procedimiento de migración. Estos comandos locales rechazan deliberadamente una URL cloud.
 
 ## Rutas
 
@@ -154,7 +218,7 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 
 > `NEXT_PUBLIC_*` se incrustan en el bundle cliente en build time — deben estar disponibles durante el build en Coolify, no solo en runtime.
 
-> WF-Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador. La publicación usa inglés como idioma base y puede generar variantes en español y finés mediante DeepL (`DEEPL_AUTH_KEY`); la clave también se mantiene únicamente en servidor.
+> WF-Blogger publica HTML estático: el panel guarda el Markdown y genera `blog/<slug>/index.html` mediante la API de GitHub. `BLOGGER_GITHUB_TOKEN` debe ser un secreto del despliegue con acceso de contenido al repositorio de Sport Massage; nunca se incluye en el navegador. La publicación usa inglés como idioma base y puede generar variantes en español y finés mediante DeepL (`DEEPL_AUTH_KEY`); la clave también se mantiene únicamente en servidor. Deja `DEEPL_API_URL` vacío para seleccionar automáticamente el endpoint oficial según la clave (`:fx` usa `api-free.deepl.com`); configura una URL explícita solo cuando necesites sobrescribir esa selección.
 
 Sport Massage usa WF-Blogger Static con un único runtime central. Su puerta de marca es `https://blogger.sportmassagefuengirola.com`: el botón del panel crea un ticket temporal, de un solo uso y ligado a ese origen; el intercambio crea una cookie exclusiva del host y limpia el código de la URL. La misma puerta admite la credencial independiente de WF-Blogger y ofrece cierre de sesión. El host personalizado no expone el panel general, administración ni otros tenants.
 

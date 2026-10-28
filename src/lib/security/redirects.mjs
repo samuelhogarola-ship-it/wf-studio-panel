@@ -191,6 +191,14 @@ export function hasConsistentForwardedOrigin({
   const normalizedHost = typeof forwardedHost === "string" && !forwardedHost.includes(",")
     ? forwardedHost.trim().toLowerCase()
     : "";
+  const requestProtocol = requestUrl.protocol.slice(0, -1).toLowerCase();
+  if (
+    isTrustedInternalRequestOrigin(requestUrl.origin) &&
+    normalizedHost === requestUrl.host.toLowerCase() &&
+    normalizedProto === requestProtocol
+  ) {
+    return true;
+  }
   if (!normalizedHost || normalizedProto !== "https" || !allowedHosts.includes(normalizedHost)) return false;
 
   const requestHost = requestUrl.hostname.toLowerCase();

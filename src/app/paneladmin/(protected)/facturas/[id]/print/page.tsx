@@ -81,7 +81,7 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '40px' }}>
           <div>
             <p style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#767676', marginBottom: '8px' }}>WF-Studio</p>
-            <h1 style={{ fontSize: '32px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{t(locale, 'print.invoice')}</h1>
+            <h1 style={{ fontSize: '32px', fontWeight: 900, margin: 0, letterSpacing: '-0.02em' }}>{invoice.document_type === 'proposal' ? 'Propuesta' : t(locale, 'print.invoice')}</h1>
           </div>
           <div style={{ textAlign: 'right' }}>
             <p style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'monospace', margin: 0 }}>{invoice.number}</p>
@@ -132,6 +132,13 @@ export default async function InvoicePrintPage({ params }: { params: Promise<{ i
             </p>
           </div>
         </div>
+
+        {invoice.transfer_instructions ? (
+          <div style={{ borderTop: '1px solid rgba(0,0,0,0.07)', paddingTop: '24px', marginBottom: '24px' }}>
+            <p style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#767676', marginBottom: '10px' }}>Datos para transferencia</p>
+            <p style={{ fontSize: '14px', color: '#444', lineHeight: '1.6', whiteSpace: 'pre-line', margin: 0 }}>{invoice.transfer_instructions}</p>
+          </div>
+        ) : null}
 
         {/* Notes */}
         {invoice.notes ? (

@@ -12,6 +12,7 @@ node_modules/
 
 # Generated reports
 storage/stat-reports/*.md
+storage/local-backups/
 
 # TypeScript incremental build info
 tsconfig.tsbuildinfo
@@ -22,3 +23,4 @@ tsconfig.tsbuildinfo
 
 # Supabase local CLI cache
 supabase/.temp/
+supabase/.branches/

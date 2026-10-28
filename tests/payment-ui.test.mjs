@@ -34,12 +34,13 @@ test('invoice print is admin-protected and client invoice links use a server rou
  assert.match(data, /recipient_name|recipient_email/)
 })
 
-test('payment navigation is present in both shells and is localized', async () => {
+test('Bill-in expense navigation is present while client payments remain localized', async () => {
  const adminShell = await source('src/components/layout/app-shell.tsx')
  const clientShell = await source('src/components/layout/client-shell.tsx')
  const portalNavigation = await source('src/lib/projects/portal-navigation.mjs')
  const i18n = await source('src/lib/i18n.ts')
- assert.match(adminShell, /pagos|payments/i)
+ assert.match(adminShell, /Bill-in/i)
+ assert.match(adminShell, /\/paneladmin\/gastos/i)
  assert.match(clientShell, /navigation\.map/)
  assert.match(portalNavigation, /pagos.*Pagos|pagos.*Payments/is)
  assert.match(i18n, /pagos|payments/i)

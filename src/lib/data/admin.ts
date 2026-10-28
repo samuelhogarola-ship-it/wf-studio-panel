@@ -279,8 +279,8 @@ export const getProjectSubscriptionsData = cache(async (project: string) => {
 export const getAdminClientDetailPageData = cache(async (clientId: string) => {
   const supabase = await createSupabaseServerClient()
 
-  const [{ data: client }, { data: packs }, { data: recentActivities }, { data: pendingItems }, { data: messages }] = await Promise.all([
-    supabase.from('clients').select('id, name, company, email, phone, status, created_at').eq('id', clientId).maybeSingle(),
+  const [{ data: client }, { data: packs }, { data: recentActivities }, { data: pendingItems }, { data: messages }, { data: services }, { data: invoices }, { data: expenses }] = await Promise.all([
+    supabase.from('clients').select('id, name, company, email, phone, status, created_at').eq('id', clientId).eq('project', 'wf-studio').maybeSingle(),
     supabase
       .from('packs')
       .select('id, name, pack_type, minutes_total, price, invoice_number, purchase_date, renewal_date, billing_cycle, paid, status, notes')
@@ -304,6 +304,21 @@ export const getAdminClientDetailPageData = cache(async (clientId: string) => {
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
       .limit(12),
+    supabase
+      .from('services')
+      .select('id, name, service_type, price, service_date, status, notes')
+      .eq('client_id', clientId)
+      .order('service_date', { ascending: false }),
+    supabase
+      .from('invoices')
+      .select('id, number, concept, amount, status, issued_at, document_type, accounting_area')
+      .eq('client_id', clientId)
+      .order('issued_at', { ascending: false }),
+    supabase
+      .from('expenses')
+      .select('id, supplier, concept, amount, expense_date, status, accounting_area')
+      .eq('client_id', clientId)
+      .order('expense_date', { ascending: false }),
   ])
 
   return {
@@ -313,5 +328,28 @@ export const getAdminClientDetailPageData = cache(async (clientId: string) => {
     recentActivities: recentActivities ?? [],
     pendingItems: pendingItems ?? [],
     messages: messages ?? [],
+    services: services ?? [],
+    invoices: invoices ?? [],
+    expenses: expenses ?? [],
   }
+})
+
+export const getAdminMessagesPageData = cache(async () => {
+  const supabase = await createSupabaseServerClient()
+  const [{ data: clients }, { data: messages }] = await Promise.all([
+    supabase
+      .from('clients')
+      .select('id, name, email, status')
+      .eq('project', 'wf-studio')
+      .eq('status', 'active')
+      .order('name'),
+    supabase
+      .from('messages')
+      .select('id, client_id, subject, body, direction, type, read_at, created_at, clients!inner(name, project)')
+      .eq('clients.project', 'wf-studio')
+      .order('created_at', { ascending: false })
+      .limit(100),
+  ])
+
+  return { clients: clients ?? [], messages: messages ?? [] }
 })

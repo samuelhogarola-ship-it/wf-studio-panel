@@ -36,7 +36,7 @@ const TYPE_LABELS: Record<string, string> = {
 export default async function AdminPacksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string; tab?: string; new?: string }>
+  searchParams: Promise<{ edit?: string; tab?: string; new?: string; client?: string }>
 }) {
   const identity = await requireAdmin()
   const params = await searchParams
@@ -110,7 +110,13 @@ export default async function AdminPacksPage({
               ×
             </Link>
           </div>
-          <PackForm clients={data.clients} editingPack={data.editingPack} locale={locale} defaultPackType={defaultPackType} />
+          <PackForm
+            clients={data.clients}
+            editingPack={data.editingPack}
+            locale={locale}
+            defaultPackType={defaultPackType}
+            defaultClientId={params.client}
+          />
         </div>
       )}
 

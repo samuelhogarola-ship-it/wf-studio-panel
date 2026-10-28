@@ -29,6 +29,9 @@ export const invoiceDraftSchema = z.object({
   concept: z.string().trim().min(1).max(500),
   amount: z.number().finite().positive().max(10_000_000),
   paymentMethod: z.enum(['cash', 'card', 'transfer']),
+  documentType: z.enum(['invoice', 'proposal']),
+  accountingArea: z.enum(['general', 'classes']),
+  transferInstructions: z.string().trim().max(1000).nullable().optional(),
   notes: z.string().trim().max(5000).nullable().optional(),
   issuedAt: z.string().date().optional(),
 })

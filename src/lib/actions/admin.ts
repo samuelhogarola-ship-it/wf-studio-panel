@@ -8,6 +8,7 @@ import { ACTIVITY_TYPES } from '@/lib/activity-types'
 import { sendActivityNotificationEmail, sendPackDepletedEmail, sendPackStartedEmail, sendPendingItemCreatedEmail } from '@/lib/email'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createClientWithPassword } from '@/lib/clients/direct-create.mjs'
 
 export type AdminFormState = {
   error?: string
@@ -448,30 +449,30 @@ export async function createClientDirectAction(_prevState: AdminFormState, formD
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' }
 
   const { name, email, password, project } = parsed.data
-
-  const { data: authUser, error: authError } = await adminClient.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  })
-
-  if (authError) return { error: authError.message }
-
-  const { error: clientError } = await supabase.from('clients').insert({
-    id: authUser.user.id,
+  const result = await createClientWithPassword({
     name,
     email,
-    status: 'active',
+    password,
     project,
+    createAuthUser: async ({ email: normalizedEmail, password: normalizedPassword }) => {
+      const { data, error } = await adminClient.auth.admin.createUser({
+        email: normalizedEmail,
+        password: normalizedPassword,
+        email_confirm: true,
+      })
+      return { userId: data.user?.id ?? null, error }
+    },
+    insertClient: async (client) => {
+      const { error } = await supabase.from('clients').insert(client)
+      return { error }
+    },
+    deleteAuthUser: (userId) => adminClient.auth.admin.deleteUser(userId),
   })
 
-  if (clientError) {
-    await adminClient.auth.admin.deleteUser(authUser.user.id)
-    return { error: 'No se pudo crear el cliente.' }
-  }
+  if ('error' in result) return result
 
   revalidateProjectClientViews(project)
-  return { success: `Cliente ${name} creado correctamente. Ya puede acceder con su contraseña.` }
+  return result
 }
 
 const serviceSchema = z.object({
@@ -649,6 +650,7 @@ export async function sendAdminClientMessageAction(_prevState: AdminFormState, f
   }
 
   revalidatePath(`/paneladmin/clientes/${client_id}`)
+  revalidatePath('/paneladmin/mensajes')
   revalidatePath('/cliente/mensajeria')
   revalidatePath('/cliente/dashboard')
   return { success: 'Mensaje enviado al portal del cliente.' }

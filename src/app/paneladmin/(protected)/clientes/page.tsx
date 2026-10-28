@@ -24,13 +24,13 @@ const CATEGORY_TABS = [
 export default async function AdminClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; edit?: string; new?: string; cat?: string }>
+  searchParams: Promise<{ q?: string; new?: string; cat?: string }>
 }) {
   const identity = await requireAdmin()
   const params = await searchParams
-  const showNew = params.new === '1' || !!params.edit
+  const showNew = params.new === '1'
   const activeCategory = params.cat ?? ''
-  const data = await getAdminClientsPageData(params.q ?? '', params.edit, activeCategory)
+  const data = await getAdminClientsPageData(params.q ?? '', undefined, activeCategory)
   const summaryMap = new Map(data.summaries.map((item) => [item.client_id, item]))
   const locale = await getLocale()
 
@@ -112,12 +112,12 @@ export default async function AdminClientsPage({
         </div>
       </div>
 
-      {/* New/edit form panel */}
+      {/* New client form panel */}
       {showNew && (
         <div className="mb-6 rounded-xl border border-line bg-white p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold text-foreground">
-              {params.edit ? 'Editar cliente' : 'Nuevo cliente'}
+              Nuevo cliente
             </h2>
             <Link
               href={`/paneladmin/clientes${activeCategory ? `?cat=${activeCategory}` : ''}`}
@@ -173,10 +173,7 @@ export default async function AdminClientsPage({
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-2">
                         <Link href={`/paneladmin/clientes/${client.id}`} className="rounded-full bg-brand/10 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/20 transition">
-                          Ver
-                        </Link>
-                        <Link href={`/paneladmin/clientes?edit=${client.id}${catParam}`} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition">
-                          {t(locale, 'clients.list.edit')}
+                          Abrir ficha
                         </Link>
                         {client.status === 'active' && (
                           <form action={deactivateClientAction}>

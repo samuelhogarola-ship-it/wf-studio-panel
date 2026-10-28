@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 
 import { updateSession } from '@/lib/supabase/middleware'
 import { getCustomBloggerSiteByHost } from '@/lib/blogger/custom-hosts.mjs'
-import { hasConsistentForwardedOrigin, resolveRequestOrigin, sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
+import { hasConsistentForwardedOrigin, isTrustedInternalRequestOrigin, resolveRequestOrigin, sanitizeInternalRedirect } from '@/lib/security/redirects.mjs'
 import { SUPPORT_COOKIE_NAME } from '@/lib/support/constants'
 
 const ADMIN_HOST = 'admin.webfuengirola.com'
@@ -48,6 +48,7 @@ export async function middleware(request: NextRequest) {
     allowedHosts,
   })
   const host = new URL(origin).hostname
+  const isTrustedLocalOrigin = isTrustedInternalRequestOrigin(origin)
   const customBloggerSite = getCustomBloggerSiteByHost(host)
   const pathname = request.nextUrl.pathname
   const isPortalBloggerMutation = request.method === 'POST' &&
@@ -68,7 +69,7 @@ export async function middleware(request: NextRequest) {
 
   // Only apply domain routing in production (known hosts)
   const isKnownHost = host === ADMIN_HOST || host === PORTAL_HOST || customBloggerSite !== null
-  if ((forwardedHost !== null || forwardedProto !== null) && !isKnownHost && !isPortalBloggerMutation) {
+  if ((forwardedHost !== null || forwardedProto !== null) && !isKnownHost && !isPortalBloggerMutation && !isTrustedLocalOrigin) {
     return new NextResponse(null, { status: 404 })
   }
 

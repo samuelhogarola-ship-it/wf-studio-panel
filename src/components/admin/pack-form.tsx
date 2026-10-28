@@ -44,11 +44,13 @@ export function PackForm({
   editingPack,
   locale,
   defaultPackType = 'hours',
+  defaultClientId,
 }: {
   clients: ClientOption[]
   editingPack: EditingPack
   locale: Locale
   defaultPackType?: string
+  defaultClientId?: string
 }) {
   const [state, action, pending] = useActionState(upsertPackAction, initialState)
   const [packType, setPackType] = useState(editingPack?.pack_type ?? defaultPackType)
@@ -68,7 +70,7 @@ export function PackForm({
         <input type="hidden" name="id" value={editingPack?.id ?? ''} />
         <div>
           <Label htmlFor="client_id">{t(locale, 'packForm.client')}</Label>
-          <Select id="client_id" name="client_id" defaultValue={editingPack?.client_id ?? ''} required>
+          <Select id="client_id" name="client_id" defaultValue={editingPack?.client_id ?? defaultClientId ?? ''} required>
             <option value="">{t(locale, 'packForm.client.placeholder')}</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id} disabled={client.status !== 'active'}>

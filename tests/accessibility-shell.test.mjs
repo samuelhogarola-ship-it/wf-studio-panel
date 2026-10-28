@@ -38,10 +38,13 @@ test('protected routes include loading, error and not-found boundaries', () => {
 });
 
 test('Samuel Coach premium is inside the standard admin shell and destructive action is confirmed accessibly', () => {
-  const source = read('src/app/paneladmin/(protected)/samuel-coach/premium/page.tsx');
-  assert.match(source, /AdminShell/);
-  assert.match(source, /role="alert"|aria-live=/);
-  assert.match(source, /confirm\(/);
+  const page = read('src/app/paneladmin/(protected)/samuel-coach/premium/page.tsx');
+  const confirmation = read('src/components/admin/premium-code-cancel-form.tsx');
+  const connectionIssue = read('src/components/admin/connection-issue-card.tsx');
+  assert.match(page, /AdminShell/);
+  assert.match(connectionIssue, /role="alert"|aria-live=/);
+  assert.match(confirmation, /confirm\(/);
+  assert.match(confirmation, /cancelPremiumCodeAction/);
 });
 
 test('accessibility boundary copy exists in both supported locales', () => {

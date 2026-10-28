@@ -28,6 +28,9 @@ test('invoice lifecycle and immutable audit model are represented in the migrati
  assert.match(sql, /old\.status = 'draft' and new\.status = 'issued'/i)
  assert.match(sql, /old\.status = 'issued' and new\.status in \('paid', 'void'\)/i)
  assert.match(sql, /create unique index .*payment_links_invoice_unique/i)
+ const dropLegacyStatusConstraint = sql.indexOf('drop constraint if exists invoices_status_check')
+ const migratePendingInvoices = sql.indexOf("update public.invoices set status = 'issued' where status = 'pending'")
+ assert.ok(dropLegacyStatusConstraint >= 0 && dropLegacyStatusConstraint < migratePendingInvoices)
 })
 
 test('invoice numbering and payment-link association are atomic RPCs', async () => {
@@ -43,7 +46,7 @@ test('invoice actions do not expose physical deletion and validate links server-
  const source = await readFile(new URL('../src/lib/actions/invoices.ts', import.meta.url), 'utf8')
  const payments = await readFile(new URL('../src/lib/actions/payments.ts', import.meta.url), 'utf8')
  assert.doesNotMatch(source, /\.delete\(\)/i)
- assert.match(source, /create_invoice|next_invoice_number/i)
+ assert.match(source, /create_billing_document|next_invoice_number/i)
  assert.match(payments, /parseStripePaymentLink/i)
  assert.match(payments, /requireAdmin/i)
 })

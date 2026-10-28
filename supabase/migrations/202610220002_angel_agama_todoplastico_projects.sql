@@ -24,7 +24,13 @@ begin
     and c.project = 'wf-studio'
     and c.status = 'active';
 
-  if v_client_count <> 1 then
+  -- This migration also has to be replayable on a brand-new local database.
+  -- The client/project records already existed in production when it was
+  -- written, but they intentionally do not exist on a clean installation.
+  if v_client_count = 0 and not exists (select 1 from public.clients) then
+    raise notice 'Skipping Agama/TodoPlastico production data reconciliation on an empty database';
+    return;
+  elsif v_client_count <> 1 then
     raise exception 'Expected exactly one active wf-studio client for normalized email 547@agama.com.mx; found %', v_client_count;
   end if;
   v_client_id := v_client_ids[1];

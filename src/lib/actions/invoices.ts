@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 
 import { requireAdmin } from '@/lib/auth'
 import { invoiceDraftSchema, parseStripePaymentLink } from '@/lib/payments/schema'
@@ -27,12 +28,21 @@ export async function createInvoiceAction(prevState: InvoiceFormState, formData:
     concept: formData.get('concept'),
     amount: Number(formData.get('amount')),
     paymentMethod: formData.get('payment_method'),
+    documentType: formData.get('document_type'),
+    accountingArea: formData.get('accounting_area'),
+    transferInstructions: String(formData.get('transfer_instructions') ?? '').trim() || null,
     notes: String(formData.get('notes') ?? '').trim() || null,
     issuedAt: String(formData.get('issued_at') ?? '').trim() || undefined,
   })
   if (!parsed.success) return { error: 'Revisa destinatario, concepto e importe.' }
+  const billingAccountId = String(formData.get('billing_account_id') ?? '').trim() || null
+  if (billingAccountId && !z.string().uuid().safeParse(billingAccountId).success) return { error: 'Selecciona una cuenta de cobro válida.' }
+  const paymentUrl = formData.get('payment_url')
+  const link = paymentUrl ? parseStripePaymentLink(paymentUrl) : { success: true as const, data: null }
+  if (!link.success) return { error: 'El enlace de pago debe ser un enlace Stripe HTTPS válido.' }
+  if (parsed.data.documentType === 'proposal' && link.data) return { error: 'Las propuestas no pueden incluir enlaces de pago.' }
 
-  const { data, error } = await supabase.rpc('create_invoice_draft', {
+  const { data, error } = await supabase.rpc('create_billing_document_draft', {
     p_client_id: parsed.data.recipient.clientId,
     p_recipient_kind: parsed.data.recipient.clientId ? 'registered' : 'external',
     p_recipient_name: parsed.data.recipient.name,
@@ -41,20 +51,21 @@ export async function createInvoiceAction(prevState: InvoiceFormState, formData:
     p_concept: parsed.data.concept,
     p_amount: parsed.data.amount,
     p_payment_method: parsed.data.paymentMethod,
+    p_document_type: parsed.data.documentType,
+    p_accounting_area: parsed.data.accountingArea,
+    p_billing_account_id: billingAccountId,
+    p_transfer_instructions: parsed.data.transferInstructions ?? null,
     p_notes: parsed.data.notes ?? null,
     p_issued_at: parsed.data.issuedAt ?? new Date().toISOString().slice(0, 10),
   })
   const draft = Array.isArray(data) ? data[0] : data
-  if (error || !draft?.id || !draft.number) return { error: 'No se pudo crear la factura.' }
-  const paymentUrl = formData.get('payment_url')
-  const link = paymentUrl ? parseStripePaymentLink(paymentUrl) : { success: true as const, data: null }
-  if (!link.success) return { error: 'El enlace de pago debe ser un enlace Stripe HTTPS válido.' }
-  const { error: issueError } = await supabase.rpc('issue_invoice_with_payment_link', { p_invoice_id: draft.id, p_payment_url: link.data })
-  if (issueError) return { error: 'No se pudo emitir la factura.' }
+  if (error || !draft?.id || !draft.number) return { error: 'No se pudo crear el documento.' }
+  const { error: issueError } = await supabase.rpc('issue_billing_document', { p_document_id: draft.id, p_payment_url: link.data })
+  if (issueError) return { error: 'No se pudo emitir el documento.' }
 
   revalidatePath('/paneladmin/facturas')
   revalidatePath('/cliente/facturas')
-  return { success: `Factura ${draft.number} creada correctamente.` }
+  return { success: `${parsed.data.documentType === 'proposal' ? 'Propuesta' : 'Factura'} ${draft.number} creada correctamente.` }
 }
 
 export async function markInvoicePaidAction(formData: FormData) {
