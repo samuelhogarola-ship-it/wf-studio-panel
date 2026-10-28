@@ -92,6 +92,7 @@
     },
     "blogger": {
       "enabled": true,
+      "variant": "vps",
       "runtime": "central-multisite",
       "url": "https://admin.webfuengirola.com/paneladmin/blogger/samuelcoachdealeman",
       "apiBase": "/api/blogger/samuelcoachdealeman/posts",
@@ -122,6 +123,7 @@
     },
     "blogger": {
       "enabled": true,
+      "variant": "vps",
       "runtime": "central-multisite",
       "url": "https://admin.webfuengirola.com/paneladmin/blogger/agama",
       "apiBase": "/api/blogger/agama/posts",
@@ -229,8 +231,11 @@
     },
     "blogger": {
       "enabled": true,
+      "variant": "static",
       "runtime": "central-legacy",
       "customOrigin": "https://blogger.sportmassagefuengirola.com",
+      "logoPath": "/brands/sportmassage/logo.png",
+      "previewImagePath": "/brands/sportmassage/wf-blogger-preview.png",
       "url": "https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola",
       "apiBase": "/api/posts",
       "buildEndpoint": "/api/build",

@@ -22,6 +22,7 @@ test("canonical website registry covers every current site and configures Samuel
 
   const samuel = getSiteByKey("samuelcoachdealeman");
   assert.equal(samuel.blogger.enabled, true);
+  assert.equal(samuel.blogger.variant, "vps");
   assert.equal(
     samuel.blogger.url,
     "https://admin.webfuengirola.com/paneladmin/blogger/samuelcoachdealeman",
@@ -36,6 +37,7 @@ test("canonical website registry covers every current site and configures Samuel
   assert.equal(agama.domain, "agama.com.mx");
   assert.equal(agama.blogger.enabled, true);
   assert.equal(agama.blogger.runtime, "central-multisite");
+  assert.equal(agama.blogger.variant, "vps");
   assert.equal(
     agama.blogger.url,
     "https://admin.webfuengirola.com/paneladmin/blogger/agama",
@@ -55,14 +57,32 @@ test("canonical website registry covers every current site and configures Samuel
     "https://portal.webfuengirola.com/acceso/blogger/sportmassagefuengirola",
   );
   assert.equal(sportMassage.blogger.runtime, "central-legacy");
+  assert.equal(sportMassage.blogger.variant, "static");
   assert.equal(
     sportMassage.blogger.customOrigin,
     "https://blogger.sportmassagefuengirola.com",
   );
   assert.equal(sportMassage.blogger.publicPostBase, "/blog/");
+  assert.equal(sportMassage.blogger.logoPath, "/brands/sportmassage/logo.png");
+  assert.equal(sportMassage.blogger.previewImagePath, "/brands/sportmassage/wf-blogger-preview.png");
   assert.equal(getBloggerHandoff(sportMassage), null);
   for (const obsolete of ["launchUrl", "healthUrl", "adapter", "capabilities"]) {
     assert.equal(obsolete in sportMassage.blogger, false, `Sport central registry must omit ${obsolete}`);
+  }
+});
+
+test("WF-Blogger registry rejects unknown variants and unsafe public brand assets", () => {
+  const base = structuredClone(getSiteByKey("sportmassagefuengirola"));
+  assert.throws(
+    () => validateSite({ ...base, blogger: { ...base.blogger, variant: "third-model" } }),
+    /Blogger|variant|variante|registro/i,
+  );
+  for (const logoPath of ["brands/logo.png", "/../secret.png", "/logo.png?x=1", "https://evil.example/logo.png"]) {
+    assert.throws(
+      () => validateSite({ ...base, blogger: { ...base.blogger, logoPath } }),
+      /Blogger|logo|recurso|ruta|registro/i,
+      logoPath,
+    );
   }
 });
 

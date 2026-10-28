@@ -19,7 +19,7 @@ export const runtime = 'nodejs'
 const CODE_PATTERN = /^[A-Za-z0-9_-]{43}$/
 const SESSION_TTL_SECONDS = 8 * 60 * 60
 const secureHeaders = buildLaunchSecurityHeaders()
-const successDocument = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=/"><meta name="referrer" content="no-referrer"><title>Opening Blogger</title></head><body><script>history.replaceState(null,'','/');window.location.replace('/')</script><a href="/">Continue to Blogger</a></body></html>`
+const successDocument = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=/"><meta name="referrer" content="no-referrer"><title>Opening WF-Blogger</title></head><body><script>history.replaceState(null,'','/');window.location.replace('/')</script><a href="/">Continue to WF-Blogger</a></body></html>`
 
 function redirect(origin: string, error?: string) {
   const destination = new URL('/', origin)

@@ -2,7 +2,7 @@ import { validateBloggerProjectDestination, validateProjectDestination } from '.
 
 const definitions = Object.freeze([
   { id: 'website', label: 'Sitio web', audience: 'both' },
-  { id: 'blogger', label: 'Blogger', audience: 'both', capability: 'blogger' },
+  { id: 'blogger', label: 'WF-Blogger', audience: 'both', capability: 'blogger' },
   { id: 'analytics', label: 'Estadísticas', audience: 'both', capability: 'analytics' },
   { id: 'client', label: 'Cliente', audience: 'admin' },
   { id: 'domains', label: 'Dominios', audience: 'both', capability: 'domains' },

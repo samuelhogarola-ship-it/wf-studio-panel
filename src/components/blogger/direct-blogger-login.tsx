@@ -7,11 +7,11 @@ export function DirectBloggerLogin({ invalid = false, handoffFailed = false }: {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <section className="w-full max-w-md rounded-2xl border border-line bg-white p-6 shadow-sm sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">WF-STUDIO · Blogger</p>
-        <h1 className="mt-2 text-2xl font-black text-foreground">Access Blogger</h1>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">WF-STUDIO · WF-Blogger</p>
+        <h1 className="mt-2 text-2xl font-black text-foreground">Access WF-Blogger</h1>
         <p className="mt-2 text-sm text-muted">Sport Massage Fuengirola</p>
         {invalid ? <p role="alert" className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">Incorrect email or password.</p> : null}
-        {handoffFailed ? <p role="alert" className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">The temporary access link expired. Please return to your panel or sign in with your Blogger password.</p> : null}
+        {handoffFailed ? <p role="alert" className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">The temporary access link expired. Please return to your panel or sign in with your WF-Blogger password.</p> : null}
         <form action="/api/blogger/direct-session" method="post" className="mt-6 space-y-4">
           <input type="hidden" name="action" value="login" />
           <label className="block text-sm font-bold text-foreground">

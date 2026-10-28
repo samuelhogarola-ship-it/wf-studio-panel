@@ -66,6 +66,8 @@ test('custom host consumes its exact ticket and redirects to a clean root sessio
   assert.equal(response.headers.get('cache-control'), 'private, no-store, max-age=0, must-revalidate')
   assert.equal(response.headers.get('referrer-policy'), 'no-referrer')
   const html = await response.text()
+  assert.match(html, /Opening WF-Blogger/)
+  assert.match(html, /Continue to WF-Blogger/)
   assert.match(html, /history\.replaceState\([^)]*['"]\/['"]\)/)
   assert.match(html, /location\.replace\(['"]\/['"]\)/)
   assert.doesNotMatch(html, new RegExp(code))

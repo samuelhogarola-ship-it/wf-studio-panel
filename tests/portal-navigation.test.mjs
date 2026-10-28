@@ -100,7 +100,7 @@ test('Sport Massage gets the approved focused English sidebar with project tools
     { id: 'projects', href: '/cliente/proyectos', label: 'Websites' },
     { id: 'bonos', href: '/cliente/bonos', label: 'Bonuses' },
     { id: 'sport-analytics', href: '/cliente/proyectos/sportmassagefuengirola/estadisticas', label: 'Statistics' },
-    { id: 'sport-blogger', href: '/cliente/proyectos/sportmassagefuengirola/blogger', label: 'Blogger' },
+    { id: 'sport-blogger', href: '/cliente/proyectos/sportmassagefuengirola/blogger', label: 'WF-Blogger' },
     { id: 'help', href: '/cliente/mensajeria?new=1', label: 'Help' },
     { id: 'facturas', href: '/cliente/facturas', label: 'Invoices' },
   ]);

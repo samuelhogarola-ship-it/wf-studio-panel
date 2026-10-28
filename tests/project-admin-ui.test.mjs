@@ -89,7 +89,7 @@ test('inventory turns arbitrary database projects into capability-driven launch 
   assert.match(card, /data-capability-badge="blogger"[^>]*data-state="active"/);
   assert.match(card, /data-capability-badge="domains"[^>]*data-state="available"/);
   assert.match(card, /href="https:\/\/northstar\.example"[^>]*>Sitio web/);
-  assert.match(card, /href="\/paneladmin\/blogger\/north-star-bakery"[^>]*>Blogger/);
+  assert.match(card, /href="\/paneladmin\/blogger\/north-star-bakery"[^>]*>WF-Blogger/);
   assert.match(card, /Quitar de Inicio/);
 });
 
@@ -224,7 +224,7 @@ test('detail prioritizes identity and operational work before access, warnings, 
   assert.deepEqual(positions, [...positions].sort((left, right) => left - right));
   assert.match(html.slice(positions[0], positions[1]), /Example[\s\S]*example\.com[\s\S]*Quitar de Inicio/);
   assert.match(html.slice(positions[1], positions[2]), /href="https:\/\/example\.com"[^>]*>Sitio web/);
-  assert.match(html.slice(positions[1], positions[2]), /href="\/paneladmin\/blogger\/example"[^>]*>Blogger/);
+  assert.match(html.slice(positions[1], positions[2]), /href="\/paneladmin\/blogger\/example"[^>]*>WF-Blogger/);
   assert.match(html, /<details[^>]*data-workspace-section="configuration"[^>]*>[\s\S]*Configuración del proyecto/);
 });
 
@@ -457,7 +457,7 @@ test('administrator home renders favorite projects as validated launcher cards a
   assert.match(favoriteSection, /Activo/);
   assert.match(favoriteSection, /Acceso habilitado/);
   assert.match(favoriteSection, new RegExp(`href="/paneladmin/proyectos/${projectId}"[^>]*>Abrir proyecto`));
-  assert.match(favoriteSection, /href="\/paneladmin\/blogger\/example"[^>]*>Blogger/);
+  assert.match(favoriteSection, /href="\/paneladmin\/blogger\/example"[^>]*>WF-Blogger/);
   assert.match(favoriteSection, /href="https:\/\/example\.com"[^>]*>Sitio web/);
   assert.doesNotMatch(favoriteSection, /Estadísticas/);
   assert.match(favoriteSection, /Quitar de Inicio/);

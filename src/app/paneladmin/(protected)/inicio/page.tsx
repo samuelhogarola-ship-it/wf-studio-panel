@@ -90,7 +90,7 @@ const PANELS: Panel[] = [
       { label: 'Ejercicios', href: '/paneladmin/samuel-coach/ejercicios' },
       { label: 'Progreso', href: '/paneladmin/samuel-coach/progreso' },
       { label: 'Estadísticas', href: '/paneladmin/samuel-coach#estadisticas' },
-      { label: 'Blogger', href: '/paneladmin/blogger/samuelcoachdealeman' },
+      { label: 'WF-Blogger', href: '/paneladmin/blogger/samuelcoachdealeman' },
     ],
   },
   {

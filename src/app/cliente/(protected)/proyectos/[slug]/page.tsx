@@ -6,6 +6,8 @@ import { clientPortalTranslations, projectTranslations } from '@/lib/i18n'
 import { getLocale } from '@/lib/locale'
 import { buildProjectTools } from '@/lib/projects/tools.mjs'
 import { ProjectIdentity } from '@/components/projects/project-detail'
+import { BloggerBranding } from '@/components/blogger/blogger-branding'
+import { getSiteByKey } from '@/lib/sites/registry.mjs'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,6 +52,13 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
   const closedCount = packs.length - hoursCount
   const numberLocale = locale === 'en' ? 'en-GB' : 'es-ES'
   const workspaceTools = [...selectedTools.values()]
+  let bloggerBranding: { logoPath?: string; previewImagePath?: string } | null = null
+  try {
+    const registeredSite = getSiteByKey(project.slug)
+    bloggerBranding = registeredSite.blogger.enabled ? registeredSite.blogger : null
+  } catch {
+    bloggerBranding = null
+  }
   const toolLabel = (id: string) => {
     if (id === 'website') return text.website
     if (id === 'reports') return text.reports
@@ -99,6 +108,12 @@ export default async function ClientProjectPage({ params }: { params: Promise<{ 
               const action = `${text.open} ${title}`
               return (
                 <article id={tool.id} key={tool.id} className="rounded-2xl border border-line bg-white p-6">
+                  {tool.id === 'blogger' ? <BloggerBranding
+                    siteName={project.name}
+                    logoPath={bloggerBranding?.logoPath}
+                    previewImagePath={bloggerBranding?.previewImagePath}
+                    compact
+                  /> : null}
                   <h3 className="font-semibold">{title}</h3>
                   <p className="mt-1 break-all text-sm text-muted">{accountCapability ? text.aggregated : project.domain}</p>
                   {tool.id === 'hosting' && project.hosting_label ? <p className="mt-2 text-sm">{project.hosting_label}</p> : null}
