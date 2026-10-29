@@ -36,7 +36,7 @@
 ### Task 1: Esquema, deduplicación y aprobación atómica
 
 **Files:**
-- Create: `supabase/migrations/202610290001_platform_requests.sql`
+- Create: `supabase/migrations/202610290003_platform_requests.sql`
 - Create: `tests/platform-requests-migration.test.mjs`
 
 **Interfaces:**
