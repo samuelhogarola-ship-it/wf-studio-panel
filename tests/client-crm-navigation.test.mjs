@@ -57,13 +57,14 @@ test('client record is editable and exposes direct CRM actions without the clien
 
   const html = renderToStaticMarkup(await Page({
     params: Promise.resolve({ id: clientId }),
-    searchParams: Promise.resolve({}),
+    searchParams: Promise.resolve({ view: 'profile' }),
   }))
 
   assert.match(html, new RegExp(`data-editing-client="${clientId}"`))
   assert.match(html, new RegExp(`/paneladmin/facturas\\?new=1&amp;client=${clientId}`))
   assert.match(html, new RegExp(`/paneladmin/servicios\\?new=1&amp;client=${clientId}`))
-  assert.match(html, new RegExp(`/paneladmin/clientes/${clientId}#mensajes`))
+  assert.match(html, new RegExp(`/paneladmin/clientes/${clientId}\\?view=messages`))
+  assert.match(html, /Volver al resumen/)
   assert.doesNotMatch(html, /Buscar cliente/)
 })
 
@@ -91,10 +92,24 @@ test('client domain section filters by name and orders the next expiry first', a
 
   const html = renderToStaticMarkup(await Page({
     params: Promise.resolve({ id: clientId }),
-    searchParams: Promise.resolve({ domain_q: 'agama' }),
+    searchParams: Promise.resolve({ view: 'domains', domain_q: 'agama' }),
   }))
 
   assert.match(html, /name="domain_q"/)
   assert.match(html, /agama\.com\.mx/)
   assert.doesNotMatch(html, /late\.example/)
+})
+
+test('unknown detail view normalizes to summary and navigation exposes every focused section', () => {
+  const { normalizeClientDetailView, ClientDetailNavigation } = loadProjectModule('src/components/admin/client-detail-navigation.tsx')
+  assert.equal(normalizeClientDetailView('unexpected'), 'summary')
+  const html = renderToStaticMarkup(React.createElement(ClientDetailNavigation, {
+    clientId, activeView: 'domains', counts: { domains: 20, invoices: 3 },
+  }))
+  for (const label of ['Resumen', 'Ficha', 'Acceso', 'Bonos', 'Dominios', 'Hosting', 'Servicios', 'Facturas', 'Gastos', 'Mensajes', 'Historial']) {
+    assert.match(html, new RegExp(label))
+  }
+  assert.match(html, /Volver al resumen/)
+  assert.match(html, /view=summary/)
+  assert.match(html, />20</)
 })
