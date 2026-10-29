@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/auth'
 import { getAdminFavoriteProjects } from '@/lib/data/projects'
 import { getRecentClientAccessEvents } from '@/lib/data/admin'
 import { getLocale } from '@/lib/locale'
+import { getPendingPlatformRequestCounts } from '@/lib/platform-requests/admin'
 
 export const dynamic = 'force-dynamic'
 
@@ -148,11 +149,18 @@ const PANELS: Panel[] = [
 
 export default async function LauncherPage() {
   const identity = await requireAdmin()
-  const [locale, favoriteProjects, accessEvents] = await Promise.all([
+  const [locale, favoriteProjects, accessEvents, requestCounts] = await Promise.all([
     getLocale(),
     getAdminFavoriteProjects(identity.userId),
     getRecentClientAccessEvents(),
+    getPendingPlatformRequestCounts(),
   ])
+
+  const requestNotices = [
+    { label: 'Vivir · clientes', count: requestCounts['vivir-fuengirola'], href: '/paneladmin/vivir-en-fuengirola/solicitudes?scope=clients' },
+    { label: 'Vivir · negocios', count: requestCounts['vivir-fuengirola-negocios'], href: '/paneladmin/vivir-en-fuengirola/solicitudes?scope=businesses' },
+    { label: 'Conoce Fuengirola', count: requestCounts['conoce-fuengirola'], href: '/paneladmin/conoce-fuengirola/solicitudes' },
+  ].filter((notice) => notice.count > 0)
 
   return (
     <AdminShell
@@ -163,6 +171,22 @@ export default async function LauncherPage() {
       locale={locale}
     >
       <ClientAccessNotifications events={accessEvents} />
+      {requestNotices.length > 0 ? (
+        <section aria-labelledby="platform-requests-title" className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-amber-700">Trabajo pendiente</p><h2 id="platform-requests-title" className="mt-1 text-xl font-bold text-amber-950">Solicitudes nuevas</h2></div>
+            <p className="text-sm text-amber-800">Revisa cada plataforma antes de incorporar la ficha al CRM.</p>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {requestNotices.map((notice) => (
+              <Link key={notice.href} href={notice.href} className="flex items-center justify-between rounded-xl border border-amber-200 bg-white px-4 py-3 text-sm font-semibold text-amber-950 hover:border-amber-400">
+                <span>Revisar solicitudes de {notice.label}</span>
+                <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-black text-amber-800">{notice.count}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <section aria-labelledby="favorite-projects-title" className="mb-8">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
