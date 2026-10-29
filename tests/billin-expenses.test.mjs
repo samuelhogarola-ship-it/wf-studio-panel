@@ -29,6 +29,8 @@ test('expense form preselects a CRM client and exposes the classes ledger', () =
   assert.match(html, /value="classes"/)
   assert.match(html, />Clases</)
   assert.match(html, /name="supplier"/)
+  assert.match(html, /Proveedor \(opcional\)/)
+  assert.doesNotMatch(html, /<input(?=[^>]*name="supplier")(?=[^>]*required)[^>]*>/)
   assert.match(html, /name="amount"/)
 })
 
@@ -63,6 +65,68 @@ test('Bill-in expense action validates before writing and persists a valid entry
     accounting_area: 'classes', amount: 35.5, expense_date: '2026-10-28', payment_method: 'card',
     expense_nature: 'one_off', billing_account_id: null, status: 'paid', notes: 'Ticket guardado', created_by: 'admin-1',
   })
+})
+
+test('expense action accepts a fixed monthly rent without supplier or client', async () => {
+  const inserts = []
+  const { createExpenseAction } = loadProjectModule('src/lib/actions/expenses.ts', {
+    '@/lib/auth': { requireAdmin: async () => ({ userId: 'admin-1' }) },
+    '@/lib/supabase/server': { createSupabaseServerClient: async () => ({
+      from(table) {
+        assert.equal(table, 'expenses')
+        return { async insert(payload) { inserts.push(payload); return { error: null } } }
+      },
+    }) },
+  })
+  const rent = new FormData()
+  for (const [key, value] of Object.entries({
+    supplier: '', concept: 'Alquiler', category: 'office', accounting_area: 'general',
+    expense_nature: 'fixed', amount: '600', expense_date: '2026-08-01',
+    payment_method: 'transfer', status: 'paid',
+  })) rent.set(key, value)
+
+  assert.match((await createExpenseAction({}, rent)).success, /Gasto registrado/)
+  assert.equal(inserts.length, 1)
+  assert.equal(inserts[0].supplier, null)
+  assert.equal(inserts[0].client_id, null)
+  assert.equal(inserts[0].concept, 'Alquiler')
+  assert.equal(inserts[0].expense_nature, 'fixed')
+  assert.equal(inserts[0].amount, 600)
+})
+
+test('expense action remains compatible with the previous required-supplier schema', async () => {
+  const inserts = []
+  const { createExpenseAction } = loadProjectModule('src/lib/actions/expenses.ts', {
+    '@/lib/auth': { requireAdmin: async () => ({ userId: 'admin-1' }) },
+    '@/lib/supabase/server': { createSupabaseServerClient: async () => ({
+      from(table) {
+        assert.equal(table, 'expenses')
+        return { async insert(payload) {
+          inserts.push(payload)
+          if (inserts.length === 1) return { error: { code: '23502' } }
+          return { error: null }
+        } }
+      },
+    }) },
+  })
+  const rent = new FormData()
+  for (const [key, value] of Object.entries({
+    supplier: '', concept: 'Alquiler', category: 'office', accounting_area: 'general',
+    expense_nature: 'fixed', amount: '600', expense_date: '2026-08-01',
+    payment_method: 'transfer', status: 'paid',
+  })) rent.set(key, value)
+
+  assert.match((await createExpenseAction({}, rent)).success, /Gasto registrado/)
+  assert.equal(inserts.length, 2)
+  assert.equal(inserts[0].supplier, null)
+  assert.equal(inserts[1].supplier, 'Sin proveedor')
+})
+
+test('expense schema permits supplier-less accounting entries', async () => {
+  const sql = await readFile(new URL('../supabase/migrations/202610290001_expenses_optional_supplier.sql', import.meta.url), 'utf8')
+  assert.match(sql, /alter column supplier drop not null/i)
+  assert.match(sql, /supplier is null[^;]+char_length\(btrim\(supplier\)\)/is)
+  assert.match(sql, /update public\.expenses\s+set supplier = null\s+where supplier = 'Sin proveedor'/i)
 })
 
 test('expense history uses the shared period and keeps it in pagination', async () => {

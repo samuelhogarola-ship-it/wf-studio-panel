@@ -34,8 +34,8 @@ export function ExpenseForm({ clients, accounts = [], defaultClientId }: { clien
         </Select>
       </div>
       <div>
-        <Label htmlFor="expense-supplier">Proveedor</Label>
-        <Input id="expense-supplier" name="supplier" required placeholder="Empresa o profesional" />
+        <Label htmlFor="expense-supplier">Proveedor (opcional)</Label>
+        <Input id="expense-supplier" name="supplier" placeholder="Empresa o profesional" />
       </div>
       <div>
         <Label htmlFor="expense-category">Categoría</Label>
