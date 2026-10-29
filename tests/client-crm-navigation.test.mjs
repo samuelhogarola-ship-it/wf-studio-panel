@@ -63,9 +63,35 @@ test('client record is editable and exposes direct CRM actions without the clien
   assert.match(html, new RegExp(`data-editing-client="${clientId}"`))
   assert.match(html, new RegExp(`/paneladmin/facturas\\?new=1&amp;client=${clientId}`))
   assert.match(html, new RegExp(`/paneladmin/servicios\\?new=1&amp;client=${clientId}`))
+  assert.match(html, new RegExp(`/paneladmin/bonos\\?new=1&amp;tab=dominios&amp;client=${clientId}`))
   assert.match(html, new RegExp(`/paneladmin/clientes/${clientId}\\?view=messages`))
   assert.match(html, /Volver al resumen/)
   assert.doesNotMatch(html, /Buscar cliente/)
+})
+
+test('domain creation opens the domain form with the selected client instead of the hours form', async () => {
+  const Page = loadProjectModule('src/app/paneladmin/(protected)/bonos/page.tsx', {
+    '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
+    '@/lib/data/admin': { getAdminPacksPageData: async (_editingId, typeFilter) => ({
+      clients: [client], packs: [], packSummaries: [], editingPack: null, typeFilter,
+    }) },
+    '@/components/admin/pack-form': {
+      PackForm: ({ defaultPackType, defaultClientId }) => React.createElement('div', {
+        'data-default-pack-type': defaultPackType,
+        'data-default-client-id': defaultClientId,
+      }),
+    },
+    '@/lib/i18n': { t: (_locale, key) => key },
+  }).default
+
+  const html = renderToStaticMarkup(await Page({
+    searchParams: Promise.resolve({ new: '1', tab: 'dominios', client: clientId }),
+  }))
+
+  assert.match(html, /Nuevo dominio/)
+  assert.match(html, /data-default-pack-type="domain"/)
+  assert.match(html, new RegExp(`data-default-client-id="${clientId}"`))
+  assert.doesNotMatch(html, /Nuevo bono de horas/)
 })
 
 test('client domain section filters by name and orders the next expiry first', async () => {

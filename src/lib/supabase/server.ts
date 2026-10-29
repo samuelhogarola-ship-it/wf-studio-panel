@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { NextRequest, NextResponse } from 'next/server'
 
-import { getPublicEnv } from '@/lib/env'
+import { getPublicEnv, getSupabaseAdminKey } from '@/lib/env'
 import type { Database } from '@/lib/supabase/types'
 
 export function createSuperEntrenadorAdminClient() {
@@ -36,8 +36,8 @@ export function createTodoPlasticoAdminClient() {
 
 export function createSupabaseAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const serviceKey = process.env.SUPABASE_SECRET_KEY
-  if (!url || !serviceKey) throw new Error('Missing Supabase admin environment variables')
+  const serviceKey = getSupabaseAdminKey()
+  if (!url) throw new Error('Missing Supabase admin environment variables')
   return createClient<Database>(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
