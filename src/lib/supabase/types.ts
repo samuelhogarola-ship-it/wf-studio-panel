@@ -24,6 +24,12 @@ export type Database = {
         Update: never
         Relationships: [{ foreignKeyName: "admin_support_events_session_owner_client_fkey"; columns: ["support_session_id", "admin_user_id", "client_id"]; isOneToOne: false; referencedRelation: "admin_support_sessions"; referencedColumns: ["id", "admin_user_id", "client_id"] }]
       }
+      client_access_events: {
+        Row: { id: string; client_id: string; auth_user_id: string; event_type: 'password_changed_by_client'; created_at: string }
+        Insert: { id?: string; client_id: string; auth_user_id: string; event_type: 'password_changed_by_client'; created_at?: string }
+        Update: never
+        Relationships: [{ foreignKeyName: "client_access_events_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
+      }
       admin_project_favorites: {
         Row: { admin_user_id: string; project_id: string; position: number | null; created_at: string }
         Insert: { admin_user_id: string; project_id: string; position?: number | null; created_at?: string }
