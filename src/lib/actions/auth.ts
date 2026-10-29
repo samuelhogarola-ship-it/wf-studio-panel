@@ -115,7 +115,7 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
   return { success: 'Te hemos enviado un enlace de acceso a tu email.' }
 }
 
-export async function clientRegisterAction(_prevState: AuthFormState, _formData: FormData): Promise<AuthFormState> {
+export async function clientRegisterAction(): Promise<AuthFormState> {
   return { error: 'El acceso se crea desde WF Studio. Contacta con el equipo.' }
 }
 

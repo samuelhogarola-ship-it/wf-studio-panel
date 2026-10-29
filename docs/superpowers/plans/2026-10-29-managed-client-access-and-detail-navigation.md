@@ -33,7 +33,7 @@
 ### Task 1: Password-change event contract
 
 **Files:**
-- Create: `supabase/migrations/202610290001_client_access_events.sql`
+- Create: `supabase/migrations/202610290002_client_access_events.sql`
 - Modify: `src/lib/database.types.ts`
 - Create: `tests/client-access-events-migration.test.mjs`
 
@@ -62,7 +62,7 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/202610290001_client_access_events.sql src/lib/database.types.ts tests/client-access-events-migration.test.mjs
+git add supabase/migrations/202610290002_client_access_events.sql src/lib/supabase/types.ts tests/client-access-events-migration.test.mjs
 git commit -m "feat: add client access security events"
 ```
 
