@@ -177,6 +177,32 @@ export async function updatePasswordAction(_prevState: AuthFormState, formData: 
     return { error: 'No se pudo actualizar la contraseña. El enlace puede haber expirado.' }
   }
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user?.id && user.email) {
+    const { data: client } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('project', CLIENT_PROJECT)
+      .eq('status', 'active')
+      .ilike('email', user.email)
+      .maybeSingle()
+
+    if (client) {
+      const { error: eventError } = await supabase.from('client_access_events').insert({
+        client_id: client.id,
+        auth_user_id: user.id,
+        event_type: 'password_changed_by_client',
+      })
+      if (eventError) {
+        console.warn('[auth/client/update-password] access event failed', {
+          userId: user.id,
+          clientId: client.id,
+        })
+        return { success: 'Contraseña actualizada. No se pudo registrar el aviso en el panel.' }
+      }
+    }
+  }
+
   redirect('/cliente/dashboard')
 }
 
