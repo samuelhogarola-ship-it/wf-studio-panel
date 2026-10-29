@@ -339,8 +339,16 @@ export function ProjectAnalyticsPanel({
 
             {(okDashboard.breakdowns?.sections.length || okDashboard.breakdowns?.contentLanguages.length) ? (
               <div className="grid border-b border-line xl:grid-cols-2">
-                <BreakdownTable title="Resumen por sección" rows={okDashboard.breakdowns.sections} />
-                <BreakdownTable title="Idioma del contenido" rows={okDashboard.breakdowns.contentLanguages} />
+                <BreakdownTable
+                  title="Resumen por sección"
+                  rows={okDashboard.breakdowns.sections}
+                  totalPageviews={okDashboard.breakdowns.totalPageviews}
+                />
+                <BreakdownTable
+                  title="Idioma del contenido"
+                  rows={okDashboard.breakdowns.contentLanguages}
+                  totalPageviews={okDashboard.breakdowns.totalPageviews}
+                />
               </div>
             ) : null}
 
@@ -433,8 +441,15 @@ function AnalyticsSelect({
   )
 }
 
-function BreakdownTable({ title, rows }: { title: string; rows: AnalyticsBreakdownRow[] }) {
-  const totalPageviews = rows.reduce((total, row) => total + (row.status === 'ok' ? row.pageviews || 0 : 0), 0)
+function BreakdownTable({
+  title,
+  rows,
+  totalPageviews,
+}: {
+  title: string
+  rows: AnalyticsBreakdownRow[]
+  totalPageviews: number | null
+}) {
   return (
     <div className="min-w-0 border-b border-line bg-white px-5 py-5 xl:border-b-0 xl:border-r">
       <h3 className="text-sm font-black text-foreground">{title}</h3>
@@ -459,7 +474,10 @@ function BreakdownTable({ title, rows }: { title: string; rows: AnalyticsBreakdo
                 ) : (
                   <>
                     <td className="px-3 py-3 text-right font-bold text-foreground">
-                      {formatNumber(row.pageviews || 0)} · {formatNumber(totalPageviews ? (row.pageviews || 0) / totalPageviews * 100 : 0, 1)}%
+                      {formatNumber(row.pageviews || 0)}
+                      {totalPageviews === null
+                        ? ' · cuota no disponible'
+                        : ` · ${formatNumber(totalPageviews ? (row.pageviews || 0) / totalPageviews * 100 : 0, 1)}%`}
                     </td>
                     <td className="px-3 py-3 text-right text-slate-700">{formatNumber(row.visitors || 0)}</td>
                     <td className="px-3 py-3 text-right text-slate-700">{formatNumber(row.pagesPerVisit || 0, 2)}</td>

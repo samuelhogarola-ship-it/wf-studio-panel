@@ -255,6 +255,7 @@ test("advanced analytics can reveal every loaded URL and shows percentage shares
   assert.match(source, /showPercentage=\{\['pages', 'referrers', 'channels', 'devices'\]\.includes\(group\.key\)\}/);
   assert.match(source, /Ver todas \(\{formatNumber\(rows\.length\)\}\)/);
   assert.match(source, /% del total/);
+  assert.match(source, /totalPageviews=\{okDashboard\.breakdowns\.totalPageviews\}/);
 });
 
 test("professional analytics explorer exposes cumulative safe filters and business overviews", async () => {

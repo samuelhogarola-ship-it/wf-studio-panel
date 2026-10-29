@@ -457,9 +457,21 @@ async function fetchProfileBreakdowns({
   dimensions,
   summaryOnly,
 }) {
-  if (summaryOnly) return { sections: [], contentLanguages: [] }
+  if (summaryOnly) return { sections: [], contentLanguages: [], totalPageviews: null }
   const shared = { baseUrl, websiteId, token, range, fetchImpl, timeoutMs, projectKey, market }
-  const [sections, contentLanguages] = await Promise.all([
+  const marketFilters = resolveAnalyticsDrilldown(projectKey, { market }).filters
+  const totalPageviewsPromise = requestJson(
+    apiUrl(baseUrl, `/api/websites/${websiteId}/stats`, {
+      startAt: range.startAt,
+      endAt: range.endAt,
+      ...marketFilters,
+    }),
+    { token, fetchImpl, timeoutMs },
+  )
+    .then(stats => metricValue(stats?.pageviews))
+    .catch(() => null)
+  const [totalPageviews, sections, contentLanguages] = await Promise.all([
+    totalPageviewsPromise,
     Promise.all(dimensions.sections.map(option => fetchBreakdownRow({
       ...shared,
       dimension: 'section',
@@ -471,7 +483,7 @@ async function fetchProfileBreakdowns({
       option,
     }))),
   ])
-  return { sections, contentLanguages }
+  return { sections, contentLanguages, totalPageviews }
 }
 
 export async function fetchUmamiDashboard({

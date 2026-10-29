@@ -60,10 +60,9 @@ El runtime compartido ya publica tanto `window.UmamiAnalyticsCore` como el alias
 
 - `core-general`: 39 pruebas correctas, 1 omitida; importación, ESLint y auditoría de dependencias correctas.
 - Web Fuengirola: 142 pruebas unitarias y 85 pruebas Playwright correctas; sintaxis, ESLint, Gitleaks y auditoría de dependencias correctas.
-- WF-Panel: 748 pruebas correctas, 2 omitidas; TypeScript, ESLint, build de producción y `git diff --check` correctos.
+- WF-Panel: 713 pruebas correctas, 2 omitidas; TypeScript, ESLint, build de producción y `git diff --check` correctos.
 - El perfil serializado de WF-Panel coincide con el perfil versionado de Web Fuengirola.
 
 Los `format:check` globales de `core-general` y Web Fuengirola siguen señalando respectivamente 14 y 409 archivos históricos no tocados por esta entrega. Los archivos funcionales modificados se comprobaron de forma dirigida para no convertir esta implantación en un reformateo masivo.
 
 La comprobación controlada contra Umami de producción queda deliberadamente pendiente hasta aprobar y desplegar los PR en orden. No se afirma que los eventos nuevos ya estén acumulando datos históricos: Umami solo podrá registrar visitas posteriores al despliegue y no puede reconstruir eventos que faltaron en el pasado.
-

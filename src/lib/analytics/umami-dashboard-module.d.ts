@@ -59,6 +59,7 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
     breakdowns: {
       sections: AnalyticsBreakdownRow[]
       contentLanguages: AnalyticsBreakdownRow[]
+      totalPageviews: number | null
     }
     range: {
       key: AnalyticsPeriod

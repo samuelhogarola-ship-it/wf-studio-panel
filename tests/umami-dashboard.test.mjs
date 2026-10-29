@@ -96,6 +96,24 @@ test('tampered drilldown values fail closed and never become regex or registry s
   assert.equal(unprofiled.selected.contentLanguage, null)
   assert.equal(unprofiled.selected.event, null)
   assert.deepEqual(unprofiled.filters, { device: 'desktop', referrer: 'google.com', match: 'all' })
+
+  for (const rawOperator of ['re.evil', 'nre.evil', 'RE.evil']) {
+    const blocked = resolveAnalyticsDrilldown('webfuengirola', { referrer: rawOperator })
+    assert.equal(blocked.selected.referrer, '')
+    assert.deepEqual(blocked.filters, {})
+  }
+})
+
+test('content language path filters do not overlap regional language routes', () => {
+  const spanish = resolveAnalyticsDrilldown('webfuengirola', { contentLanguage: 'es' }).filters.path
+  const english = resolveAnalyticsDrilldown('webfuengirola', { contentLanguage: 'en' }).filters.path
+  const matches = (filter, pathname) => new RegExp(filter.slice(3)).test(pathname)
+
+  assert.equal(matches(spanish, '/mexico'), true)
+  assert.equal(matches(spanish, '/mexico/en'), false)
+  assert.equal(matches(english, '/mexico/en'), true)
+  assert.equal(matches(english, '/usa'), true)
+  assert.equal(matches(english, '/usa/es'), false)
 })
 
 test('client analytics serialization removes registry and Umami configuration details', () => {
@@ -674,6 +692,7 @@ test('dashboard applies trusted multidimensional filters and returns section and
   assert.deepEqual(dashboard.dimensions.contentLanguages.map(({ key }) => key), ['es', 'en', 'de', 'fi'])
   assert.equal(dashboard.breakdowns.sections.length, 5)
   assert.equal(dashboard.breakdowns.contentLanguages.length, 4)
+  assert.equal(dashboard.breakdowns.totalPageviews, 100)
   assert.equal(dashboard.breakdowns.sections.find(row => row.key === 'services').pagesPerVisit, 2)
   assert.equal(dashboard.breakdowns.sections.find(row => row.key === 'services').averageVisitSeconds, 30)
   assert.equal(dashboard.breakdowns.sections.find(row => row.key === 'solidarity').status, 'unavailable')
@@ -710,7 +729,7 @@ test('summary-only refresh skips profile breakdown requests', async () => {
     fetchImpl,
   })
   assert.equal(dashboard.status, 'ok')
-  assert.deepEqual(dashboard.breakdowns, { sections: [], contentLanguages: [] })
+  assert.deepEqual(dashboard.breakdowns, { sections: [], contentLanguages: [], totalPageviews: null })
   assert.equal(requests.filter(url => /\/api\/websites\/[^/]+\/stats$/.test(url.pathname)).length, 1)
 })
 

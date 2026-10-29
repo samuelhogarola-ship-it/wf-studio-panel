@@ -50,7 +50,6 @@
                 "/contacto/",
                 "/sobre-nosotros/",
                 "/como-trabajamos/",
-                "/mexico/",
                 "/usa/es/"
               ]
             }
@@ -66,8 +65,7 @@
               ],
               "prefixes": [
                 "/en/",
-                "/mexico/en/",
-                "/usa/"
+                "/mexico/en/"
               ]
             }
           },

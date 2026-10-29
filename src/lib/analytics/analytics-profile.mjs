@@ -105,7 +105,9 @@ export function resolveAnalyticsDrilldown(projectKey, input = {}) {
   const device = selectOption(dimensions.devices, input.device)
   const event = selectOption(dimensions.events, input.event)
   const candidateReferrer = String(input.referrer || '').trim()
-  const referrer = candidateReferrer.length <= 120 && SAFE_REFERRER.test(candidateReferrer)
+  const referrer = candidateReferrer.length <= 120 &&
+    !/^(?:n?re)\./i.test(candidateReferrer) &&
+    SAFE_REFERRER.test(candidateReferrer)
     ? candidateReferrer
     : ''
   const filters = {
