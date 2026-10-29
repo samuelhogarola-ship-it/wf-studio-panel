@@ -263,4 +263,3 @@ Confirm unauthenticated redirects, admin navigation, sign-out and client-area is
 Run: `git diff --check && git status --short`
 
 Expected: no whitespace errors and only intended changes/plan documents.
-
