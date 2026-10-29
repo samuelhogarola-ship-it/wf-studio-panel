@@ -1,10 +1,15 @@
 import { getLegacyAnalyticsProjects, getSites } from '../sites/registry.mjs'
+import {
+  getAnalyticsMarketOptions,
+  resolveAnalyticsDrilldown,
+} from './analytics-profile.mjs'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const PERIODS = new Set(['live', '7d', '30d', '90d', '6m', '12m'])
 const AUTH_CACHE_TTL_MS = 5 * 60 * 1000
 const authCacheByFetch = new WeakMap()
 const websiteCacheByFetch = new WeakMap()
+export { getAnalyticsMarketOptions }
 
 export function createRequestCoordinator() {
   let requestId = 0
@@ -59,12 +64,14 @@ export function normalizeSessionRows(response) {
 
 export function mergeSummaryRefresh(current, refresh) {
   if (current?.status !== 'ok' || refresh?.status !== 'ok') return refresh
-  return {
+  const merged = {
     ...refresh,
     metrics: current.metrics,
     sessions: current.sessions,
     sessionsAvailable: current.sessionsAvailable,
   }
+  if (Object.prototype.hasOwnProperty.call(current, 'breakdowns')) merged.breakdowns = current.breakdowns
+  return merged
 }
 
 export const ANALYTICS_PROJECTS = getLegacyAnalyticsProjects()
@@ -325,7 +332,7 @@ function derivedMetric(value, previous = null) {
   }
 }
 
-async function fetchMetric({ baseUrl, websiteId, token, range, types, fetchImpl, timeoutMs, limit = 10 }) {
+async function fetchMetric({ baseUrl, websiteId, token, range, types, fetchImpl, timeoutMs, filters = {}, limit = 10 }) {
   for (const type of types) {
     try {
       const response = await requestJson(
@@ -334,6 +341,7 @@ async function fetchMetric({ baseUrl, websiteId, token, range, types, fetchImpl,
           endAt: range.endAt,
           type,
           limit,
+          ...filters,
         }),
         { token, fetchImpl, timeoutMs },
       )
@@ -345,13 +353,14 @@ async function fetchMetric({ baseUrl, websiteId, token, range, types, fetchImpl,
   return []
 }
 
-async function fetchEventSummary({ baseUrl, websiteId, token, range, fetchImpl, timeoutMs }) {
+async function fetchEventSummary({ baseUrl, websiteId, token, range, fetchImpl, timeoutMs, filters = {} }) {
   try {
     const response = await requestJson(
       apiUrl(baseUrl, `/api/websites/${websiteId}/events/stats`, {
         startAt: range.startAt,
         endAt: range.endAt,
         compare: 'prev',
+        ...filters,
       }),
       { token, fetchImpl, timeoutMs },
     )
@@ -374,9 +383,107 @@ async function fetchEventSummary({ baseUrl, websiteId, token, range, fetchImpl, 
     types: ['event'],
     fetchImpl,
     timeoutMs,
+    filters,
     limit: 500,
   })
   return derivedMetric(rows.reduce((total, row) => total + Number(row.y || 0), 0))
+}
+
+function breakdownMetrics(stats) {
+  const pageviews = metricValue(stats?.pageviews)
+  const visitors = metricValue(stats?.visitors)
+  const visits = metricValue(stats?.visits)
+  const bounces = metricValue(stats?.bounces)
+  const totalTime = metricValue(stats?.totaltime)
+  return {
+    pageviews,
+    visitors,
+    visits,
+    bounceRate: visits ? bounces / visits * 100 : 0,
+    pagesPerVisit: visits ? pageviews / visits : 0,
+    averageVisitSeconds: visits ? totalTime / visits : 0,
+  }
+}
+
+async function fetchBreakdownRow({
+  baseUrl,
+  websiteId,
+  token,
+  range,
+  fetchImpl,
+  timeoutMs,
+  projectKey,
+  market,
+  dimension,
+  option,
+}) {
+  const filters = resolveAnalyticsDrilldown(projectKey, {
+    market,
+    [dimension]: option.key,
+  }).filters
+  try {
+    const stats = await requestJson(
+      apiUrl(baseUrl, `/api/websites/${websiteId}/stats`, {
+        startAt: range.startAt,
+        endAt: range.endAt,
+        ...filters,
+      }),
+      { token, fetchImpl, timeoutMs },
+    )
+    return { ...option, status: 'ok', ...breakdownMetrics(stats) }
+  } catch {
+    return {
+      ...option,
+      status: 'unavailable',
+      pageviews: null,
+      visitors: null,
+      visits: null,
+      bounceRate: null,
+      pagesPerVisit: null,
+      averageVisitSeconds: null,
+    }
+  }
+}
+
+async function fetchProfileBreakdowns({
+  baseUrl,
+  websiteId,
+  token,
+  range,
+  fetchImpl,
+  timeoutMs,
+  projectKey,
+  market,
+  dimensions,
+  summaryOnly,
+}) {
+  if (summaryOnly) return { sections: [], contentLanguages: [], totalPageviews: null }
+  const shared = { baseUrl, websiteId, token, range, fetchImpl, timeoutMs, projectKey, market }
+  const marketFilters = resolveAnalyticsDrilldown(projectKey, { market }).filters
+  const totalPageviewsPromise = requestJson(
+    apiUrl(baseUrl, `/api/websites/${websiteId}/stats`, {
+      startAt: range.startAt,
+      endAt: range.endAt,
+      ...marketFilters,
+    }),
+    { token, fetchImpl, timeoutMs },
+  )
+    .then(stats => metricValue(stats?.pageviews))
+    .catch(() => null)
+  const [totalPageviews, sections, contentLanguages] = await Promise.all([
+    totalPageviewsPromise,
+    Promise.all(dimensions.sections.map(option => fetchBreakdownRow({
+      ...shared,
+      dimension: 'section',
+      option,
+    }))),
+    Promise.all(dimensions.contentLanguages.map(option => fetchBreakdownRow({
+      ...shared,
+      dimension: 'contentLanguage',
+      option,
+    }))),
+  ])
+  return { sections, contentLanguages, totalPageviews }
 }
 
 export async function fetchUmamiDashboard({
@@ -388,8 +495,25 @@ export async function fetchUmamiDashboard({
   timeoutMs = 8_000,
   summaryOnly = false,
   includeContentLanguages = false,
+  market = 'all',
+  section,
+  contentLanguage,
+  device,
+  referrer,
+  event,
 }) {
   const project = getAnalyticsProject(projectKey, env)
+  const drilldown = resolveAnalyticsDrilldown(projectKey, {
+    market,
+    section,
+    contentLanguage,
+    device,
+    referrer,
+    event,
+  })
+  const { dimensions, selected, filters } = drilldown
+  const selectedMarket = selected.market
+  const isFiltered = Object.keys(filters).some(key => key !== 'match')
   const isAgama = project.source === 'agama'
   const baseUrl = isAgama
     ? env.UMAMI_AGAMA_URL?.trim()
@@ -406,6 +530,7 @@ export async function fetchUmamiDashboard({
     return {
       status: 'configuration_error',
       project,
+      market: selectedMarket,
       range,
       message: isAgama
         ? 'Faltan UMAMI_AGAMA_URL o UMAMI_AGAMA_PASSWORD en Coolify.'
@@ -419,21 +544,24 @@ export async function fetchUmamiDashboard({
     return {
       status: 'configuration_error',
       project,
+      market: selectedMarket,
       range,
       message: `No se encontró el sitio en Umami. Configura ${project.websiteIdEnv} en Coolify.`,
     }
   }
 
-  const baseParams = { startAt: range.startAt, endAt: range.endAt }
+  const baseParams = { startAt: range.startAt, endAt: range.endAt, ...filters }
   const corePromise = Promise.allSettled([
-    requestJson(apiUrl(baseUrl, `/api/websites/${websiteId}/active`), { token, fetchImpl, timeoutMs }),
+    isFiltered
+      ? Promise.resolve(null)
+      : requestJson(apiUrl(baseUrl, `/api/websites/${websiteId}/active`), { token, fetchImpl, timeoutMs }),
     requestJson(apiUrl(baseUrl, `/api/websites/${websiteId}/stats`, baseParams), { token, fetchImpl, timeoutMs }),
     requestJson(apiUrl(baseUrl, `/api/websites/${websiteId}/pageviews`, {
       ...baseParams,
       unit: range.unit,
       timezone: 'Europe/Madrid',
     }), { token, fetchImpl, timeoutMs }),
-    fetchEventSummary({ baseUrl, websiteId, token, range, fetchImpl, timeoutMs }),
+    fetchEventSummary({ baseUrl, websiteId, token, range, fetchImpl, timeoutMs, filters }),
   ])
   const metricsPromise = summaryOnly
     ? includeContentLanguages
@@ -445,15 +573,26 @@ export async function fetchUmamiDashboard({
           types: METRIC_TYPES.events,
           fetchImpl,
           timeoutMs,
+          filters,
           limit: 500,
         })
         .then((contentLanguageEvents) => ({ contentLanguageEvents }))
         .catch(() => ({ contentLanguageEvents: [] }))
       : Promise.resolve({})
     : Promise.allSettled([
-        fetchMetric({ baseUrl, websiteId, token, range, types: ['url', 'path'], fetchImpl, timeoutMs }),
+        fetchMetric({
+          baseUrl,
+          websiteId,
+          token,
+          range,
+          types: ['url', 'path'],
+          fetchImpl,
+          timeoutMs,
+          filters,
+          limit: 500,
+        }),
         ...Object.values(METRIC_TYPES).map((types) => (
-          fetchMetric({ baseUrl, websiteId, token, range, types, fetchImpl, timeoutMs })
+          fetchMetric({ baseUrl, websiteId, token, range, types, fetchImpl, timeoutMs, filters })
         )),
       ]).then(([pagesResult, ...metricResults]) => {
         const result = {
@@ -476,10 +615,24 @@ export async function fetchUmamiDashboard({
       .then((response) => ({ rows: normalizeSessionRows(response), available: true }))
       .catch(() => ({ rows: [], available: false }))
 
-  const [[activeResult, statsResult, pageviewsResult, eventsResult], metrics, sessions] = await Promise.all([
+  const breakdownsPromise = fetchProfileBreakdowns({
+    baseUrl,
+    websiteId,
+    token,
+    range,
+    fetchImpl,
+    timeoutMs,
+    projectKey,
+    market: selectedMarket.key,
+    dimensions,
+    summaryOnly,
+  })
+
+  const [[activeResult, statsResult, pageviewsResult, eventsResult], metrics, sessions, breakdowns] = await Promise.all([
     corePromise,
     metricsPromise,
     sessionsPromise,
+    breakdownsPromise,
   ])
 
   if (statsResult.status === 'rejected') throw statsResult.reason
@@ -502,9 +655,15 @@ export async function fetchUmamiDashboard({
     status: 'ok',
     project,
     websiteId,
+    market: selectedMarket,
+    dimensions,
+    selected,
+    breakdowns,
     range,
     generatedAt: now.toISOString(),
-    activeVisitors: activeResult.status === 'fulfilled' ? Number(activeResult.value?.visitors || 0) : null,
+    activeVisitors: isFiltered
+      ? null
+      : activeResult.status === 'fulfilled' ? Number(activeResult.value?.visitors || 0) : null,
     summary: {
       pageviews,
       visitors,

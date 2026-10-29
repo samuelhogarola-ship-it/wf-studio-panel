@@ -62,12 +62,13 @@ function setup({
   error = null,
   locale = 'es',
   clientAccessError = null,
+  configuredSite = { key: 'webfuengirola', domain: 'webfuengirola.com' },
 } = {}) {
   const db = database({ client_projects: projects, project_capabilities: capabilities })
   const analyticsCalls = []
   const identity = { userId: 'session-user', email: client.email, role: 'client', client: { ...client, portal_mode: 'dynamic' } }
   const configuredSites = configuredAnalytics
-    ? [{ key: 'webfuengirola', domain: 'webfuengirola.com', websiteId: 'private-website-id', source: 'personal' }]
+    ? [{ ...configuredSite, websiteId: 'private-website-id', source: 'personal' }]
     : []
   const mocks = {
     '@/lib/auth': {
@@ -128,6 +129,97 @@ test('an authorized client uses its project slug while the server resolves the r
   assert.equal(JSON.stringify(payload).includes('webfuengirola'), false)
   assert.equal(JSON.stringify(payload).includes('private-website-id'), false)
   assert.equal(JSON.stringify(payload).includes('UMAMI_'), false)
+})
+
+test('an authorized Web Fuengirola request forwards only its selected market key', async () => {
+  const s = setup()
+  const { response } = await s.request('my-site', '?period=90d&market=mexico')
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(s.analyticsCalls, [{
+    projectKey: 'webfuengirola',
+    period: '90d',
+    summaryOnly: false,
+    market: 'mexico',
+  }])
+})
+
+test('an authorized analytics request forwards every supported drilldown selector', async () => {
+  const s = setup()
+  const { response } = await s.request(
+    'my-site',
+    '?period=30d&market=spain&section=services&language=de&device=desktop&source=google.com&event=form_submit',
+  )
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(s.analyticsCalls, [{
+    projectKey: 'webfuengirola',
+    period: '30d',
+    summaryOnly: false,
+    market: 'spain',
+    section: 'services',
+    contentLanguage: 'de',
+    device: 'desktop',
+    referrer: 'google.com',
+    event: 'form_submit',
+  }])
+})
+
+test('administrator drilldowns use the same approved selectors as assigned clients', async () => {
+  const s = setup({ role: 'admin' })
+  const { response } = await s.request(
+    configuredProject.id,
+    '?market=usa&section=portfolio&language=en&device=mobile&source=linkedin.com&event=quote_click',
+  )
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(s.analyticsCalls, [{
+    projectKey: 'webfuengirola',
+    period: '30d',
+    summaryOnly: false,
+    market: 'usa',
+    section: 'portfolio',
+    contentLanguage: 'en',
+    device: 'mobile',
+    referrer: 'linkedin.com',
+    event: 'quote_click',
+  }])
+})
+
+test('tampered and cross-profile selectors are removed before the dashboard reaches Umami', async () => {
+  const tampered = setup()
+  const bad = await tampered.request(
+    'my-site',
+    '?market=re.*&section=.*&language=fi%7Cen&device=mobile%7Cdesktop&source=re.%5Eevil&event=form_submit.*',
+  )
+  assert.equal(bad.response.status, 200)
+  assert.deepEqual(tampered.analyticsCalls, [{
+    projectKey: 'webfuengirola',
+    period: '30d',
+    summaryOnly: false,
+    market: 'all',
+  }])
+
+  const otherProject = {
+    ...configuredProject,
+    domain: 'superentrenador.com',
+    analytics_registry_key: 'superentrenador',
+  }
+  const crossProfile = setup({
+    projects: [otherProject],
+    configuredSite: { key: 'superentrenador', domain: 'superentrenador.com' },
+  })
+  const cross = await crossProfile.request(
+    'my-site',
+    '?market=mexico&section=blog&language=fi&event=form_submit',
+  )
+  assert.equal(cross.response.status, 200)
+  assert.deepEqual(crossProfile.analyticsCalls, [{
+    projectKey: 'superentrenador',
+    period: '30d',
+    summaryOnly: false,
+    market: 'all',
+  }])
 })
 
 test('a client cannot choose a registry key directly', async () => {
@@ -260,7 +352,29 @@ test('the statistics page authorizes the active capability and sends only the sl
   assert.match(html, /Statistics · My Site/)
   assert.match(html, /webfuengirola\.com/)
   assert.match(html, /my-site-analytics-title/)
+  assert.match(html, /España \/ resto/)
+  assert.match(html, /México/)
+  assert.match(html, />USA</)
+  assert.match(html, /Brasil/)
+  assert.match(html, /role="group" aria-label="Filtrar estadísticas por mercado"/)
+  assert.match(html, /aria-pressed="true"[^>]*>Total</)
   assert.doesNotMatch(html, /private-website-id|UMAMI_|server-secret|\/api\/analytics\/webfuengirola/)
+})
+
+test('projects outside the Web Fuengirola registry do not render its market selector', async () => {
+  const otherProject = {
+    ...configuredProject,
+    domain: 'example.com',
+    analytics_registry_key: 'superentrenador',
+  }
+  const s = setup({
+    projects: [otherProject],
+    configuredSite: { key: 'superentrenador', domain: 'example.com' },
+  })
+  const Page = s.load(pagePath).default
+  const html = renderToStaticMarkup(await Page({ params: Promise.resolve({ slug: 'my-site' }) }))
+
+  assert.doesNotMatch(html, /España \/ resto|México|>USA<|Brasil/)
 })
 
 test('the statistics page returns the same 404 for inaccessible capability states', async () => {

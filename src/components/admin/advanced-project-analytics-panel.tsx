@@ -3,15 +3,18 @@
 import { useState } from 'react'
 
 import { ProjectAnalyticsPanel } from '@/components/analytics/project-analytics-panel'
+import type { AnalyticsMarket } from '@/lib/analytics/umami-dashboard.mjs'
 
 export function AdvancedProjectAnalyticsPanel({
   projectKey,
   projectLabel,
   domain,
+  marketOptions = [],
 }: {
   projectKey: string
   projectLabel: string
   domain: string
+  marketOptions?: ReadonlyArray<AnalyticsMarket>
 }) {
   const [expanded, setExpanded] = useState(false)
 
@@ -30,6 +33,7 @@ export function AdvancedProjectAnalyticsPanel({
         projectKey={projectKey}
         projectLabel={projectLabel}
         domain={domain}
+        marketOptions={marketOptions}
         sectionId="estadisticas-avanzadas"
       />
     </div>

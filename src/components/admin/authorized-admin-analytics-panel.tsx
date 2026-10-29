@@ -3,6 +3,7 @@ import {
   AnalyticsTargetUnavailableError,
   resolveAdminAnalyticsTargetForRegistryKey,
 } from '@/lib/analytics/project-access'
+import { getAnalyticsMarketOptions } from '@/lib/analytics/umami-dashboard.mjs'
 
 export async function AuthorizedAdminAnalyticsPanel({
   registryKey,
@@ -20,6 +21,7 @@ export async function AuthorizedAdminAnalyticsPanel({
         projectKey={target.projectId}
         projectLabel={projectLabel}
         domain={domain}
+        marketOptions={getAnalyticsMarketOptions(target.registryKey)}
       />
     )
   } catch (error) {

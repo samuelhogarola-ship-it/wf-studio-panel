@@ -207,6 +207,26 @@ test("aGama analytics exposes only its canonical runtime lookup schema", () => {
   });
 });
 
+test("Web Fuengirola carries the public reusable analytics profile without credentials", () => {
+  const webFuengirola = getSiteByKey("webfuengirola");
+  assert.equal(webFuengirola.analytics.profile.schemaVersion, 1);
+  assert.deepEqual(
+    webFuengirola.analytics.profile.languages.map(({ key }) => key),
+    ["es", "en", "de", "fi"],
+  );
+  assert.deepEqual(
+    webFuengirola.analytics.profile.sections.map(({ key }) => key),
+    ["home", "services", "portfolio", "blog", "solidarity"],
+  );
+  assert.doesNotMatch(
+    JSON.stringify(webFuengirola.analytics.profile),
+    /password|websiteId|distinctId/i,
+  );
+  assert.deepEqual(webFuengirola.analytics.profile.excludedDestinations, [
+    "https://portal.webfuengirola.com",
+  ]);
+});
+
 test("Blogger handoff registry accepts only complete same-site HTTPS destinations", () => {
   const base = structuredClone(getSiteByKey("samuelcoachdealeman"));
   const configured = {

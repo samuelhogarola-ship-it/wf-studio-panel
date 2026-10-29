@@ -6,6 +6,7 @@ import {
   AnalyticsTargetUnavailableError,
   resolveClientAnalyticsTarget,
 } from '@/lib/analytics/project-access'
+import { getAnalyticsMarketOptions } from '@/lib/analytics/umami-dashboard.mjs'
 import { getAccessibleClientProject } from '@/lib/data/projects'
 import { clientPortalTranslations, projectTranslations } from '@/lib/i18n'
 import { getLocale } from '@/lib/locale'
@@ -46,6 +47,7 @@ export default async function ClientProjectStatisticsPage({
         projectKey={target.projectSlug}
         projectLabel={project.name}
         domain={project.domain}
+        marketOptions={getAnalyticsMarketOptions(target.registryKey)}
       />
     </div>
   )

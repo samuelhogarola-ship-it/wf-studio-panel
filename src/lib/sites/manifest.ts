@@ -16,6 +16,14 @@ export type SiteManifestEntry = {
     legacyDashboard: boolean
     legacyKey?: string
     legacyLabel?: string
+    profile?: {
+      schemaVersion: 1
+      languages: readonly AnalyticsRouteDimension[]
+      sections: readonly AnalyticsRouteDimension[]
+      allowedEvents: readonly { key: string; label: string; category: string }[]
+      allowedContextKeys: readonly string[]
+      excludedDestinations: readonly string[]
+    }
   }
   blogger: {
     enabled: boolean
@@ -23,6 +31,12 @@ export type SiteManifestEntry = {
     customOrigin?: string
     [key: string]: unknown
   }
+}
+
+type AnalyticsRouteDimension = {
+  key: string
+  label: string
+  routes: { exact: readonly string[]; prefixes: readonly string[] }
 }
 
 type RawSite = Omit<SiteManifestEntry, 'panelKey'>
