@@ -6,6 +6,7 @@ import {
   toClientAnalyticsPayload,
   toPublicAnalyticsError,
 } from '@/lib/analytics/umami-dashboard.mjs'
+import { resolveAnalyticsDrilldown } from '@/lib/analytics/analytics-profile.mjs'
 import {
   resolveAdminAnalyticsTarget,
   resolveClientAnalyticsTarget,
@@ -27,13 +28,33 @@ export async function GET(
   const url = new URL(request.url)
   const period = normalizePeriod(url.searchParams.get('period') || undefined)
   const summaryOnly = url.searchParams.get('summary') === '1'
+  const market = url.searchParams.get('market') || 'all'
 
   try {
     const target = identity.role === 'admin'
       ? await resolveAdminAnalyticsTarget(project)
       : await resolveClientAnalyticsTarget(project)
 
-    const dashboard = await fetchUmamiDashboard({ projectKey: target.registryKey, period, summaryOnly })
+    const drilldown = resolveAnalyticsDrilldown(target.registryKey, {
+      market,
+      section: url.searchParams.get('section') || undefined,
+      contentLanguage: url.searchParams.get('language') || undefined,
+      device: url.searchParams.get('device') || undefined,
+      referrer: url.searchParams.get('source') || undefined,
+      event: url.searchParams.get('event') || undefined,
+    })
+    const selected = drilldown.selected
+    const dashboard = await fetchUmamiDashboard({
+      projectKey: target.registryKey,
+      period,
+      summaryOnly,
+      market: selected.market.key,
+      ...(selected.section ? { section: selected.section.key } : {}),
+      ...(selected.contentLanguage ? { contentLanguage: selected.contentLanguage.key } : {}),
+      ...(selected.device ? { device: selected.device.key } : {}),
+      ...(selected.referrer ? { referrer: selected.referrer } : {}),
+      ...(selected.event ? { event: selected.event.key } : {}),
+    })
     const payload = identity.role === 'client' || dashboard.status === 'ok'
       ? toClientAnalyticsPayload(dashboard)
       : dashboard

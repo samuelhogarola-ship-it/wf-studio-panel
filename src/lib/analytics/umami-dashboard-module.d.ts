@@ -1,5 +1,9 @@
 declare module '@/lib/analytics/umami-dashboard.mjs' {
   export type AnalyticsPeriod = 'live' | '7d' | '30d' | '90d' | '6m' | '12m'
+  export type AnalyticsMarketKey = 'all' | 'spain' | 'mexico' | 'usa' | 'brazil'
+  export type AnalyticsMarket = { key: AnalyticsMarketKey; label: string }
+  export type AnalyticsOption = { key: string; label: string }
+  export type AnalyticsEventOption = AnalyticsOption & { category: string }
 
   export type MetricValue = {
     value: number
@@ -36,6 +40,27 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
       websiteId?: string
     }
     websiteId: string
+    market: AnalyticsMarket
+    dimensions: {
+      markets: ReadonlyArray<AnalyticsOption>
+      sections: ReadonlyArray<AnalyticsOption>
+      contentLanguages: ReadonlyArray<AnalyticsOption>
+      devices: ReadonlyArray<AnalyticsOption>
+      events: ReadonlyArray<AnalyticsEventOption>
+    }
+    selected: {
+      market: AnalyticsMarket
+      section: AnalyticsOption | null
+      contentLanguage: AnalyticsOption | null
+      device: AnalyticsOption | null
+      referrer: string
+      event: AnalyticsEventOption | null
+    }
+    breakdowns: {
+      sections: AnalyticsBreakdownRow[]
+      contentLanguages: AnalyticsBreakdownRow[]
+      totalPageviews: number | null
+    }
     range: {
       key: AnalyticsPeriod
       label: string
@@ -50,6 +75,16 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
     metrics: Record<string, MetricRow[]>
     sessions: SessionRow[]
     sessionsAvailable: boolean
+  }
+
+  export type AnalyticsBreakdownRow = AnalyticsOption & {
+    status: 'ok' | 'unavailable'
+    pageviews: number | null
+    visitors: number | null
+    visits: number | null
+    bounceRate: number | null
+    pagesPerVisit: number | null
+    averageVisitSeconds: number | null
   }
 
   export type AnalyticsConfigurationError = {
@@ -83,6 +118,7 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
   }
   export function getAnalyticsRange(period?: string, now?: Date): AnalyticsDashboard['range']
   export function getAnalyticsProject(projectKey: string, env?: NodeJS.ProcessEnv): AnalyticsDashboard['project']
+  export function getAnalyticsMarketOptions(projectKey: string): ReadonlyArray<AnalyticsMarket>
   export function fetchUmamiDashboard(options: {
     projectKey: string
     period?: string
@@ -92,5 +128,11 @@ declare module '@/lib/analytics/umami-dashboard.mjs' {
     timeoutMs?: number
     summaryOnly?: boolean
     includeContentLanguages?: boolean
+    market?: string
+    section?: string
+    contentLanguage?: string
+    device?: string
+    referrer?: string
+    event?: string
   }): Promise<AnalyticsDashboard | AnalyticsConfigurationError>
 }
