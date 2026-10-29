@@ -104,6 +104,7 @@ git commit -m "feat: expose secure platform request API"
 **Files:**
 - Create: `src/lib/platform-requests/admin.ts`
 - Create: `src/lib/actions/platform-requests.ts`
+- Modify: `src/lib/supabase/types.ts`
 - Create: `tests/platform-requests-admin.test.mjs`
 
 **Interfaces:**
