@@ -1,0 +1,211 @@
+import { createHash } from 'node:crypto'
+
+import { z } from 'zod'
+
+const BODY_LIMIT_BYTES = 32 * 1024
+const PROFILE_LIMIT_BYTES = 24 * 1024
+const PROFILE_MAX_DEPTH = 5
+const PROFILE_MAX_KEYS = 100
+const TURNSTILE_TIMEOUT_MS = 8_000
+
+const PRODUCTION_ORIGINS = new Map([
+  ['https://vivirenfuengirola.com', new Set(['vivir-fuengirola', 'vivir-fuengirola-negocios'])],
+  ['https://www.vivirenfuengirola.com', new Set(['vivir-fuengirola', 'vivir-fuengirola-negocios'])],
+  ['https://conocefuengirola.com', new Set(['conoce-fuengirola'])],
+  ['https://www.conocefuengirola.com', new Set(['conoce-fuengirola'])],
+])
+
+const payloadSchema = z.object({
+  platform: z.enum(['vivir-fuengirola', 'vivir-fuengirola-negocios', 'conoce-fuengirola']),
+  requestType: z.enum(['client', 'business', 'subscription_interest']),
+  name: z.string().trim().min(1).max(120),
+  email: z.string().trim().email().max(160).transform((value) => value.toLowerCase()),
+  phone: z.string().trim().max(80).optional().default(''),
+  company: z.string().trim().max(160).optional().default(''),
+  message: z.string().trim().max(5_000).optional().default(''),
+  profile: z.unknown().optional().default({}),
+  sourceUrl: z.string().trim().url().max(500).optional().default(''),
+  website: z.string().trim().max(200).optional().default(''),
+  token: z.string().trim().max(4_096).optional().default(''),
+}).strict()
+
+function developmentOrigin(env) {
+  if (env.NODE_ENV === 'production') return null
+  const configured = String(env.PLATFORM_REQUEST_DEV_ORIGIN || '').trim()
+  if (!configured) return null
+  try {
+    const parsed = new URL(configured)
+    if (!['http:', 'https:'].includes(parsed.protocol) || parsed.origin !== configured) return null
+    return parsed.origin
+  } catch {
+    return null
+  }
+}
+
+function allowedPlatforms(origin, env) {
+  const production = PRODUCTION_ORIGINS.get(origin)
+  if (production) return production
+  return origin === developmentOrigin(env)
+    ? new Set(['vivir-fuengirola', 'vivir-fuengirola-negocios', 'conoce-fuengirola'])
+    : null
+}
+
+function requestOrigin(request, env) {
+  const origin = request.headers.get('origin')
+  return origin && allowedPlatforms(origin, env) ? origin : null
+}
+
+function corsHeaders(origin, methods) {
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': methods,
+    'Access-Control-Allow-Headers': 'Content-Type, Accept',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  }
+}
+
+function json(body, status, origin, methods) {
+  return Response.json(body, { status, headers: corsHeaders(origin, methods) })
+}
+
+function turnstileConfiguration(env) {
+  const siteKey = String(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || env.TURNSTILE_SITE_KEY || '').trim()
+  const secret = String(env.TURNSTILE_SECRET_KEY || '').trim()
+  if (siteKey && secret) return { state: 'enabled', siteKey, secret }
+  if (siteKey || secret || env.NODE_ENV === 'production') return { state: 'unavailable' }
+  return { state: 'disabled' }
+}
+
+function inspectProfile(value, depth = 1, state = { keys: 0 }) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || depth > PROFILE_MAX_DEPTH) return false
+  for (const [key, child] of Object.entries(value)) {
+    state.keys += 1
+    if (state.keys > PROFILE_MAX_KEYS || key.length > 120) return false
+    if (child && typeof child === 'object') {
+      if (Array.isArray(child) || !inspectProfile(child, depth + 1, state)) return false
+    } else if (!['string', 'number', 'boolean'].includes(typeof child) && child !== null) {
+      return false
+    }
+  }
+  return true
+}
+
+function validProfile(value) {
+  if (!inspectProfile(value)) return false
+  return new TextEncoder().encode(JSON.stringify(value)).byteLength <= PROFILE_LIMIT_BYTES
+}
+
+async function verifyTurnstileToken(token, remoteIp, secret, fetchImpl = fetch) {
+  const formData = new FormData()
+  formData.append('secret', secret)
+  formData.append('response', token)
+  if (remoteIp) formData.append('remoteip', remoteIp)
+  const response = await fetchImpl('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    body: formData,
+    cache: 'no-store',
+    signal: AbortSignal.timeout(TURNSTILE_TIMEOUT_MS),
+  })
+  if (!response.ok) return { success: false }
+  const payload = await response.json()
+  return { success: Boolean(payload.success), hostname: typeof payload.hostname === 'string' ? payload.hostname : undefined }
+}
+
+function fingerprint(platform, requestType, email) {
+  return createHash('sha256').update(`${platform}|${requestType}|${email}`).digest('hex')
+}
+
+export function handlePlatformRequestOptions(request, { env = process.env } = {}) {
+  const origin = requestOrigin(request, env)
+  if (!origin) return Response.json({ error: 'forbidden_origin' }, { status: 403 })
+  return new Response(null, { status: 204, headers: corsHeaders(origin, 'POST,OPTIONS') })
+}
+
+export async function handlePlatformRequestConfigGet(request, { env = process.env } = {}) {
+  const origin = requestOrigin(request, env)
+  if (!origin) return Response.json({ error: 'forbidden_origin' }, { status: 403 })
+  const config = turnstileConfiguration(env)
+  if (config.state === 'unavailable') return json({ error: 'requests_not_configured' }, 503, origin, 'GET,OPTIONS')
+  if (config.state === 'disabled') return json({ turnstileEnabled: false }, 200, origin, 'GET,OPTIONS')
+  return json({ turnstileEnabled: true, turnstileSiteKey: config.siteKey }, 200, origin, 'GET,OPTIONS')
+}
+
+export async function handlePlatformRequestPost(request, {
+  env = process.env,
+  fetchImpl = fetch,
+  verifyToken = (token, remoteIp, secret) => verifyTurnstileToken(token, remoteIp, secret, fetchImpl),
+  createRequest,
+} = {}) {
+  const origin = requestOrigin(request, env)
+  if (!origin) return Response.json({ success: false, error: 'forbidden_origin' }, { status: 403 })
+  const methods = 'POST,OPTIONS'
+  const config = turnstileConfiguration(env)
+  if (config.state === 'unavailable') {
+    return json({ success: false, error: 'requests_not_configured' }, 503, origin, methods)
+  }
+
+  try {
+    const text = await request.text()
+    if (new TextEncoder().encode(text).byteLength > BODY_LIMIT_BYTES) {
+      return json({ success: false, error: 'invalid_payload' }, 400, origin, methods)
+    }
+    const parsed = payloadSchema.safeParse(JSON.parse(text))
+    if (!parsed.success || !validProfile(parsed.data.profile)) {
+      return json({ success: false, error: 'invalid_payload' }, 400, origin, methods)
+    }
+
+    const data = parsed.data
+    const platforms = allowedPlatforms(origin, env)
+    if (!platforms?.has(data.platform)) {
+      return json({ success: false, error: 'platform_not_allowed' }, 403, origin, methods)
+    }
+    if (data.sourceUrl && new URL(data.sourceUrl).origin !== origin) {
+      return json({ success: false, error: 'invalid_payload' }, 400, origin, methods)
+    }
+    if (data.website) return json({ success: true, outcome: 'created' }, 201, origin, methods)
+
+    if (config.state === 'enabled') {
+      if (!data.token) return json({ success: false, error: 'invalid_payload' }, 400, origin, methods)
+      const verification = await verifyToken(data.token, request.headers.get('x-forwarded-for'), config.secret)
+      if (!verification.success || verification.hostname !== new URL(origin).hostname) {
+        return json({ success: false, error: 'turnstile_failed' }, 400, origin, methods)
+      }
+    }
+
+    if (typeof createRequest !== 'function') throw new Error('platform_request_dependency_missing')
+    const outcome = await createRequest({
+      platform: data.platform,
+      request_type: data.requestType,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      company: data.company,
+      message: data.message,
+      profile_data: data.profile,
+      source_url: data.sourceUrl,
+      fingerprint: fingerprint(data.platform, data.requestType, data.email),
+    })
+    if (outcome === 'existing') return json({ success: true, outcome }, 200, origin, methods)
+    if (outcome !== 'created') throw new Error('platform_request_invalid_outcome')
+    return json({ success: true, outcome }, 201, origin, methods)
+  } catch {
+    console.error('Public platform request submission failed')
+    return json({ success: false, error: 'server_error' }, 500, origin, methods)
+  }
+}
+
+export async function persistPlatformRequest(supabase, payload) {
+  const { error } = await supabase.from('platform_requests').insert(payload)
+  if (!error) return 'created'
+  if (error.code !== '23505') throw new Error('platform_request_insert_failed')
+
+  const { data, error: lookupError } = await supabase
+    .from('platform_requests')
+    .select('id,status')
+    .eq('fingerprint', payload.fingerprint)
+    .eq('status', 'pending')
+    .maybeSingle()
+  if (lookupError || !data) throw new Error('platform_request_conflict_unresolved')
+  return 'existing'
+}
