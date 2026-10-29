@@ -24,6 +24,10 @@ function getLoginErrorMessage(error?: string, redirectedFrom?: string) {
     return 'El enlace de acceso no es valido o ha expirado. Solicita uno nuevo.'
   }
 
+  if (error === 'invite_required') {
+    return 'El acceso se crea desde WF Studio. Contacta con el equipo.'
+  }
+
   if (redirectedFrom) {
     return 'Tu sesion ha expirado o necesitas iniciar sesion para continuar.'
   }
@@ -90,12 +94,7 @@ export default async function ClientLoginPage({ searchParams }: ClientLoginPageP
           </div>
         ) : null}
 
-        <p className="mt-6 text-center text-xs text-white/55">
-          {t(locale, 'clientLogin.noAccount')}{' '}
-          <Link href="/cliente/registro" className="font-semibold text-white/80 transition-colors underline underline-offset-2 hover:text-white">
-            {t(locale, 'clientLogin.requestAccess')}
-          </Link>
-        </p>
+        <p className="mt-6 text-center text-xs text-white/55">¿Necesitas acceso? Contacta con WF Studio.</p>
       </main>
     </div>
   )

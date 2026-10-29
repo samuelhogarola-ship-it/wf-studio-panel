@@ -434,31 +434,38 @@ export async function createActivityAction(_prevState: AdminFormState, formData:
 
 const createClientDirectSchema = z.object({
   name: z.string().min(2, 'El nombre es obligatorio.'),
+  company: z.string().optional(),
   email: z.string().email('Email inválido.'),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.'),
+  phone: z.string().optional(),
+  status: z.enum(['active', 'inactive']).default('active'),
   project: z.enum(PROJECT_VALUES).default('wf-studio'),
 })
 
-export async function createClientDirectAction(_prevState: AdminFormState, formData: FormData): Promise<AdminFormState> {
+export async function createClientDirectAction(_prevState: ManagedAccessState, formData: FormData): Promise<ManagedAccessState> {
   await requireAdmin()
   const supabase = await createSupabaseServerClient()
   const adminClient = getSupabaseAdminClient()
 
   const parsed = createClientDirectSchema.safeParse({
     name: formData.get('name'),
+    company: formData.get('company'),
     email: formData.get('email'),
-    password: formData.get('password'),
+    phone: formData.get('phone'),
+    status: formData.get('status') || 'active',
     project: formData.get('project') || 'wf-studio',
   })
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' }
 
-  const { name, email, password, project } = parsed.data
+  const { name, company, email, phone, status, project } = parsed.data
   const result = await createClientWithPassword({
     name,
+    company,
     email,
-    password,
+    phone,
+    status,
     project,
+    generatePassword: generateTemporaryPassword,
     createAuthUser: async ({ email: normalizedEmail, password: normalizedPassword }) => {
       const { data, error } = await adminClient.auth.admin.createUser({
         email: normalizedEmail,

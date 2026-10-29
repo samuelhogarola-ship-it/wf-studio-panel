@@ -2,7 +2,6 @@
 
 import { redirect } from 'next/navigation'
 
-import { registerPendingClient } from '@/lib/auth/register.mjs'
 import { buildCanonicalClientCallbackUrl, buildCanonicalClientDestinationUrl, buildCanonicalResetCallbackUrl, sanitizeClientDestination } from '@/lib/security/redirects.mjs'
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -116,64 +115,8 @@ export async function clientMagicLinkAction(_prevState: AuthFormState, formData:
   return { success: 'Te hemos enviado un enlace de acceso a tu email.' }
 }
 
-export async function clientRegisterAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const name = String(formData.get('name') ?? '').trim()
-  const email = String(formData.get('email') ?? '').trim()
-  const password = String(formData.get('password') ?? '')
-
-  if (!name || !email || !password) {
-    return { error: 'Rellena todos los campos.' }
-  }
-  if (password.length < 6) {
-    return { error: 'La contraseña debe tener al menos 6 caracteres.' }
-  }
-
-  const supabase = await createSupabaseServerClient()
-  const adminClient = getSupabaseAdminClient()
-
-  return registerPendingClient({
-    name,
-    email,
-    password,
-    signUp: async ({ email: signUpEmail, password: signUpPassword }) => {
-      const { data, error } = await supabase.auth.signUp({
-        email: signUpEmail,
-        password: signUpPassword,
-      })
-
-      if (error) {
-        console.warn('[auth/client/register] signUp failed', {
-          email: signUpEmail,
-          project: CLIENT_PROJECT,
-          message: error.message,
-        })
-      }
-
-      return {
-        userId: data.user?.id ?? null,
-        error: error ? { message: error.message } : null,
-      }
-    },
-    insertClient: async (client) => {
-      const { error } = await adminClient.from('clients').insert(client)
-
-      if (error) {
-        console.warn('[auth/client/register] insert client failed', {
-          email: client.email,
-          project: client.project,
-          status: client.status,
-          message: error.message,
-        })
-      }
-
-      return {
-        error: error ? { message: error.message } : null,
-      }
-    },
-    deleteUser: async (userId) => {
-      await adminClient.auth.admin.deleteUser(userId)
-    },
-  })
+export async function clientRegisterAction(_prevState: AuthFormState, _formData: FormData): Promise<AuthFormState> {
+  return { error: 'El acceso se crea desde WF Studio. Contacta con el equipo.' }
 }
 
 export async function resetPasswordAction(_prevState: AuthFormState, formData: FormData): Promise<AuthFormState> {
