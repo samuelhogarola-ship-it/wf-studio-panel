@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 
-const migration = new URL('../supabase/migrations/202610290001_client_access_events.sql', import.meta.url)
+const migration = new URL('../supabase/migrations/202610290002_client_access_events.sql', import.meta.url)
 
 test('client access events record only credential-free client password changes', async () => {
   const sql = await readFile(migration, 'utf8')
