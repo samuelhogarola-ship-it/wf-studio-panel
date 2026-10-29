@@ -2,6 +2,7 @@ import { cache } from 'react'
 
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { normalizeSearch } from '@/lib/utils'
+import { resolveManagedAccess } from '@/lib/clients/managed-access.mjs'
 
 export const getAdminDashboardData = cache(async () => {
   const supabase = await createSupabaseServerClient()
@@ -280,7 +281,7 @@ export const getAdminClientDetailPageData = cache(async (clientId: string) => {
   const supabase = await createSupabaseServerClient()
 
   const [{ data: client }, { data: packs }, { data: recentActivities }, { data: pendingItems }, { data: messages }, { data: services }, { data: invoices }, { data: expenses }] = await Promise.all([
-    supabase.from('clients').select('id, name, company, email, phone, status, created_at').eq('id', clientId).eq('project', 'wf-studio').maybeSingle(),
+    supabase.from('clients').select('id, name, company, email, phone, status, project, created_at').eq('id', clientId).eq('project', 'wf-studio').maybeSingle(),
     supabase
       .from('packs')
       .select('id, name, pack_type, minutes_total, price, invoice_number, purchase_date, renewal_date, billing_cycle, paid, status, notes')
@@ -321,8 +322,14 @@ export const getAdminClientDetailPageData = cache(async (clientId: string) => {
       .order('expense_date', { ascending: false }),
   ])
 
+  const { data: profile } = client
+    ? await supabase.from('profiles').select('id, email, role').ilike('email', client.email).maybeSingle()
+    : { data: null }
+  const accessStatus = resolveManagedAccess({ client, profile })
+
   return {
     client,
+    accessStatus,
     packs: packs ?? [],
     activePacks: (packs ?? []).filter((pack) => pack.status === 'active'),
     recentActivities: recentActivities ?? [],
@@ -352,4 +359,21 @@ export const getAdminMessagesPageData = cache(async () => {
   ])
 
   return { clients: clients ?? [], messages: messages ?? [] }
+})
+
+export const getRecentClientAccessEvents = cache(async (limit = 10) => {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from('client_access_events')
+    .select('client_id, event_type, created_at, clients!inner(name, project)')
+    .eq('clients.project', 'wf-studio')
+    .order('created_at', { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 25))
+
+  return (data ?? []).map((event) => ({
+    clientId: event.client_id,
+    clientName: Array.isArray(event.clients) ? event.clients[0]?.name ?? 'Cliente' : event.clients?.name ?? 'Cliente',
+    eventType: event.event_type,
+    createdAt: event.created_at,
+  }))
 })

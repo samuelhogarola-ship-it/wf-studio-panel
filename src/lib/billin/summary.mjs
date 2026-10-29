@@ -1,4 +1,4 @@
-const emptyArea = () => ({ invoiced: 0, collected: 0, expenses: 0, net: 0 })
+const emptyArea = () => ({ invoiced: 0, collected: 0, pending: 0, expenses: 0, net: 0 })
 
 function areaKey(value) {
   return value === 'classes' ? 'classes' : 'general'
@@ -32,6 +32,8 @@ export function summarizeBillin({ invoices = [], collections, expenses = [] } = 
       area.collected += value
     } else if (invoice.status === 'issued') {
       summary.counts.pendingInvoices += 1
+      summary.totals.pending += value
+      area.pending += value
     }
   }
 

@@ -1,8 +1,9 @@
 import { cache } from 'react'
 
+import { collectAllPages } from '@/lib/billin/pagination.mjs'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-export const getExpensesPageData = cache(async ({ area, page, pageSize = 50 }: { area: 'general' | 'classes' | null; page: number; pageSize?: number }) => {
+export const getExpensesPageData = cache(async ({ area, page, pageSize = 50, start, end }: { area: 'general' | 'classes' | null; page: number; pageSize?: number; start?: string; end?: string }) => {
   const supabase = await createSupabaseServerClient()
   let expensesQuery = supabase
     .from('expenses')
@@ -10,13 +11,25 @@ export const getExpensesPageData = cache(async ({ area, page, pageSize = 50 }: {
     .order('expense_date', { ascending: false })
     .order('created_at', { ascending: false })
   if (area) expensesQuery = expensesQuery.eq('accounting_area', area)
+  if (start && end) expensesQuery = expensesQuery.gte('expense_date', start).lt('expense_date', end)
   expensesQuery = expensesQuery.range(page * pageSize, page * pageSize + pageSize - 1)
+
+  const summaryPromise = start && end
+    ? collectAllPages(async (from, to) => {
+      let query = supabase.from('expenses').select('amount, status').eq('status', 'paid')
+      if (area) query = query.eq('accounting_area', area)
+      query = query.gte('expense_date', start).lt('expense_date', end)
+      const { data, error } = await query.order('expense_date', { ascending: false }).range(from, to)
+      if (error) throw error
+      return data ?? []
+    }).then((rows) => ({ data: [{ total: rows.reduce((total, row) => total + Number(row.amount), 0) }], error: null }))
+    : supabase.rpc('get_expense_ledger_summary', { p_area: area })
 
   const [clientsResult, accountsResult, expensesResult, summaryResult] = await Promise.all([
     supabase.from('clients').select('id, name, status').eq('project', 'wf-studio').order('name'),
     supabase.from('billing_accounts').select('id, name, account_type, status').order('name'),
     expensesQuery,
-    supabase.rpc('get_expense_ledger_summary', { p_area: area }),
+    summaryPromise,
   ])
 
   if (clientsResult.error) throw clientsResult.error

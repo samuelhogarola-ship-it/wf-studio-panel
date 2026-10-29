@@ -24,6 +24,12 @@ export type Database = {
         Update: never
         Relationships: [{ foreignKeyName: "admin_support_events_session_owner_client_fkey"; columns: ["support_session_id", "admin_user_id", "client_id"]; isOneToOne: false; referencedRelation: "admin_support_sessions"; referencedColumns: ["id", "admin_user_id", "client_id"] }]
       }
+      client_access_events: {
+        Row: { id: string; client_id: string; auth_user_id: string; event_type: 'password_changed_by_client'; created_at: string }
+        Insert: { id?: string; client_id: string; auth_user_id: string; event_type: 'password_changed_by_client'; created_at?: string }
+        Update: never
+        Relationships: [{ foreignKeyName: "client_access_events_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
+      }
       admin_project_favorites: {
         Row: { admin_user_id: string; project_id: string; position: number | null; created_at: string }
         Insert: { admin_user_id: string; project_id: string; position?: number | null; created_at?: string }
@@ -97,9 +103,9 @@ export type Database = {
         Relationships: [{ foreignKeyName: "invoices_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
       expenses: {
-        Row: { id: string; client_id: string | null; supplier: string; concept: string; category: string; accounting_area: string; expense_nature: string; billing_account_id: string | null; amount: number; expense_date: string; payment_method: string; status: string; notes: string | null; created_by: string | null; created_at: string; updated_at: string }
-        Insert: { id?: string; client_id?: string | null; supplier: string; concept: string; category?: string; accounting_area?: string; expense_nature?: string; billing_account_id?: string | null; amount: number; expense_date?: string; payment_method?: string; status?: string; notes?: string | null; created_by?: string | null; created_at?: string; updated_at?: string }
-        Update: { client_id?: string | null; supplier?: string; concept?: string; category?: string; accounting_area?: string; expense_nature?: string; billing_account_id?: string | null; amount?: number; expense_date?: string; payment_method?: string; status?: string; notes?: string | null; updated_at?: string }
+        Row: { id: string; client_id: string | null; supplier: string | null; concept: string; category: string; accounting_area: string; expense_nature: string; billing_account_id: string | null; amount: number; expense_date: string; payment_method: string; status: string; notes: string | null; created_by: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; client_id?: string | null; supplier?: string | null; concept: string; category?: string; accounting_area?: string; expense_nature?: string; billing_account_id?: string | null; amount: number; expense_date?: string; payment_method?: string; status?: string; notes?: string | null; created_by?: string | null; created_at?: string; updated_at?: string }
+        Update: { client_id?: string | null; supplier?: string | null; concept?: string; category?: string; accounting_area?: string; expense_nature?: string; billing_account_id?: string | null; amount?: number; expense_date?: string; payment_method?: string; status?: string; notes?: string | null; updated_at?: string }
         Relationships: [{ foreignKeyName: "expenses_client_id_fkey"; columns: ["client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] }]
       }
       invoice_audit: {

@@ -2,6 +2,7 @@ declare module '@/lib/billin/summary.mjs' {
   export type BillinAreaSummary = {
     invoiced: number
     collected: number
+    pending: number
     expenses: number
     net: number
   }

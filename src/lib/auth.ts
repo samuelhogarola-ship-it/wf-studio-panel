@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { cache } from 'react'
 
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
@@ -21,7 +22,7 @@ export type ClientIdentity = AuthIdentity & {
 
 const CLIENT_PROJECT = 'wf-studio'
 
-async function getProfileIdentity() {
+const getProfileIdentity = cache(async function getProfileIdentity() {
   const supabase = await createSupabaseServerClient()
   const {
     data: { user },
@@ -50,7 +51,7 @@ async function getProfileIdentity() {
     email: profile.email ?? user.email,
     role: profile.role,
   }
-}
+})
 
 export async function requireAdmin() {
   const identity = await getProfileIdentity()

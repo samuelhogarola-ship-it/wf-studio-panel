@@ -10,7 +10,7 @@ export type ExpenseFormState = { error?: string; success?: string }
 
 const expenseSchema = z.object({
   client_id: z.string().uuid().nullable(),
-  supplier: z.string().trim().min(1).max(200),
+  supplier: z.string().trim().max(200).nullable(),
   concept: z.string().trim().min(1).max(500),
   category: z.enum(['software', 'services', 'taxes', 'travel', 'office', 'marketing', 'classes', 'other']),
   accounting_area: z.enum(['general', 'classes']),
@@ -28,7 +28,7 @@ export async function createExpenseAction(_previous: ExpenseFormState, formData:
   const clientId = String(formData.get('client_id') ?? '').trim() || null
   const parsed = expenseSchema.safeParse({
     client_id: clientId,
-    supplier: formData.get('supplier'),
+    supplier: String(formData.get('supplier') ?? '').trim() || null,
     concept: formData.get('concept'),
     category: formData.get('category'),
     accounting_area: formData.get('accounting_area'),
@@ -41,13 +41,20 @@ export async function createExpenseAction(_previous: ExpenseFormState, formData:
     notes: String(formData.get('notes') ?? '').trim() || null,
   })
 
-  if (!parsed.success) return { error: 'Revisa proveedor, concepto, importe, fecha y categoría.' }
+  if (!parsed.success) return { error: 'Revisa concepto, importe, fecha y categoría.' }
 
   const supabase = await createSupabaseServerClient()
-  const { error } = await supabase.from('expenses').insert({
+  const expense = {
     ...parsed.data,
     created_by: identity.userId,
-  })
+  }
+  let { error } = await supabase.from('expenses').insert(expense)
+  // Keep local/production installs usable while the optional-supplier migration
+  // is being rolled out. The migration converts this compatibility value to null.
+  if (parsed.data.supplier === null && (error?.code === '23502' || error?.code === '23514')) {
+    const retry = await supabase.from('expenses').insert({ ...expense, supplier: 'Sin proveedor' })
+    error = retry.error
+  }
   if (error) return { error: 'No se pudo registrar el gasto.' }
 
   revalidatePath('/paneladmin/gastos')

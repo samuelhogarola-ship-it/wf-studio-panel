@@ -1,8 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 
-import { loadProjectModule } from './helpers/project-harness.mjs'
+import { clientId, loadProjectModule } from './helpers/project-harness.mjs'
 
 const summary = {
   totals: { invoiced: 300, collected: 220, expenses: 70, net: 150 },
@@ -13,7 +14,7 @@ const summary = {
   },
 }
 
-test('invoice history applies month, document, status, and area filters and shows the filtered total', async () => {
+test('invoice history applies a shared period with document, status, and area filters', async () => {
   let received
   const Page = loadProjectModule('src/app/paneladmin/(protected)/facturas/page.tsx', {
     '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
@@ -23,21 +24,80 @@ test('invoice history applies month, document, status, and area filters and show
         { id: 'invoice-1', number: 'FAC-1', concept: 'Web', amount: 200, payment_method: 'transfer', status: 'paid', issued_at: '2026-10-10', recipient_name: 'Ana', recipient_email: 'ana@example.com', recipient_company: null, document_type: 'invoice', accounting_area: 'general', clients: null },
         { id: 'invoice-2', number: 'FAC-2', concept: 'Clase', amount: 100, payment_method: 'card', status: 'issued', issued_at: '2026-10-20', recipient_name: 'Luis', recipient_email: 'luis@example.com', recipient_company: null, document_type: 'invoice', accounting_area: 'classes', clients: null },
         { id: 'invoice-3', number: 'BOR-1', concept: 'Sin emitir', amount: 999, payment_method: 'transfer', status: 'draft', issued_at: '2026-10-21', recipient_name: 'Eva', recipient_email: 'eva@example.com', recipient_company: null, document_type: 'invoice', accounting_area: 'general', clients: null },
-      ], filteredTotal: 300 }
+      ], filteredTotal: 300, count: 250, page: 2, pageSize: 100 }
     } },
     '@/components/admin/invoice-form': { InvoiceForm: () => null },
     '@/lib/actions/invoices': { markInvoicePaidAction: async () => ({}) },
+    'next/link': { default: ({ href, children, ...props }) => React.createElement('a', { ...props, href: typeof href === 'string' ? href : href.pathname, 'data-query': typeof href === 'object' ? JSON.stringify(href.query) : undefined }, children), __esModule: true },
   }).default
 
-  const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ month: '2026-10', type: 'invoice', status: 'paid', area: 'general' }) }))
+  const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ period: 'custom', from: '2026-10-01', to: '2026-10-31', client: clientId, type: 'invoice', status: 'paid', area: 'general', page: '2' }) }))
 
-  assert.deepEqual(received, { month: '2026-10', type: 'invoice', status: 'paid', area: 'general', page: undefined })
-  for (const name of ['month', 'type', 'status', 'area']) assert.match(html, new RegExp(`name="${name}"`))
-  assert.match(html, /3 documentos/)
+  assert.deepEqual(received, { start: '2026-10-01', end: '2026-11-01', client: clientId, type: 'invoice', status: 'paid', area: 'general', page: '2' })
+  for (const name of ['period', 'from', 'to', 'client', 'type', 'status', 'area']) assert.match(html, new RegExp(`name="${name}"`))
+  assert.match(html, /250 documentos/)
   assert.match(html, /Borrador/)
   assert.match(html, /Total filtrado/)
   assert.match(html, /300,00/)
   assert.match(html, /Limpiar filtros/)
+  assert.match(html, /data-query="[^"]*period[^"]*custom[^"]*from[^"]*2026-10-01[^"]*to[^"]*2026-10-31/)
+})
+
+test('invoice history defaults to all records when no period is supplied', async () => {
+  let received
+  const Page = loadProjectModule('src/app/paneladmin/(protected)/facturas/page.tsx', {
+    '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
+    '@/lib/data/invoices': { getInvoicesPageData: async (filters) => {
+      received = filters
+      return { clients: [], accounts: [], invoices: [], filteredTotal: 0, count: 0, page: 1, pageSize: 100 }
+    } },
+    '@/components/admin/invoice-form': { InvoiceForm: () => null },
+    '@/lib/actions/invoices': { markInvoicePaidAction: async () => ({}) },
+  }).default
+  const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve({}) }))
+  assert.deepEqual(received, { client: undefined, type: undefined, status: undefined, area: undefined, page: undefined })
+  assert.match(html, /<option value="all" selected="">Todo el histórico<\/option>/)
+})
+
+function queryDatabase() {
+  const calls = []
+  return { calls, db: { from(table) {
+    const call = { table, filters: [] }
+    calls.push(call)
+    const query = {
+      select() { return query }, order() { return query }, eq(name, value) { call.filters.push(['eq', name, value]); return query },
+      gte(name, value) { call.filters.push(['gte', name, value]); return query },
+      lt(name, value) { call.filters.push(['lt', name, value]); return query }, range() { return query },
+      then(resolve) { return Promise.resolve({ data: [], error: null, count: 0 }).then(resolve) },
+    }
+    return query
+  } } }
+}
+
+test('invoice data applies identical half-open bounds to rows and totals, and omits them for all history', async () => {
+  const bounded = queryDatabase()
+  const boundedModule = loadProjectModule('src/lib/data/invoices.ts', {
+    '@/lib/supabase/server': { createSupabaseServerClient: async () => bounded.db },
+    '@/lib/billin/pagination.mjs': { collectAllPages: async (fetchPage) => fetchPage(0, 999) },
+  })
+  await boundedModule.getInvoicesPageData({ start: '2026-10-01', end: '2026-11-01', client: clientId, type: 'invoice', status: 'paid', area: 'general' })
+  const boundedInvoiceCalls = bounded.calls.filter((call) => call.table === 'invoices')
+  assert.equal(boundedInvoiceCalls.length, 2)
+  for (const call of boundedInvoiceCalls) {
+    assert.deepEqual(call.filters.slice(0, 2), [['gte', 'issued_at', '2026-10-01'], ['lt', 'issued_at', '2026-11-01']])
+    assert.ok(call.filters.some((filter) => filter.join(':') === 'eq:document_type:invoice'))
+    assert.ok(call.filters.some((filter) => filter.join(':') === 'eq:status:paid'))
+    assert.ok(call.filters.some((filter) => filter.join(':') === 'eq:accounting_area:general'))
+    assert.ok(call.filters.some((filter) => filter.join(':') === `eq:client_id:${clientId}`))
+  }
+
+  const historical = queryDatabase()
+  const historicalModule = loadProjectModule('src/lib/data/invoices.ts', {
+    '@/lib/supabase/server': { createSupabaseServerClient: async () => historical.db },
+    '@/lib/billin/pagination.mjs': { collectAllPages: async (fetchPage) => fetchPage(0, 999) },
+  })
+  await historicalModule.getInvoicesPageData({})
+  assert.ok(historical.calls.filter((call) => call.table === 'invoices').every((call) => call.filters.every(([operator]) => operator !== 'gte' && operator !== 'lt')))
 })
 
 test('quarter preparation separates ledgers and links a CSV export for the selected period', async () => {

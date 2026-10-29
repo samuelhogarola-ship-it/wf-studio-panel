@@ -39,7 +39,7 @@ test('proposals cannot inherit payment links or unpaid invoice semantics', async
   assert.match(form, /documentType === 'invoice'[\s\S]*payment_url/)
 })
 
-test('expense ledger paginates and totals the complete filtered ledger', async () => {
+test('expense ledger paginates and totals the complete selected period', async () => {
   const data = await source('src/lib/data/expenses.ts')
   const page = await source('src/app/paneladmin/(protected)/gastos/page.tsx')
   assert.doesNotMatch(data, /\.limit\(250\)/)
@@ -47,5 +47,5 @@ test('expense ledger paginates and totals the complete filtered ledger', async (
   assert.match(data, /\.range\(/)
   assert.match(data, /get_expense_ledger_summary/)
   assert.match(page, /Página siguiente/)
-  assert.match(page, /Total del histórico/)
+  assert.match(page, /Total de \{period\.label\}/)
 })

@@ -24,10 +24,10 @@ test('Bill-in summary excludes proposals and void records from money while separ
     ],
   })
 
-  assert.deepEqual(summary.totals, { invoiced: 230, collected: 180, expenses: 60, net: 120 })
+  assert.deepEqual(summary.totals, { invoiced: 230, collected: 180, pending: 50, expenses: 60, net: 120 })
   assert.deepEqual(summary.counts, { invoices: 3, proposals: 1, pendingInvoices: 1, expenses: 3 })
-  assert.deepEqual(summary.areas.general, { invoiced: 150, collected: 100, expenses: 40, net: 60 })
-  assert.deepEqual(summary.areas.classes, { invoiced: 80, collected: 80, expenses: 20, net: 60 })
+  assert.deepEqual(summary.areas.general, { invoiced: 150, collected: 100, pending: 50, expenses: 40, net: 60 })
+  assert.deepEqual(summary.areas.classes, { invoiced: 80, collected: 80, pending: 0, expenses: 20, net: 60 })
 })
 
 test('Bill-in attributes collections to paid rows independently from issued documents', () => {
@@ -36,22 +36,23 @@ test('Bill-in attributes collections to paid rows independently from issued docu
     collections: [{ amount: 150, status: 'paid', document_type: 'invoice', accounting_area: 'general' }],
     expenses: [],
   })
-  assert.deepEqual(summary.totals, { invoiced: 200, collected: 150, expenses: 0, net: 150 })
+  assert.deepEqual(summary.totals, { invoiced: 200, collected: 150, pending: 200, expenses: 0, net: 150 })
 })
 
 test('Bill-in dashboard renders its totals, ledgers, and direct accounting actions', async () => {
   let requestedPeriod
   const Page = loadProjectModule('src/app/paneladmin/(protected)/billin/page.tsx', {
     '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
+    '@/components/layout/app-shell': { AdminShell: ({ header, children, title }) => React.createElement('main', null, header ?? React.createElement('h1', null, title), children) },
     '@/lib/data/billin': { getBillinDashboardData: async (period) => {
       requestedPeriod = period
       return ({
       summary: {
-        totals: { invoiced: 230, collected: 180, expenses: 60, net: 120 },
+        totals: { invoiced: 230, collected: 180, pending: 50, expenses: 60, net: 120 },
         counts: { invoices: 3, proposals: 1, pendingInvoices: 1, expenses: 3 },
         areas: {
-          general: { invoiced: 150, collected: 100, expenses: 40, net: 60 },
-          classes: { invoiced: 80, collected: 80, expenses: 20, net: 60 },
+          general: { invoiced: 150, collected: 100, pending: 50, expenses: 40, net: 60 },
+          classes: { invoiced: 80, collected: 80, pending: 0, expenses: 20, net: 60 },
         },
       },
       accountBreakdown: {
@@ -68,8 +69,8 @@ test('Bill-in dashboard renders its totals, ledgers, and direct accounting actio
 
   assert.deepEqual(requestedPeriod, { start: '2026-10-01', end: '2026-11-01' })
   assert.match(html, /Resumen de octubre de 2026/)
-  assert.match(html, /name="month"/)
-  for (const label of ['Facturado', 'Cobrado', 'Gastos pagados', 'Resultado de caja', 'Contabilidad general', 'Contabilidad de clases', 'Facturas y propuestas recientes', 'Gastos recientes']) {
+  assert.match(html, /name="period"/)
+  for (const label of ['Facturado', 'Cobrado', 'Pendiente', 'Gastos pagados', 'Neto', '3 facturas', '1 propuesta', 'Contabilidad general', 'Contabilidad de clases', 'Facturas y propuestas recientes', 'Gastos recientes']) {
     if (!['Facturas y propuestas recientes', 'Gastos recientes'].includes(label)) assert.match(html, new RegExp(label))
   }
   for (const label of ['Resumen por actividad', 'Movimientos recientes', 'Documento / proveedor', 'Área', 'Estado']) assert.match(html, new RegExp(label))
@@ -81,6 +82,31 @@ test('Bill-in dashboard renders its totals, ledgers, and direct accounting actio
   assert.match(html, /href="\/paneladmin\/facturas"/)
   assert.match(html, /href="\/paneladmin\/gastos"/)
   assert.match(html, /Preparar trimestre/)
+  assert.match(html, /href="\/paneladmin\/facturas"[^>]*>Histórico de facturas/)
+  assert.match(html, /data-billin-header="true"/)
+})
+
+test('Bill-in dashboard applies historical, quarterly, annual, and custom periods', async () => {
+  const cases = [
+    [{ period: 'all' }, undefined, 'todo el histórico'],
+    [{ period: 'this-quarter' }, { start: '2026-10-01', end: '2027-01-01' }, '4.º trimestre de 2026'],
+    [{ period: 'this-year' }, { start: '2026-01-01', end: '2027-01-01' }, 'año 2026'],
+    [{ period: 'custom', from: '2026-02-10', to: '2026-02-12' }, { start: '2026-02-10', end: '2026-02-13' }, '10 feb 2026 – 12 feb 2026'],
+  ]
+  for (const [params, expectedBounds, label] of cases) {
+    let requestedPeriod = 'not-called'
+    const Page = loadProjectModule('src/app/paneladmin/(protected)/billin/page.tsx', {
+      '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
+      '@/lib/data/billin': { getBillinDashboardData: async (period) => {
+        requestedPeriod = period
+        const emptyArea = { invoiced: 0, collected: 0, pending: 0, expenses: 0, net: 0 }
+        return { summary: { totals: emptyArea, counts: { invoices: 0, proposals: 0, pendingInvoices: 0, expenses: 0 }, areas: { general: emptyArea, classes: emptyArea } }, accountBreakdown: {}, recentInvoices: [], recentExpenses: [] }
+      } },
+    }).default
+    const html = renderToStaticMarkup(await Page({ searchParams: Promise.resolve(params) }))
+    assert.deepEqual(requestedPeriod, expectedBounds)
+    assert.match(html, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  }
 })
 
 test('administrator sidebar exposes the Bill-in home before its ledgers', () => {

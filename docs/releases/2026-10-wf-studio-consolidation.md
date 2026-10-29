@@ -6,8 +6,10 @@ This release is prepared on `codex/wf-studio-consolidation`. It contains the Blo
 
 1. Run CI on the consolidation branch and confirm `npm ci`, lint, typecheck, tests, the production audit, `npm run test:db` and the build are green.
 2. Apply Supabase migrations in filename order. The consolidation migrations are:
+   - `202610230001_admin_support_sessions.sql`
    - `202610240001_message_and_resource_rls.sql`
    - `202610240002_payments_and_invoices.sql`
+   - `202610290002_client_access_events.sql`
 3. Deploy the application revision with the required environment names configured. Never copy values into Git or this document.
 4. Run the smoke checks below before enabling support preview or accepting client payment links.
 
@@ -34,6 +36,20 @@ Use a deployed preview with production-equivalent schema and masked test account
 - Integrations: configured Blogger launch, analytics for personal and Agama sources, and a protected invoice print route.
 
 Record the revision, migration result, smoke-test timestamp and any intentionally unavailable integration in the deployment system; do not record credentials or customer data here.
+
+### Support preview activation checklist
+
+Keep `WF_SUPPORT_PREVIEW_ENABLED=false` until every item is confirmed on the same revision that will be deployed:
+
+1. Apply `supabase/migrations/202610230001_admin_support_sessions.sql` and verify the migration completed without editing an already-applied migration.
+2. Run `node --test tests/support-preview-ui.test.mjs tests/support-portal-viewer.test.mjs`.
+3. Deploy with the flag still disabled and confirm the active client record loads normally.
+4. Set the hosted server variable `WF_SUPPORT_PREVIEW_ENABLED=true` and redeploy that verified revision.
+5. From an active client record, start **Ver como**; confirm the client name, 30-minute countdown and read-only banner are visible.
+6. Attempt a client mutation and confirm it is blocked. Do not change a password, invoice, message or client record during this check.
+7. Exit support mode and confirm the administrator returns to the exact client record. Confirm an inactive client cannot start a session and an expired session fails closed.
+
+If any check fails, immediately restore the hosted flag to `false`, redeploy, and record which boundary failed. No password credential is read, copied or modified by support preview.
 
 ## Rollback
 
