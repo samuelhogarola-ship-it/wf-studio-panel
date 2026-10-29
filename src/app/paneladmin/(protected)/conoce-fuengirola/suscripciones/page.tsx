@@ -1,9 +1,11 @@
+import { PlatformSectionNav } from '@/components/admin/platform-section-nav'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
 import { getProjectSubscriptionsData } from '@/lib/data/admin'
 import { getLocale } from '@/lib/locale'
+import { getPendingPlatformRequestCounts } from '@/lib/platform-requests/admin'
 import { formatDate } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -26,7 +28,7 @@ const CYCLE_LABELS: Record<string, string> = {
 export default async function Page() {
   const identity = await requireAdmin()
   const locale = await getLocale()
-  const data = await getProjectSubscriptionsData(PROJECT)
+  const [data, counts] = await Promise.all([getProjectSubscriptionsData(PROJECT), getPendingPlatformRequestCounts()])
 
   return (
     <AdminShell
@@ -36,6 +38,7 @@ export default async function Page() {
       userEmail={identity.email}
       locale={locale}
     >
+      <PlatformSectionNav section="conoce" currentPath="/paneladmin/conoce-fuengirola/suscripciones" counts={counts} />
       <section className="grid gap-4 md:grid-cols-3 mb-8">
         <Card className="p-5">
           <p className="text-sm text-muted">Suscripciones activas</p>

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 import { ClientForm } from '@/components/admin/client-form'
+import { PlatformSectionNav } from '@/components/admin/platform-section-nav'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -8,6 +9,7 @@ import { approveClientAction, deactivateClientAction, rejectClientAction } from 
 import { requireAdmin } from '@/lib/auth'
 import { getAdminClientsPageData } from '@/lib/data/admin'
 import { getLocale } from '@/lib/locale'
+import { getPendingPlatformRequestCounts } from '@/lib/platform-requests/admin'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
@@ -25,7 +27,7 @@ export default async function Page({
   const params = await searchParams
   const showNew = params.new === '1' || !!params.edit
   const locale = await getLocale()
-  const data = await getAdminClientsPageData(params.q ?? '', params.edit, '', PROJECT)
+  const [data, counts] = await Promise.all([getAdminClientsPageData(params.q ?? '', params.edit, '', PROJECT), getPendingPlatformRequestCounts()])
 
   return (
     <AdminShell
@@ -35,6 +37,7 @@ export default async function Page({
       userEmail={identity.email}
       locale={locale}
     >
+      <PlatformSectionNav section="conoce" currentPath={BASE} counts={counts} />
       {data.pendingClients.length > 0 && (
         <Card className="mb-6 overflow-hidden border-amber-200">
           <div className="border-b border-amber-200 bg-amber-50 px-6 py-4">

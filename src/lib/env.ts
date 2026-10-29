@@ -16,3 +16,13 @@ export function getRequiredServerEnv(name: keyof NodeJS.ProcessEnv) {
 
   return value
 }
+
+export function getSupabaseAdminKey(env: NodeJS.ProcessEnv = process.env) {
+  const value = env.SUPABASE_SERVICE_ROLE_KEY?.trim() || env.SUPABASE_SECRET_KEY?.trim()
+
+  if (!value) {
+    throw new Error('Missing environment variable: SUPABASE_SECRET_KEY')
+  }
+
+  return value
+}

@@ -281,7 +281,7 @@ export const getAdminClientDetailPageData = cache(async (clientId: string) => {
   const supabase = await createSupabaseServerClient()
 
   const [{ data: client }, { data: packs }, { data: recentActivities }, { data: pendingItems }, { data: messages }, { data: services }, { data: invoices }, { data: expenses }] = await Promise.all([
-    supabase.from('clients').select('id, name, company, email, phone, status, project, created_at').eq('id', clientId).eq('project', 'wf-studio').maybeSingle(),
+    supabase.from('clients').select('id, name, company, email, phone, status, project, created_at').eq('id', clientId).maybeSingle(),
     supabase
       .from('packs')
       .select('id, name, pack_type, minutes_total, price, invoice_number, purchase_date, renewal_date, billing_cycle, paid, status, notes')

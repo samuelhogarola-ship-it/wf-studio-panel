@@ -7,11 +7,22 @@ export type CapabilityKey = 'products' | 'domains' | 'hosting' | 'invoices' | 'b
 export type CapabilityState = 'unavailable' | 'available' | 'active'
 export type SupportEndReason = 'manual' | 'expired' | 'replaced' | 'client_inactive' | 'access_revoked'
 export type SupportSessionRow = { id: string; admin_user_id: string; client_id: string; token_hash: string; return_path: string; started_at: string; expires_at: string; ended_at: string | null; end_reason: SupportEndReason | null }
+export type PlatformRequestPlatform = 'vivir-fuengirola' | 'vivir-fuengirola-negocios' | 'conoce-fuengirola'
+export type PlatformRequestType = 'client' | 'business' | 'subscription_interest'
+export type PlatformRequestStatus = 'pending' | 'approved' | 'rejected'
 
 export type Database = {
   __InternalSupabase: { PostgrestVersion: "14.5" }
   public: {
     Tables: {
+      platform_requests: {
+        Row: { id: string; platform: PlatformRequestPlatform; request_type: PlatformRequestType; name: string; email: string; phone: string | null; company: string | null; profile_data: Json; message: string | null; source_url: string | null; status: PlatformRequestStatus; fingerprint: string; converted_client_id: string | null; reviewed_by: string | null; reviewed_at: string | null; rejection_reason: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; platform: PlatformRequestPlatform; request_type: PlatformRequestType; name: string; email: string; phone?: string | null; company?: string | null; profile_data?: Json; message?: string | null; source_url?: string | null; status?: PlatformRequestStatus; fingerprint: string; converted_client_id?: string | null; reviewed_by?: string | null; reviewed_at?: string | null; rejection_reason?: string | null; created_at?: string; updated_at?: string }
+        Update: { platform?: PlatformRequestPlatform; request_type?: PlatformRequestType; name?: string; email?: string; phone?: string | null; company?: string | null; profile_data?: Json; message?: string | null; source_url?: string | null; status?: PlatformRequestStatus; converted_client_id?: string | null; reviewed_by?: string | null; reviewed_at?: string | null; rejection_reason?: string | null; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "platform_requests_converted_client_id_fkey"; columns: ["converted_client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
+        ]
+      }
       admin_support_sessions: {
         Row: SupportSessionRow
         Insert: never
@@ -183,6 +194,8 @@ export type Database = {
       }
     }
     Functions: {
+      approve_platform_request: { Args: { p_request_id: string }; Returns: { outcome: 'created_client' | 'existing_client'; client_id: string }[] }
+      reject_platform_request: { Args: { p_request_id: string; p_reason: string | null }; Returns: boolean }
       mark_message_read: { Args: { p_message_id: string }; Returns: undefined }
       create_invoice_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string }; Returns: { id: string; number: string }[] }
       create_billing_document_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string; p_document_type: string; p_accounting_area: string; p_billing_account_id: string | null; p_transfer_instructions: string | null }; Returns: { id: string; number: string }[] }
