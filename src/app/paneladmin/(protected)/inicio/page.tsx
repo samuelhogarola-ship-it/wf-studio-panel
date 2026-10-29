@@ -1,9 +1,11 @@
 import Link from 'next/link'
 
 import { FavoriteProjectCard } from '@/components/admin/favorite-project-card'
+import { ClientAccessNotifications } from '@/components/admin/client-access-notifications'
 import { AdminShell } from '@/components/layout/app-shell'
 import { requireAdmin } from '@/lib/auth'
 import { getAdminFavoriteProjects } from '@/lib/data/projects'
+import { getRecentClientAccessEvents } from '@/lib/data/admin'
 import { getLocale } from '@/lib/locale'
 
 export const dynamic = 'force-dynamic'
@@ -146,9 +148,10 @@ const PANELS: Panel[] = [
 
 export default async function LauncherPage() {
   const identity = await requireAdmin()
-  const [locale, favoriteProjects] = await Promise.all([
+  const [locale, favoriteProjects, accessEvents] = await Promise.all([
     getLocale(),
     getAdminFavoriteProjects(identity.userId),
+    getRecentClientAccessEvents(),
   ])
 
   return (
@@ -159,6 +162,7 @@ export default async function LauncherPage() {
       userEmail={identity.email}
       locale={locale}
     >
+      <ClientAccessNotifications events={accessEvents} />
       <section aria-labelledby="favorite-projects-title" className="mb-8">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>

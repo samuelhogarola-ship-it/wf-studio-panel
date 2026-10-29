@@ -353,3 +353,20 @@ export const getAdminMessagesPageData = cache(async () => {
 
   return { clients: clients ?? [], messages: messages ?? [] }
 })
+
+export const getRecentClientAccessEvents = cache(async (limit = 10) => {
+  const supabase = await createSupabaseServerClient()
+  const { data } = await supabase
+    .from('client_access_events')
+    .select('client_id, event_type, created_at, clients!inner(name, project)')
+    .eq('clients.project', 'wf-studio')
+    .order('created_at', { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 25))
+
+  return (data ?? []).map((event) => ({
+    clientId: event.client_id,
+    clientName: Array.isArray(event.clients) ? event.clients[0]?.name ?? 'Cliente' : event.clients?.name ?? 'Cliente',
+    eventType: event.event_type,
+    createdAt: event.created_at,
+  }))
+})
