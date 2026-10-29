@@ -79,6 +79,64 @@ test('inbox search is normalized and a foreign selected request never leaks into
   assert.equal(result.selectedRequest, null)
 })
 
+test('selected detail remains available after resolution even when the list is filtered to pending', async () => {
+  const approved = {
+    ...requestA,
+    status: 'approved',
+    converted_client_id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+    reviewed_at: '2026-10-29T13:00:00Z',
+  }
+  const db = database({ platform_requests: [approved, requestB] })
+  const auth = boundary(db)
+  const { getPlatformRequestInbox } = loadProjectModule('src/lib/platform-requests/admin.ts', auth.mocks)
+
+  const result = await getPlatformRequestInbox({
+    platforms: ['vivir-fuengirola'],
+    status: 'pending',
+    selectedId: approved.id,
+  })
+
+  assert.equal(result.requests.length, 0)
+  assert.equal(result.selectedRequest?.id, approved.id)
+  assert.equal(result.selectedRequest?.status, 'approved')
+})
+
+test('inbox paginates in the database and pushes normalized search into PostgREST', async () => {
+  const rows = Array.from({ length: 55 }, (_, index) => ({
+    ...requestA,
+    id: `${String(index).padStart(8, '0')}-aaaa-4aaa-8aaa-aaaaaaaaaaaa`,
+    name: index === 52 ? 'Búsqueda remota' : `Solicitud ${String(index).padStart(2, '0')}`,
+    email: `request-${index}@example.com`,
+    created_at: `2026-10-${String((index % 28) + 1).padStart(2, '0')}T10:00:00Z`,
+  }))
+  const db = database({ platform_requests: rows })
+  const auth = boundary(db)
+  const { getPlatformRequestInbox } = loadProjectModule('src/lib/platform-requests/admin.ts', auth.mocks)
+
+  const page = await getPlatformRequestInbox({ platforms: ['vivir-fuengirola'], status: 'pending', page: 2, pageSize: 20 })
+  assert.equal(page.requests.length, 20)
+  assert.equal(page.page, 2)
+  assert.equal(page.pageSize, 20)
+  assert.equal(page.total, 55)
+  assert.deepEqual(db.calls[0].range, [20, 39])
+
+  const searched = await getPlatformRequestInbox({ platforms: ['vivir-fuengirola'], query: '  BÚSQUEDA REMOTA  ' })
+  assert.deepEqual(searched.requests.map((item) => item.name), ['Búsqueda remota'])
+  assert.match(db.calls.find((call) => call.orFilter)?.orFilter ?? '', /name\.ilike/)
+})
+
+test('the shared admin client detail accepts every supported platform client', async () => {
+  for (const project of ['vivir-fuengirola', 'vivir-fuengirola-negocios', 'conoce-fuengirola']) {
+    const platformClient = { ...requestA, id: requestA.id, project, status: 'active' }
+    const db = database({ clients: [platformClient], profiles: [], packs: [], activities: [], pending_items: [], messages: [], services: [], invoices: [], expenses: [] })
+    const auth = boundary(db)
+    const { getAdminClientDetailPageData } = loadProjectModule('src/lib/data/admin.ts', auth.mocks)
+    const result = await getAdminClientDetailPageData(platformClient.id)
+    assert.equal(result.client?.project, project)
+    assert.equal(result.accessStatus.status, 'missing')
+  }
+})
+
 test('pending counts are returned independently for all three platform namespaces', async () => {
   const db = database({ platform_requests: [requestA, requestB, requestC, { ...requestC, id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', status: 'approved' }] })
   const auth = boundary(db)

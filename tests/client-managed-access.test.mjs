@@ -37,6 +37,9 @@ test('resolve marks missing access, exact client access, and unsafe records lite
   assert.deepEqual(resolveManagedAccess({ client: { ...client, project: 'other' }, profile: null }), {
     status: 'blocked', reason: 'wrong-project',
   })
+  for (const project of ['vivir-fuengirola', 'vivir-fuengirola-negocios', 'conoce-fuengirola']) {
+    assert.deepEqual(resolveManagedAccess({ client: { ...client, project }, profile: null }), { status: 'missing' })
+  }
   assert.deepEqual(resolveManagedAccess({ client, profile: { id: 'admin-id', email: client.email, role: 'admin' } }), {
     status: 'blocked', reason: 'admin-profile',
   })

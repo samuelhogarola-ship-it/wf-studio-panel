@@ -17,7 +17,7 @@ declare module '@/lib/platform-requests/public-api.mjs' {
   export function handlePlatformRequestPost(request: Request, options?: {
     env?: NodeJS.ProcessEnv
     fetchImpl?: typeof fetch
-    verifyToken?: (token: string, remoteIp: string | null, secret: string) => Promise<{ success: boolean; hostname?: string }>
+    verifyToken?: (token: string, remoteIp: string | null, secret: string, idempotencyKey: string) => Promise<{ success: boolean; hostname?: string }>
     createRequest?: (payload: PlatformRequestInsert) => Promise<'created' | 'existing'>
   }): Promise<Response>
   export function persistPlatformRequest(supabase: unknown, payload: PlatformRequestInsert): Promise<'created' | 'existing'>

@@ -96,11 +96,12 @@ function validProfile(value) {
   return new TextEncoder().encode(JSON.stringify(value)).byteLength <= PROFILE_LIMIT_BYTES
 }
 
-async function verifyTurnstileToken(token, remoteIp, secret, fetchImpl = fetch) {
+async function verifyTurnstileToken(token, remoteIp, secret, idempotencyKey, fetchImpl = fetch) {
   const formData = new FormData()
   formData.append('secret', secret)
   formData.append('response', token)
   if (remoteIp) formData.append('remoteip', remoteIp)
+  formData.append('idempotency_key', idempotencyKey)
   const response = await fetchImpl('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',
     body: formData,
@@ -110,6 +111,35 @@ async function verifyTurnstileToken(token, remoteIp, secret, fetchImpl = fetch) 
   if (!response.ok) return { success: false }
   const payload = await response.json()
   return { success: Boolean(payload.success), hostname: typeof payload.hostname === 'string' ? payload.hostname : undefined }
+}
+
+function turnstileIdempotencyKey(token, requestFingerprint) {
+  const bytes = Buffer.from(createHash('sha256').update(`${token}|${requestFingerprint}`).digest('hex').slice(0, 32), 'hex')
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = bytes.toString('hex')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
+async function readBoundedBody(request) {
+  if (!request.body) return { text: '', oversized: false }
+  const reader = request.body.getReader()
+  const decoder = new TextDecoder()
+  let text = ''
+  let size = 0
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > BODY_LIMIT_BYTES) {
+      await reader.cancel('platform_request_body_too_large')
+      return { text: '', oversized: true }
+    }
+    text += decoder.decode(value, { stream: true })
+  }
+  text += decoder.decode()
+  return { text, oversized: false }
 }
 
 function fingerprint(platform, requestType, email) {
@@ -134,7 +164,7 @@ export async function handlePlatformRequestConfigGet(request, { env = process.en
 export async function handlePlatformRequestPost(request, {
   env = process.env,
   fetchImpl = fetch,
-  verifyToken = (token, remoteIp, secret) => verifyTurnstileToken(token, remoteIp, secret, fetchImpl),
+  verifyToken = (token, remoteIp, secret, idempotencyKey) => verifyTurnstileToken(token, remoteIp, secret, idempotencyKey, fetchImpl),
   createRequest,
 } = {}) {
   const origin = requestOrigin(request, env)
@@ -146,11 +176,11 @@ export async function handlePlatformRequestPost(request, {
   }
 
   try {
-    const text = await request.text()
-    if (new TextEncoder().encode(text).byteLength > BODY_LIMIT_BYTES) {
+    const body = await readBoundedBody(request)
+    if (body.oversized) {
       return json({ success: false, error: 'invalid_payload' }, 400, origin, methods)
     }
-    const parsed = payloadSchema.safeParse(JSON.parse(text))
+    const parsed = payloadSchema.safeParse(JSON.parse(body.text))
     if (!parsed.success || !validProfile(parsed.data.profile)) {
       return json({ success: false, error: 'invalid_payload' }, 400, origin, methods)
     }
@@ -165,9 +195,15 @@ export async function handlePlatformRequestPost(request, {
     }
     if (data.website) return json({ success: true, outcome: 'created' }, 201, origin, methods)
 
+    const requestFingerprint = fingerprint(data.platform, data.requestType, data.email)
     if (config.state === 'enabled') {
       if (!data.token) return json({ success: false, error: 'invalid_payload' }, 400, origin, methods)
-      const verification = await verifyToken(data.token, request.headers.get('x-forwarded-for'), config.secret)
+      const verification = await verifyToken(
+        data.token,
+        request.headers.get('x-forwarded-for'),
+        config.secret,
+        turnstileIdempotencyKey(data.token, requestFingerprint),
+      )
       if (!verification.success || verification.hostname !== new URL(origin).hostname) {
         return json({ success: false, error: 'turnstile_failed' }, 400, origin, methods)
       }
@@ -184,7 +220,7 @@ export async function handlePlatformRequestPost(request, {
       message: data.message,
       profile_data: data.profile,
       source_url: data.sourceUrl,
-      fingerprint: fingerprint(data.platform, data.requestType, data.email),
+      fingerprint: requestFingerprint,
     })
     if (outcome === 'existing') return json({ success: true, outcome }, 200, origin, methods)
     if (outcome !== 'created') throw new Error('platform_request_invalid_outcome')

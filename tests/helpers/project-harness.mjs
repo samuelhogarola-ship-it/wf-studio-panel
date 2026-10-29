@@ -81,10 +81,17 @@ export function database(seed = {}, failures = {}, { beforeExecute, rpcs = {} } 
       neq(key, value) { call.filters.push(row => row[key] !== value); return query; },
       is(key, value) { call.filters.push(row => row[key] === value); return query; },
       ilike(key, value) { call.filters.push(row => row[key]?.toLowerCase() === value.toLowerCase()); return query; },
+      or(value) {
+        call.orFilter = value;
+        const clauses = [...String(value).matchAll(/(name|email|company|phone)\.ilike\."%((?:\\.|[^"])*)%"/g)]
+          .map((match) => [match[1], match[2].replaceAll('\\"', '"').replaceAll('\\\\', '\\').toLowerCase()]);
+        call.filters.push(row => clauses.some(([key, needle]) => String(row[key] ?? '').toLowerCase().includes(needle)));
+        return query;
+      },
       in(key, values) { call.filters.push(row => values.includes(row[key])); return query; },
       order(key, options) { ordering = [key, options?.ascending !== false]; return query; },
       limit(value) { limit = value; return query; },
-      range(from, to) { range = [from, to]; return query; },
+      range(from, to) { range = [from, to]; call.range = range; return query; },
       maybeSingle() { single = true; return query; },
       single() { single = true; return query; },
       insert(payload) { call.operation = 'insert'; call.payload = payload; return query; },

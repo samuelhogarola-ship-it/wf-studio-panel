@@ -36,7 +36,7 @@ const TYPE_LABELS: Record<string, string> = {
 export default async function AdminPacksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ edit?: string; tab?: string; new?: string; client?: string }>
+  searchParams: Promise<{ edit?: string; tab?: string; new?: string; client?: string; type?: string }>
 }) {
   const identity = await requireAdmin()
   const params = await searchParams
@@ -57,7 +57,8 @@ export default async function AdminPacksPage({
   const tabQuery = tab === 'horas' ? '' : `?tab=${tab}`
   const newLabel = tab === 'horas' ? 'Nuevo bono' : tab === 'dominios' ? 'Nuevo dominio' : tab === 'hosting' ? 'Nuevo hosting' : 'Nuevo pack'
   const formTitle = params.edit ? 'Editar' : tab === 'horas' ? 'Nuevo bono de horas' : tab === 'dominios' ? 'Nuevo dominio' : tab === 'hosting' ? 'Nuevo hosting' : 'Nuevo pack o servicio'
-  const defaultPackType = tab === 'dominios' ? 'domain' : tab === 'hosting' ? 'hosting' : tab === 'packs' ? 'tasks' : 'hours'
+  const requestedPackType = ['tasks', 'service', 'subscription', 'membership'].includes(params.type ?? '') ? params.type : undefined
+  const defaultPackType = tab === 'dominios' ? 'domain' : tab === 'hosting' ? 'hosting' : tab === 'packs' ? requestedPackType ?? 'tasks' : 'hours'
 
   return (
     <AdminShell

@@ -152,6 +152,30 @@ test('profile must be a bounded object and the whole body is capped at 32 KiB', 
   assert.equal((await response.json()).error, 'invalid_payload')
 })
 
+test('oversized streaming bodies stop reading and cancel at the 32 KiB boundary', async () => {
+  let pulls = 0
+  let cancelled = false
+  const body = new ReadableStream({
+    pull(controller) {
+      pulls += 1
+      controller.enqueue(new TextEncoder().encode('x'.repeat(20_000)))
+      if (pulls >= 10) controller.close()
+    },
+    cancel() { cancelled = true },
+  })
+  const streamingRequest = new Request('https://admin.webfuengirola.com/api/platform-requests', {
+    method: 'POST',
+    headers: { origin: 'https://vivirenfuengirola.com', 'content-type': 'application/json' },
+    body,
+    duplex: 'half',
+  })
+  const response = await handlePlatformRequestPost(streamingRequest, acceptingOptions())
+  assert.equal(response.status, 400)
+  assert.equal((await response.json()).error, 'invalid_payload')
+  assert.ok(pulls < 10)
+  assert.equal(cancelled, true)
+})
+
 test('honeypot mimics a successful creation without writing', async () => {
   let writes = 0
   const response = await handlePlatformRequestPost(request('POST', { ...validPayload, website: 'spam' }), acceptingOptions({
@@ -203,6 +227,39 @@ test('Turnstile token and verified hostname must match the allowed request origi
   }))
   assert.equal(wrongHost.status, 400)
   assert.deepEqual(await wrongHost.json(), { success: false, error: 'turnstile_failed' })
+})
+
+test('production retries use one stable Turnstile idempotency key and can reach existing persistence', async () => {
+  const env = {
+    NODE_ENV: 'production',
+    NEXT_PUBLIC_TURNSTILE_SITE_KEY: 'public-key',
+    TURNSTILE_SECRET_KEY: 'private-secret',
+  }
+  const verified = new Map()
+  const keys = []
+  const verifyToken = async (token, _ip, _secret, idempotencyKey) => {
+    keys.push(idempotencyKey)
+    if (!idempotencyKey) return { success: false }
+    const prior = verified.get(token)
+    if (prior && prior !== idempotencyKey) return { success: false }
+    verified.set(token, idempotencyKey)
+    return { success: true, hostname: 'vivirenfuengirola.com' }
+  }
+  let writes = 0
+  const options = acceptingOptions({
+    env,
+    verifyToken,
+    createRequest: async () => (++writes === 1 ? 'created' : 'existing'),
+  })
+  const payload = { ...validPayload, token: 'single-use-token' }
+  const first = await handlePlatformRequestPost(request('POST', payload), options)
+  const retry = await handlePlatformRequestPost(request('POST', payload), options)
+  assert.equal(first.status, 201)
+  assert.equal(retry.status, 200)
+  assert.deepEqual(await retry.json(), { success: true, outcome: 'existing' })
+  assert.equal(keys.length, 2)
+  assert.equal(keys[0], keys[1])
+  assert.match(keys[0], /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
 })
 
 test('default Turnstile verification uses a bounded abort signal', async () => {

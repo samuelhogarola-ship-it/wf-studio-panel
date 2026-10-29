@@ -97,6 +97,55 @@ test('request detail replaces the table, escapes profile data and exposes review
   assert.match(pendingHtml, /name="reason"/)
 })
 
+test('resolved detail keeps a durable outcome, audit reason and subscription preparation action', () => {
+  const { PlatformRequestInbox } = loadProjectModule('src/components/admin/platform-request-inbox.tsx', actionMocks)
+  const clientId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  const approved = {
+    ...request,
+    request_type: 'subscription_interest',
+    status: 'approved',
+    converted_client_id: clientId,
+    reviewed_at: '2026-10-29T13:00:00Z',
+  }
+  const approvedHtml = renderToStaticMarkup(React.createElement(PlatformRequestInbox, {
+    scope: 'vivir-clients', data: { requests: [], selectedRequest: approved }, query: '', status: 'pending', page: 1,
+  }))
+  assert.match(approvedHtml, /Solicitud aprobada/)
+  assert.match(approvedHtml, new RegExp(`/paneladmin/bonos\\?new=1&amp;tab=packs&amp;type=subscription&amp;client=${clientId}`))
+
+  const rejected = { ...request, status: 'rejected', reviewed_at: '2026-10-29T14:00:00Z', rejection_reason: 'Ficha incompleta' }
+  const rejectedHtml = renderToStaticMarkup(React.createElement(PlatformRequestInbox, {
+    scope: 'vivir-clients', data: { requests: [], selectedRequest: rejected }, query: '', status: 'pending', page: 1,
+  }))
+  assert.match(rejectedHtml, /Solicitud rechazada/)
+  assert.match(rejectedHtml, /Ficha incompleta/)
+  assert.match(rejectedHtml, /29\/10\/2026/)
+})
+
+test('inbox renders canonical pagination links', () => {
+  const { PlatformRequestInbox } = loadProjectModule('src/components/admin/platform-request-inbox.tsx', actionMocks)
+  const html = renderToStaticMarkup(React.createElement(PlatformRequestInbox, {
+    scope: 'vivir-businesses',
+    data: { requests: [request], selectedRequest: null, page: 2, pageSize: 20, total: 61 },
+    query: 'Ada', status: 'pending', page: 2,
+  }))
+  assert.match(html, /scope=businesses&amp;q=Ada&amp;status=pending&amp;page=1/)
+  assert.match(html, /scope=businesses&amp;q=Ada&amp;status=pending&amp;page=3/)
+})
+
+test('bonuses route can preselect a subscription for the converted client', async () => {
+  let receivedProps
+  const Page = loadProjectModule('src/app/paneladmin/(protected)/bonos/page.tsx', {
+    '@/lib/auth': { requireAdmin: async () => ({ email: 'admin@example.com' }) },
+    '@/lib/data/admin': { getAdminPacksPageData: async () => ({ clients: [], packs: [], packSummaries: [], editingPack: null }) },
+    '@/lib/locale': { getLocale: async () => 'es' },
+    '@/components/admin/pack-form': { PackForm: (props) => { receivedProps = props; return null } },
+  }).default
+  renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ new: '1', tab: 'packs', type: 'subscription', client: request.id }) }))
+  assert.equal(receivedProps.defaultPackType, 'subscription')
+  assert.equal(receivedProps.defaultClientId, request.id)
+})
+
 test('Vivir and Conoce pages request only their allowed platform namespace', async () => {
   const calls = []
   const mocks = {
