@@ -9,10 +9,15 @@ import { sendActivityNotificationEmail, sendPackDepletedEmail, sendPackStartedEm
 import { getSupabaseAdminClient } from '@/lib/supabase/admin'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createClientWithPassword } from '@/lib/clients/direct-create.mjs'
+import { generateTemporaryPassword, resolveManagedAccess } from '@/lib/clients/managed-access.mjs'
 
 export type AdminFormState = {
   error?: string
   success?: string
+}
+
+export type ManagedAccessState = AdminFormState & {
+  generatedPassword?: string
 }
 
 const PROJECT_VALUES = ['wf-studio', 'vivir-fuengirola', 'vivir-fuengirola-negocios', 'conoce-fuengirola'] as const
@@ -473,6 +478,69 @@ export async function createClientDirectAction(_prevState: AdminFormState, formD
 
   revalidateProjectClientViews(project)
   return result
+}
+
+export async function provisionOrResetClientAccessAction(
+  _prevState: ManagedAccessState,
+  formData: FormData,
+): Promise<ManagedAccessState> {
+  await requireAdmin()
+  const parsedId = z.string().uuid().safeParse(formData.get('client_id'))
+  if (!parsedId.success) return { error: 'Cliente inválido.' }
+
+  const supabase = await createSupabaseServerClient()
+  const { data: client } = await supabase
+    .from('clients')
+    .select('id, email, status, project')
+    .eq('id', parsedId.data)
+    .maybeSingle()
+
+  if (!client) return { error: 'No se encontró el cliente.' }
+
+  const normalizedEmail = client.email.trim().toLowerCase()
+  const [{ data: profileByClientId }, { data: profileByEmail }] = await Promise.all([
+    supabase.from('profiles').select('id, email, role').eq('id', client.id).maybeSingle(),
+    supabase.from('profiles').select('id, email, role').ilike('email', normalizedEmail).maybeSingle(),
+  ])
+
+  if (profileByClientId && profileByEmail && profileByClientId.id !== profileByEmail.id) {
+    return { error: 'Hay dos accesos relacionados con este cliente. Debes revisar la identidad por seguridad.' }
+  }
+
+  const resolution = resolveManagedAccess({ client, profile: profileByClientId ?? profileByEmail ?? null })
+  if (resolution.status === 'blocked') {
+    return { error: 'El acceso no se puede modificar automáticamente; debes revisar la identidad por seguridad.' }
+  }
+
+  const generatedPassword = generateTemporaryPassword()
+  const adminClient = getSupabaseAdminClient()
+
+  if (resolution.status === 'missing') {
+    const { data, error } = await adminClient.auth.admin.createUser({
+      email: normalizedEmail,
+      password: generatedPassword,
+      email_confirm: true,
+    })
+    if (error || !data.user) {
+      const duplicate = error?.message?.toLowerCase().includes('already')
+      return {
+        error: duplicate
+          ? 'Ya existe una cuenta Auth con ese email; debes revisar la identidad antes de continuar.'
+          : 'No se pudo crear el acceso del cliente.',
+      }
+    }
+
+    revalidatePath(`/paneladmin/clientes/${client.id}`)
+    return { success: 'Acceso creado correctamente.', generatedPassword }
+  }
+
+  const { error } = await adminClient.auth.admin.updateUserById(resolution.authUserId, {
+    password: generatedPassword,
+  })
+  if (error) return { error: 'No se pudo generar la nueva contraseña.' }
+
+  revalidatePath(`/paneladmin/clientes/${client.id}`)
+  return { success: 'Nueva contraseña generada correctamente.', generatedPassword }
 }
 
 const serviceSchema = z.object({
