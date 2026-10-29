@@ -1,10 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
 import { useActionState } from 'react'
 
-import { upsertClientAction, createClientDirectAction, type AdminFormState } from '@/lib/actions/admin'
+import { upsertClientAction, createClientDirectAction, type AdminFormState, type ManagedAccessState } from '@/lib/actions/admin'
 import { type Locale, t } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -23,11 +22,14 @@ type EditingClient = {
 } | null
 
 const initialState: AdminFormState = {}
+const initialAccessState: ManagedAccessState = {}
 
 export function ClientForm({ editingClient, locale, project = 'wf-studio' }: { editingClient: EditingClient; locale: Locale; project?: string }) {
-  const [state, action, pending] = useActionState(upsertClientAction, initialState)
-  const [directState, directAction, directPending] = useActionState(createClientDirectAction, initialState)
-  const [showDirect, setShowDirect] = useState(false)
+  const [editState, editAction, editPending] = useActionState(upsertClientAction, initialState)
+  const [createState, createAction, createPending] = useActionState(createClientDirectAction, initialAccessState)
+  const state = editingClient ? editState : createState
+  const action = editingClient ? editAction : createAction
+  const pending = editingClient ? editPending : createPending
 
   return (
     <div className="grid gap-4">
@@ -35,6 +37,7 @@ export function ClientForm({ editingClient, locale, project = 'wf-studio' }: { e
         <div className="mb-5">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{editingClient ? t(locale, 'clientForm.eyebrow.edit') : t(locale, 'clientForm.eyebrow.new')}</p>
           <h2 className="mt-2 text-xl font-bold text-foreground">{editingClient ? editingClient.name : t(locale, 'clientForm.title.new')}</h2>
+          {!editingClient ? <p className="mt-2 text-sm text-muted">Al crear el cliente se generará automáticamente su acceso inicial.</p> : null}
         </div>
         <form action={action} className="grid gap-4 md:grid-cols-2">
           <input type="hidden" name="id" value={editingClient?.id ?? ''} />
@@ -65,60 +68,26 @@ export function ClientForm({ editingClient, locale, project = 'wf-studio' }: { e
           <div className="md:col-span-2">
             <FormMessage error={state.error} success={state.success} />
           </div>
+          {!editingClient && createState.generatedPassword ? (
+            <div className="md:col-span-2 rounded-2xl border border-amber-300 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-950">Contraseña inicial — se muestra una sola vez</p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <Input aria-label="Contraseña inicial" value={createState.generatedPassword} readOnly />
+                <Button type="button" variant="secondary" onClick={() => navigator.clipboard.writeText(createState.generatedPassword!)}>Copiar</Button>
+              </div>
+              <p className="mt-2 text-xs text-amber-800">Cópiala ahora. Al recargar esta página dejará de estar disponible.</p>
+            </div>
+          ) : null}
           <div className="md:col-span-2 flex flex-wrap gap-3">
             <Button type="submit" disabled={pending}>
               {pending ? t(locale, 'clientForm.submitting') : editingClient ? t(locale, 'clientForm.submit.edit') : t(locale, 'clientForm.submit.new')}
             </Button>
             {editingClient ? (
-              <Link href="/paneladmin/clientes" className="inline-flex items-center rounded-full bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700">
-                {t(locale, 'clientForm.cancel')}
-              </Link>
+              <Link href="/paneladmin/clientes" className="inline-flex items-center rounded-full bg-slate-100 px-5 py-3 text-sm font-semibold text-slate-700">{t(locale, 'clientForm.cancel')}</Link>
             ) : null}
           </div>
         </form>
       </Card>
-
-      {!editingClient && (
-        <Card className="p-6">
-          <button
-            type="button"
-            onClick={() => setShowDirect(!showDirect)}
-            className="flex w-full items-center justify-between text-left"
-          >
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">Acceso directo</p>
-              <p className="mt-1 text-sm font-semibold text-foreground">Crear cliente con contraseña</p>
-            </div>
-            <span className="text-muted text-lg">{showDirect ? '−' : '+'}</span>
-          </button>
-
-          {showDirect && (
-            <form action={directAction} className="mt-5 grid gap-4 md:grid-cols-2">
-              <input type="hidden" name="project" value={project} />
-              <div>
-                <Label htmlFor="direct-name">Nombre</Label>
-                <Input id="direct-name" name="name" required />
-              </div>
-              <div>
-                <Label htmlFor="direct-email">Email</Label>
-                <Input id="direct-email" name="email" type="email" required />
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="direct-password">Contraseña temporal</Label>
-                <Input id="direct-password" name="password" type="password" minLength={6} required placeholder="Mínimo 6 caracteres" />
-              </div>
-              <div className="md:col-span-2">
-                <FormMessage error={directState.error} success={directState.success} />
-              </div>
-              <div className="md:col-span-2">
-                <Button type="submit" disabled={directPending}>
-                  {directPending ? 'Creando...' : 'Crear cliente con contraseña'}
-                </Button>
-              </div>
-            </form>
-          )}
-        </Card>
-      )}
     </div>
   )
 }

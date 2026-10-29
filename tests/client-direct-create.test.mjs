@@ -22,27 +22,33 @@ function setup(overrides = {}) {
   return { calls, dependencies }
 }
 
-test('direct client creation normalizes email and creates matching auth and client records', async () => {
+test('direct client creation generates the password and preserves the complete client record', async () => {
   const { calls, dependencies } = setup()
 
   const result = await createClientWithPassword({
     name: 'Cliente Demo',
     email: ' Demo@Example.COM ',
-    password: 'temporary-secret',
+    company: 'EPU SL',
+    phone: '+34 600 000 000',
+    status: 'inactive',
     project: 'vivir-fuengirola-negocios',
+    generatePassword: () => 'GENERATED-PASSWORD-123',
     ...dependencies,
   })
 
-  assert.deepEqual(calls.auth, [{ email: 'demo@example.com', password: 'temporary-secret' }])
+  assert.deepEqual(calls.auth, [{ email: 'demo@example.com', password: 'GENERATED-PASSWORD-123' }])
   assert.deepEqual(calls.clients, [{
     id: 'auth-user-1',
     name: 'Cliente Demo',
     email: 'demo@example.com',
-    status: 'active',
+    company: 'EPU SL',
+    phone: '+34 600 000 000',
+    status: 'inactive',
     project: 'vivir-fuengirola-negocios',
   }])
   assert.deepEqual(calls.deleted, [])
-  assert.equal(result.success, 'Cliente Cliente Demo creado correctamente. Ya puede acceder con su contraseña.')
+  assert.equal(result.success, 'Cliente Cliente Demo creado correctamente.')
+  assert.equal(result.generatedPassword, 'GENERATED-PASSWORD-123')
 })
 
 test('direct client creation translates duplicate auth accounts without inserting a client', async () => {
@@ -51,7 +57,7 @@ test('direct client creation translates duplicate auth accounts without insertin
   })
 
   const result = await createClientWithPassword({
-    name: 'Cliente Demo', email: 'demo@example.com', password: 'temporary-secret', project: 'wf-studio', ...dependencies,
+    name: 'Cliente Demo', email: 'demo@example.com', project: 'wf-studio', generatePassword: () => 'temporary-secret', ...dependencies,
   })
 
   assert.equal(result.error, 'Ya existe una cuenta con ese email.')
@@ -64,7 +70,7 @@ test('direct client creation does not expose unexpected auth errors', async () =
   })
 
   const result = await createClientWithPassword({
-    name: 'Cliente Demo', email: 'demo@example.com', password: 'temporary-secret', project: 'wf-studio', ...dependencies,
+    name: 'Cliente Demo', email: 'demo@example.com', project: 'wf-studio', generatePassword: () => 'temporary-secret', ...dependencies,
   })
 
   assert.equal(result.error, 'No se pudo crear el acceso del cliente.')
@@ -76,7 +82,7 @@ test('direct client creation removes the auth user when the client insert fails'
   })
 
   const result = await createClientWithPassword({
-    name: 'Cliente Demo', email: 'demo@example.com', password: 'temporary-secret', project: 'wf-studio', ...dependencies,
+    name: 'Cliente Demo', email: 'demo@example.com', project: 'wf-studio', generatePassword: () => 'temporary-secret', ...dependencies,
   })
 
   assert.deepEqual(calls.deleted, ['auth-user-1'])
@@ -90,7 +96,7 @@ test('direct client creation preserves the primary error when auth cleanup fails
   })
 
   const result = await createClientWithPassword({
-    name: 'Cliente Demo', email: 'demo@example.com', password: 'temporary-secret', project: 'wf-studio', ...dependencies,
+    name: 'Cliente Demo', email: 'demo@example.com', project: 'wf-studio', generatePassword: () => 'temporary-secret', ...dependencies,
   })
 
   assert.equal(result.error, 'No se pudo crear el cliente.')

@@ -10,14 +10,18 @@ function isDuplicateClientError(message) {
 
 export async function createClientWithPassword({
   name,
+  company,
   email,
-  password,
+  phone,
+  status = 'active',
   project,
+  generatePassword,
   createAuthUser,
   insertClient,
   deleteAuthUser,
 }) {
   const normalizedEmail = email.trim().toLowerCase()
+  const password = generatePassword()
   const { userId, error: authError } = await createAuthUser({ email: normalizedEmail, password })
 
   if (authError || !userId) {
@@ -31,8 +35,10 @@ export async function createClientWithPassword({
   const { error: clientError } = await insertClient({
     id: userId,
     name,
+    company: company || null,
     email: normalizedEmail,
-    status: 'active',
+    phone: phone || null,
+    status,
     project,
   })
 
@@ -50,5 +56,5 @@ export async function createClientWithPassword({
     }
   }
 
-  return { success: `Cliente ${name} creado correctamente. Ya puede acceder con su contraseña.` }
+  return { success: `Cliente ${name} creado correctamente.`, generatedPassword: password }
 }
