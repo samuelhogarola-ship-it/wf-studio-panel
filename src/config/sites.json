@@ -12,7 +12,324 @@
     "analytics": {
       "source": "personal",
       "envSuffix": "WEBFUENGIROLA",
-      "legacyDashboard": true
+      "legacyDashboard": true,
+      "profile": {
+        "schemaVersion": 1,
+        "languages": [
+          {
+            "key": "es",
+            "label": "Español",
+            "routes": {
+              "exact": [
+                "/",
+                "/mexico",
+                "/usa/es"
+              ],
+              "prefixes": [
+                "/blog/",
+                "/casos/",
+                "/servicios/",
+                "/web-solidaria/",
+                "/diseno-web-fuengirola/",
+                "/diseno-web-malaga/",
+                "/web-para-clinicas-fuengirola/",
+                "/web-para-entrenadores-personales-fuengirola/",
+                "/web-para-fisioterapeutas-fuengirola/",
+                "/web-para-gimnasios-fuengirola/",
+                "/web-para-negocios-locales-fuengirola/",
+                "/web-para-restaurantes-fuengirola/",
+                "/web-multidioma-fuengirola/",
+                "/aplicaciones-web-fuengirola/",
+                "/automatizacion-ia-fuengirola/",
+                "/publicidad-ia-fuengirola/",
+                "/publicidad-ia-malaga/",
+                "/seo-local-fuengirola/",
+                "/seo-local-malaga/",
+                "/precios-diseno-web-fuengirola/",
+                "/auditoria-web-gratis/",
+                "/contacto/",
+                "/sobre-nosotros/",
+                "/como-trabajamos/",
+                "/mexico/",
+                "/usa/es/"
+              ]
+            }
+          },
+          {
+            "key": "en",
+            "label": "English",
+            "routes": {
+              "exact": [
+                "/en",
+                "/mexico/en",
+                "/usa"
+              ],
+              "prefixes": [
+                "/en/",
+                "/mexico/en/",
+                "/usa/"
+              ]
+            }
+          },
+          {
+            "key": "de",
+            "label": "Deutsch",
+            "routes": {
+              "exact": [
+                "/de"
+              ],
+              "prefixes": [
+                "/de/"
+              ]
+            }
+          },
+          {
+            "key": "fi",
+            "label": "Suomi",
+            "routes": {
+              "exact": [
+                "/fi"
+              ],
+              "prefixes": [
+                "/fi/"
+              ]
+            }
+          }
+        ],
+        "sections": [
+          {
+            "key": "home",
+            "label": "Inicio",
+            "routes": {
+              "exact": [
+                "/",
+                "/en",
+                "/de",
+                "/fi",
+                "/mexico",
+                "/mexico/en",
+                "/usa",
+                "/usa/es",
+                "/brasil"
+              ],
+              "prefixes": []
+            }
+          },
+          {
+            "key": "services",
+            "label": "Servicios",
+            "routes": {
+              "exact": [],
+              "prefixes": [
+                "/servicios/",
+                "/diseno-web-fuengirola/",
+                "/diseno-web-malaga/",
+                "/web-para-clinicas-fuengirola/",
+                "/web-para-entrenadores-personales-fuengirola/",
+                "/web-para-fisioterapeutas-fuengirola/",
+                "/web-para-gimnasios-fuengirola/",
+                "/web-para-negocios-locales-fuengirola/",
+                "/web-para-restaurantes-fuengirola/",
+                "/web-multidioma-fuengirola/",
+                "/aplicaciones-web-fuengirola/",
+                "/automatizacion-ia-fuengirola/",
+                "/publicidad-ia-fuengirola/",
+                "/publicidad-ia-malaga/",
+                "/seo-local-fuengirola/",
+                "/seo-local-malaga/",
+                "/precios-diseno-web-fuengirola/",
+                "/auditoria-web-gratis/",
+                "/en/web-applications-fuengirola/",
+                "/en/local-seo-fuengirola/",
+                "/en/multilingual-websites-fuengirola/",
+                "/en/web-design-fuengirola/",
+                "/en/web-design-prices-fuengirola/",
+                "/en/web-design-atlanta/",
+                "/en/web-design-boston/",
+                "/en/web-design-chicago/",
+                "/en/web-design-denver/",
+                "/en/web-design-houston/",
+                "/en/web-design-los-angeles/",
+                "/en/web-design-miami/",
+                "/en/web-design-new-york/",
+                "/en/web-design-san-diego/",
+                "/en/web-design-san-francisco/",
+                "/en/web-design-washington-dc/",
+                "/en/websites-for-clinics-fuengirola/",
+                "/en/websites-for-gyms-fuengirola/",
+                "/en/websites-for-local-businesses-fuengirola/",
+                "/en/websites-for-personal-trainers-fuengirola/",
+                "/en/websites-for-physiotherapists-fuengirola/",
+                "/en/websites-for-restaurants-fuengirola/",
+                "/en/automation-ai-fuengirola/",
+                "/en/free-website-audit/",
+                "/de/web-anwendungen-fuengirola/",
+                "/de/lokales-seo-fuengirola/",
+                "/de/mehrsprachige-websites-fuengirola/",
+                "/de/webdesign-fuengirola/",
+                "/de/webdesign-preise-fuengirola/",
+                "/de/websites-fuer-fitnessstudios-fuengirola/",
+                "/de/websites-fuer-lokale-unternehmen-fuengirola/",
+                "/de/websites-fuer-personal-trainer-fuengirola/",
+                "/de/websites-fuer-physiotherapie-fuengirola/",
+                "/de/websites-fuer-praxen-fuengirola/",
+                "/de/websites-fuer-restaurants-fuengirola/",
+                "/de/automatisierung-ki-fuengirola/",
+                "/de/kostenlose-website-analyse/",
+                "/fi/verkkosovellukset-fuengirola/",
+                "/fi/paikallinen-seo-fuengirola/",
+                "/fi/monikieliset-verkkosivut-fuengirola/",
+                "/fi/verkkosivujen-hinnat-fuengirola/",
+                "/fi/verkkosivut-fuengirola/",
+                "/fi/verkkosivut-fysioterapeuteille-fuengirola/",
+                "/fi/verkkosivut-klinikoille-fuengirola/",
+                "/fi/verkkosivut-kuntosaleille-fuengirola/",
+                "/fi/verkkosivut-paikallisille-yrityksille-fuengirola/",
+                "/fi/verkkosivut-personal-trainereille-fuengirola/",
+                "/fi/verkkosivut-ravintoloille-fuengirola/",
+                "/fi/automaatio-tekoaly-fuengirola/",
+                "/fi/maksuton-verkkosivuanalyysi/"
+              ]
+            }
+          },
+          {
+            "key": "portfolio",
+            "label": "Portfolio",
+            "routes": {
+              "exact": [],
+              "prefixes": [
+                "/casos/",
+                "/en/case-studies/",
+                "/de/referenzen/",
+                "/fi/asiakastyot/"
+              ]
+            }
+          },
+          {
+            "key": "blog",
+            "label": "Blog",
+            "routes": {
+              "exact": [],
+              "prefixes": [
+                "/blog/",
+                "/en/blog/",
+                "/de/blog/",
+                "/fi/blog/"
+              ]
+            }
+          },
+          {
+            "key": "solidarity",
+            "label": "Web Solidaria",
+            "routes": {
+              "exact": [],
+              "prefixes": [
+                "/web-solidaria/"
+              ]
+            }
+          }
+        ],
+        "allowedEvents": [
+          {
+            "key": "language_switch",
+            "label": "Cambio de idioma",
+            "category": "commercial"
+          },
+          {
+            "key": "market_switch",
+            "label": "Cambio de mercado",
+            "category": "commercial"
+          },
+          {
+            "key": "tier_select",
+            "label": "Selección de plan",
+            "category": "commercial"
+          },
+          {
+            "key": "quote_click",
+            "label": "Clic en presupuesto",
+            "category": "commercial"
+          },
+          {
+            "key": "audit_click",
+            "label": "Clic en auditoría",
+            "category": "commercial"
+          },
+          {
+            "key": "whatsapp_click",
+            "label": "Clic en WhatsApp",
+            "category": "commercial"
+          },
+          {
+            "key": "blog_to_landing",
+            "label": "Blog hacia landing",
+            "category": "commercial"
+          },
+          {
+            "key": "email_click",
+            "label": "Clic en email",
+            "category": "commercial"
+          },
+          {
+            "key": "phone_click",
+            "label": "Clic en teléfono",
+            "category": "commercial"
+          },
+          {
+            "key": "form_start",
+            "label": "Inicio de formulario",
+            "category": "commercial"
+          },
+          {
+            "key": "form_submit",
+            "label": "Formulario enviado",
+            "category": "commercial"
+          },
+          {
+            "key": "form_error",
+            "label": "Error de formulario",
+            "category": "commercial"
+          },
+          {
+            "key": "audit_request",
+            "label": "Auditoría solicitada",
+            "category": "commercial"
+          },
+          {
+            "key": "engagement_15s",
+            "label": "Permanencia 15 s",
+            "category": "engagement"
+          },
+          {
+            "key": "engagement_30s",
+            "label": "Permanencia 30 s",
+            "category": "engagement"
+          },
+          {
+            "key": "engagement_60s",
+            "label": "Permanencia 60 s",
+            "category": "engagement"
+          },
+          {
+            "key": "engagement_120s",
+            "label": "Permanencia 120 s",
+            "category": "engagement"
+          }
+        ],
+        "allowedContextKeys": [
+          "market",
+          "sector",
+          "plan",
+          "currency",
+          "targetLanguage",
+          "targetSection",
+          "targetMarket",
+          "form"
+        ],
+        "excludedDestinations": [
+          "https://portal.webfuengirola.com"
+        ]
+      }
     },
     "blogger": {
       "enabled": false

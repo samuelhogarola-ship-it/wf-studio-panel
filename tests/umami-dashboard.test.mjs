@@ -25,6 +25,78 @@ import {
   normalizePeriod,
 } from '../src/lib/analytics/umami-dashboard.mjs'
 import * as analyticsDashboard from '../src/lib/analytics/umami-dashboard.mjs'
+import {
+  getAnalyticsDimensions,
+  resolveAnalyticsDrilldown,
+} from '../src/lib/analytics/analytics-profile.mjs'
+
+test('profile-driven analytics dimensions expose only reusable public options', () => {
+  const dimensions = getAnalyticsDimensions('webfuengirola')
+  assert.deepEqual(dimensions.contentLanguages.map(({ key }) => key), ['es', 'en', 'de', 'fi'])
+  assert.deepEqual(dimensions.sections.map(({ key }) => key), ['home', 'services', 'portfolio', 'blog', 'solidarity'])
+  assert.ok(dimensions.events.some(({ key }) => key === 'form_submit'))
+  assert.ok(dimensions.events.some(({ key }) => key === 'engagement_120s'))
+  assert.deepEqual(dimensions.devices.map(({ key }) => key), ['mobile', 'desktop', 'tablet', 'laptop'])
+  assert.deepEqual(getAnalyticsDimensions('superentrenador').sections, [])
+  assert.deepEqual(getAnalyticsDimensions('superentrenador').contentLanguages, [])
+  assert.deepEqual(getAnalyticsDimensions('superentrenador').events, [])
+})
+
+test('safe drilldowns compose market, section, language, device, source, and event filters', () => {
+  for (const market of ['all', 'spain', 'mexico', 'usa', 'brazil']) {
+    const drilldown = resolveAnalyticsDrilldown('webfuengirola', {
+      market,
+      section: 'blog',
+      contentLanguage: 'fi',
+      device: 'mobile',
+      referrer: 'google.com',
+      event: 'engagement_30s',
+    })
+    assert.equal(drilldown.selected.market.key, market)
+    assert.equal(drilldown.selected.section.key, 'blog')
+    assert.equal(drilldown.selected.contentLanguage.key, 'fi')
+    assert.equal(drilldown.selected.device.key, 'mobile')
+    assert.equal(drilldown.selected.referrer, 'google.com')
+    assert.equal(drilldown.selected.event.key, 'engagement_30s')
+    assert.equal(drilldown.filters.device, 'mobile')
+    assert.equal(drilldown.filters.referrer, 'google.com')
+    assert.equal(drilldown.filters.event, 'engagement_30s')
+    assert.equal(drilldown.filters.match, 'all')
+    const pathFilters = Object.entries(drilldown.filters).filter(([key]) => /^path\d*$/.test(key))
+    assert.equal(pathFilters.length >= (market === 'all' ? 2 : 3), true, market)
+    assert.equal(pathFilters.every(([, value]) => /^(?:n?re\.)\^/.test(value)), true)
+  }
+})
+
+test('tampered drilldown values fail closed and never become regex or registry selectors', () => {
+  const drilldown = resolveAnalyticsDrilldown('webfuengirola', {
+    market: 're.*',
+    section: '.*',
+    contentLanguage: 'fi|en',
+    device: 'mobile|desktop',
+    referrer: 're.^evil',
+    event: 'form_submit.*',
+  })
+  assert.equal(drilldown.selected.market.key, 'all')
+  assert.equal(drilldown.selected.section, null)
+  assert.equal(drilldown.selected.contentLanguage, null)
+  assert.equal(drilldown.selected.device, null)
+  assert.equal(drilldown.selected.referrer, '')
+  assert.equal(drilldown.selected.event, null)
+  assert.deepEqual(drilldown.filters, {})
+
+  const unprofiled = resolveAnalyticsDrilldown('superentrenador', {
+    section: 'blog',
+    contentLanguage: 'fi',
+    event: 'form_submit',
+    device: 'desktop',
+    referrer: 'google.com',
+  })
+  assert.equal(unprofiled.selected.section, null)
+  assert.equal(unprofiled.selected.contentLanguage, null)
+  assert.equal(unprofiled.selected.event, null)
+  assert.deepEqual(unprofiled.filters, { device: 'desktop', referrer: 'google.com', match: 'all' })
+})
 
 test('client analytics serialization removes registry and Umami configuration details', () => {
   const range = { key: '30d', label: 'Últimos 30 días', startAt: 1, endAt: 2, unit: 'day' }
@@ -439,8 +511,207 @@ test('dashboard resolves website id and returns all supported Umami dimensions',
     firstAt: '2026-08-25T10:00:00.000Z', lastAt: '2026-08-25T10:03:00.000Z', durationSeconds: 180,
   }])
   assert.equal(dashboard.sessionsAvailable, true)
+  assert.ok(requests.some((request) => request.includes('/metrics?') && request.includes('type=url') && request.includes('limit=500')))
   assert.ok(requests.some((request) => request.includes('/sessions?') && request.includes('pageSize=20')))
   assert.ok(requests.some((request) => request.includes('/api/websites?')))
+})
+
+test('Web Fuengirola market views filter every compatible Umami dataset by pathname', async () => {
+  const options = analyticsDashboard.getAnalyticsMarketOptions?.('webfuengirola')
+  assert.deepEqual(options, [
+    { key: 'all', label: 'Total' },
+    { key: 'spain', label: 'España / resto' },
+    { key: 'mexico', label: 'México' },
+    { key: 'usa', label: 'USA' },
+    { key: 'brazil', label: 'Brasil' },
+  ])
+  assert.deepEqual(analyticsDashboard.getAnalyticsMarketOptions?.('superentrenador'), [])
+
+  const cases = [
+    { market: 'all', filters: {}, active: true },
+    { market: 'mexico', filters: { path: 're.^/mexico(?:/|$)' }, active: false },
+    { market: 'usa', filters: { path: 're.^/usa(?:/|$)' }, active: false },
+    { market: 'brazil', filters: { path: 're.^/brasil(?:/|$)' }, active: false },
+    {
+      market: 'spain',
+      filters: {
+        path: 'nre.^/mexico(?:/|$)',
+        path1: 'nre.^/usa(?:/|$)',
+        path2: 'nre.^/brasil(?:/|$)',
+        match: 'all',
+      },
+      active: false,
+    },
+  ]
+
+  for (const expected of cases) {
+    const requests = []
+    const fetchImpl = async (input) => {
+      const url = new URL(String(input))
+      requests.push(url)
+      if (url.pathname === '/api/auth/login') return jsonResponse({ token: 'token' })
+      if (url.pathname.endsWith('/active')) return jsonResponse({ visitors: 9 })
+      if (url.pathname.endsWith('/events/stats')) return jsonResponse({ data: { events: 3 } })
+      if (url.pathname.endsWith('/stats')) {
+        return jsonResponse({ pageviews: 8, visitors: 5, visits: 6, bounces: 2, totaltime: 120 })
+      }
+      if (url.pathname.endsWith('/pageviews')) return jsonResponse({ pageviews: [], sessions: [] })
+      if (url.pathname.endsWith('/sessions')) return jsonResponse({ data: [] })
+      if (url.pathname.endsWith('/metrics')) return jsonResponse([])
+      return jsonResponse({ message: 'not found' }, 404)
+    }
+
+    const dashboard = await fetchUmamiDashboard({
+      projectKey: 'webfuengirola',
+      market: expected.market,
+      env: {
+        UMAMI_PERSONAL_URL: 'https://analytics.example.com',
+        UMAMI_PERSONAL_PASSWORD: 'secret',
+        UMAMI_WEBSITE_ID_WEBFUENGIROLA: 'wf-id',
+      },
+      fetchImpl,
+    })
+
+    assert.equal(dashboard.status, 'ok')
+    assert.equal(dashboard.market.key, expected.market)
+    assert.equal(dashboard.activeVisitors === 9, expected.active)
+    const analyticsRequests = requests.filter(url => url.pathname !== '/api/auth/login')
+    assert.equal(analyticsRequests.some(url => url.pathname.endsWith('/active')), expected.active)
+    for (const url of analyticsRequests.filter(url => !url.pathname.endsWith('/active'))) {
+      const pathFilters = Object.fromEntries(
+        [...url.searchParams].filter(([key]) => key === 'match' || key.startsWith('path')),
+      )
+      const expectedPathCount = Object.keys(expected.filters).filter(key => key.startsWith('path')).length
+      const actualPathCount = Object.keys(pathFilters).filter(key => key.startsWith('path')).length
+      if (url.pathname.endsWith('/stats') && actualPathCount > expectedPathCount) continue
+      assert.deepEqual(pathFilters, expected.filters, `${expected.market}: ${url.pathname}`)
+    }
+  }
+})
+
+test('unknown markets and other projects cannot activate Web Fuengirola path filters', async () => {
+  for (const options of [
+    { projectKey: 'webfuengirola', market: 'unknown', websiteId: 'wf-id' },
+    { projectKey: 'superentrenador', market: 'mexico', websiteId: 'super-id' },
+  ]) {
+    const requests = []
+    const fetchImpl = async (input) => {
+      const url = new URL(String(input))
+      requests.push(url)
+      if (url.pathname === '/api/auth/login') return jsonResponse({ token: 'token' })
+      if (url.pathname.endsWith('/active')) return jsonResponse({ visitors: 1 })
+      if (url.pathname.endsWith('/events/stats')) return jsonResponse({ data: { events: 0 } })
+      if (url.pathname.endsWith('/stats')) return jsonResponse({ pageviews: 0, visitors: 0, visits: 0, bounces: 0, totaltime: 0 })
+      if (url.pathname.endsWith('/pageviews')) return jsonResponse({ pageviews: [], sessions: [] })
+      if (url.pathname.endsWith('/sessions')) return jsonResponse({ data: [] })
+      if (url.pathname.endsWith('/metrics')) return jsonResponse([])
+      return jsonResponse({ message: 'not found' }, 404)
+    }
+
+    const dashboard = await fetchUmamiDashboard({
+      projectKey: options.projectKey,
+      market: options.market,
+      summaryOnly: true,
+      env: {
+        UMAMI_PERSONAL_URL: 'https://analytics.example.com',
+        UMAMI_PERSONAL_PASSWORD: 'secret',
+        UMAMI_WEBSITE_ID_WEBFUENGIROLA: options.websiteId,
+        UMAMI_WEBSITE_ID_SUPERENTRENADOR: options.websiteId,
+      },
+      fetchImpl,
+    })
+
+    assert.equal(dashboard.market.key, 'all')
+    assert.equal(dashboard.activeVisitors, 1)
+    assert.equal(requests.some(url => [...url.searchParams.keys()].some(key => key.startsWith('path'))), false)
+  }
+})
+
+test('dashboard applies trusted multidimensional filters and returns section and language breakdowns', async () => {
+  const requests = []
+  const fetchImpl = async (input) => {
+    const url = new URL(String(input))
+    requests.push(url)
+    if (url.pathname === '/api/auth/login') return jsonResponse({ token: 'token' })
+    if (url.pathname.endsWith('/active')) return jsonResponse({ visitors: 99 })
+    if (url.pathname.endsWith('/events/stats')) return jsonResponse({ data: { events: 4 } })
+    if (url.pathname.endsWith('/stats')) {
+      if ([...url.searchParams.values()].some(value => value.includes('web-solidaria'))) {
+        return jsonResponse({ message: 'temporarily unavailable' }, 503)
+      }
+      return jsonResponse({ pageviews: 100, visitors: 40, visits: 50, bounces: 10, totaltime: 1500 })
+    }
+    if (url.pathname.endsWith('/pageviews')) return jsonResponse({ pageviews: [], sessions: [] })
+    if (url.pathname.endsWith('/sessions')) return jsonResponse({ data: [] })
+    if (url.pathname.endsWith('/metrics')) return jsonResponse([])
+    return jsonResponse({ message: 'not found' }, 404)
+  }
+
+  const dashboard = await fetchUmamiDashboard({
+    projectKey: 'webfuengirola',
+    market: 'mexico',
+    section: 'blog',
+    contentLanguage: 'fi',
+    device: 'mobile',
+    referrer: 'google.com',
+    event: 'engagement_30s',
+    env: {
+      UMAMI_PERSONAL_URL: 'https://analytics.example.com',
+      UMAMI_PERSONAL_PASSWORD: 'secret',
+      UMAMI_WEBSITE_ID_WEBFUENGIROLA: 'wf-id',
+    },
+    fetchImpl,
+  })
+
+  assert.equal(dashboard.status, 'ok')
+  assert.equal(dashboard.activeVisitors, null)
+  assert.equal(dashboard.selected.section.key, 'blog')
+  assert.equal(dashboard.selected.contentLanguage.key, 'fi')
+  assert.equal(dashboard.selected.device.key, 'mobile')
+  assert.equal(dashboard.selected.referrer, 'google.com')
+  assert.equal(dashboard.selected.event.key, 'engagement_30s')
+  assert.deepEqual(dashboard.dimensions.sections.map(({ key }) => key), ['home', 'services', 'portfolio', 'blog', 'solidarity'])
+  assert.deepEqual(dashboard.dimensions.contentLanguages.map(({ key }) => key), ['es', 'en', 'de', 'fi'])
+  assert.equal(dashboard.breakdowns.sections.length, 5)
+  assert.equal(dashboard.breakdowns.contentLanguages.length, 4)
+  assert.equal(dashboard.breakdowns.sections.find(row => row.key === 'services').pagesPerVisit, 2)
+  assert.equal(dashboard.breakdowns.sections.find(row => row.key === 'services').averageVisitSeconds, 30)
+  assert.equal(dashboard.breakdowns.sections.find(row => row.key === 'solidarity').status, 'unavailable')
+
+  const coreStats = requests.find(url => url.pathname.endsWith('/stats') && url.searchParams.get('device') === 'mobile')
+  assert.ok(coreStats)
+  assert.equal(coreStats.searchParams.get('referrer'), 'google.com')
+  assert.equal(coreStats.searchParams.get('event'), 'engagement_30s')
+  assert.equal(coreStats.searchParams.get('match'), 'all')
+  assert.equal([...coreStats.searchParams.keys()].filter(key => /^path\d*$/.test(key)).length, 3)
+  assert.equal(requests.some(url => url.pathname.endsWith('/active')), false)
+})
+
+test('summary-only refresh skips profile breakdown requests', async () => {
+  const requests = []
+  const fetchImpl = async (input) => {
+    const url = new URL(String(input))
+    requests.push(url)
+    if (url.pathname === '/api/auth/login') return jsonResponse({ token: 'token' })
+    if (url.pathname.endsWith('/active')) return jsonResponse({ visitors: 1 })
+    if (url.pathname.endsWith('/events/stats')) return jsonResponse({ data: { events: 0 } })
+    if (url.pathname.endsWith('/stats')) return jsonResponse({ pageviews: 1, visitors: 1, visits: 1, bounces: 0, totaltime: 10 })
+    if (url.pathname.endsWith('/pageviews')) return jsonResponse({ pageviews: [], sessions: [] })
+    return jsonResponse([])
+  }
+  const dashboard = await fetchUmamiDashboard({
+    projectKey: 'webfuengirola',
+    summaryOnly: true,
+    env: {
+      UMAMI_PERSONAL_URL: 'https://analytics.example.com',
+      UMAMI_PERSONAL_PASSWORD: 'secret',
+      UMAMI_WEBSITE_ID_WEBFUENGIROLA: 'wf-id',
+    },
+    fetchImpl,
+  })
+  assert.equal(dashboard.status, 'ok')
+  assert.deepEqual(dashboard.breakdowns, { sections: [], contentLanguages: [] })
+  assert.equal(requests.filter(url => /\/api\/websites\/[^/]+\/stats$/.test(url.pathname)).length, 1)
 })
 
 test('dashboard keeps working when optional metrics are unsupported', async () => {

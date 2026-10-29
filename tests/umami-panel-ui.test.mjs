@@ -245,6 +245,56 @@ test("advanced analytics is mounted only after the user expands it", async () =>
   assert.match(source, /ProjectAnalyticsPanel/);
 });
 
+test("advanced analytics can reveal every loaded URL and shows percentage shares", async () => {
+  const source = await readFile(
+    new URL("../src/components/analytics/project-analytics-panel.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /expandable=\{group\.key === 'pages'\}/);
+  assert.match(source, /showPercentage=\{\['pages', 'referrers', 'channels', 'devices'\]\.includes\(group\.key\)\}/);
+  assert.match(source, /Ver todas \(\{formatNumber\(rows\.length\)\}\)/);
+  assert.match(source, /% del total/);
+});
+
+test("professional analytics explorer exposes cumulative safe filters and business overviews", async () => {
+  const source = await readFile(
+    new URL("../src/components/analytics/project-analytics-panel.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /Resumen por sección/);
+  assert.match(source, /Idioma del contenido/);
+  assert.match(source, /Idioma del navegador/);
+  assert.match(source, /Sección/);
+  assert.match(source, /Dispositivo/);
+  assert.match(source, /Fuente \/ referencia/);
+  assert.match(source, /Evento/);
+  assert.match(source, /query\.set\('section'/);
+  assert.match(source, /query\.set\('language'/);
+  assert.match(source, /query\.set\('device'/);
+  assert.match(source, /query\.set\('source'/);
+  assert.match(source, /query\.set\('event'/);
+  assert.match(source, /Filtros activos/);
+  assert.match(source, /Limpiar filtros/);
+  assert.match(source, /No disponible/);
+  assert.match(source, /Páginas vistas/);
+  assert.match(source, /% del total/);
+  assert.doesNotMatch(source, /Área cliente/);
+});
+
+test("event explorer separates commercial actions from reached engagement milestones", async () => {
+  const source = await readFile(
+    new URL("../src/components/analytics/project-analytics-panel.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /Eventos comerciales/);
+  assert.match(source, /Hitos de permanencia alcanzados/);
+  assert.match(source, /no representa el momento exacto de salida/i);
+  assert.match(source, /category === 'engagement'/);
+});
+
 test("TodoPlástico navigation uses the exact client and administrator destinations", async () => {
   const [launcherSource, todoSource] = await Promise.all([
     readFile(new URL("../src/app/paneladmin/(protected)/inicio/page.tsx", import.meta.url), "utf8"),
