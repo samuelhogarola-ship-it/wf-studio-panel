@@ -29,14 +29,14 @@ function adapters() {
       channelKey: 'vivir-fuengirola',
       schema: 'public',
       table: 'businesses',
-      client: createVivirFuengirolaAdminClient(),
+      getClient: createVivirFuengirolaAdminClient,
       map: mapVivirPublication,
     }),
     'conoce-fuengirola': createSupabaseChannelAdapter({
       channelKey: 'conoce-fuengirola',
       schema: 'conoce',
       table: 'businesses',
-      client: createConoceFuengirolaAdminClient(),
+      getClient: createConoceFuengirolaAdminClient,
       map: mapConocePublication,
     }),
   }

@@ -16,12 +16,13 @@ export function safePublicationError(error) {
   }
 }
 
-export function createSupabaseChannelAdapter({ channelKey, schema, table, client, map }) {
+export function createSupabaseChannelAdapter({ channelKey, schema, table, client, getClient, map }) {
   return {
     async publish(snapshot, channel, sourceVersion) {
       if (channel.channelKey !== channelKey) throw new PublicationAdapterError('channel_mismatch', 'El canal de publicación no coincide.')
       const projection = map(snapshot, channel, sourceVersion)
-      const { data, error } = await client
+      const destinationClient = getClient ? getClient() : client
+      const { data, error } = await destinationClient
         .schema(schema)
         .from(table)
         .upsert(projection, { onConflict: 'canonical_profile_id' })

@@ -10,7 +10,8 @@ declare module '@/lib/fichero/publication/adapter.mjs' {
     channelKey: DirectoryChannelKey
     schema: string
     table: string
-    client: unknown
+    client?: unknown
+    getClient?: () => unknown
     map: (snapshot: CanonicalPublicationSnapshot, channel: PublicationChannel, sourceVersion: number) => PublicationProjection
   }): PublicationAdapter
 }

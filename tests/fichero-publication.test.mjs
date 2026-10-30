@@ -1,6 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
+import { createSupabaseChannelAdapter } from '../src/lib/fichero/publication/adapter.mjs'
+import { mapConocePublication } from '../src/lib/fichero/publication/map-conoce.mjs'
+import { mapVivirPublication } from '../src/lib/fichero/publication/map-vivir.mjs'
 
 import {
   publishApprovedProfileWithDependencies,
@@ -113,6 +116,29 @@ test('partial failure persists independent results and keeps the approved versio
   assert.equal(h.contentVersion, 1)
   assert.equal(h.calls.filter(call => call.startsWith('adapter:vivir-fuengirola')).length, 1)
   assert.equal(h.calls.filter(call => call.startsWith('adapter:conoce-fuengirola')).length, 2)
+})
+
+test('a missing destination configuration does not block the other channel', async () => {
+  const h = harness()
+  const query = {
+    upsert() { return this }, select() { return this },
+    async single() { return { data: { canonical_profile_id: candidate().profile.id }, error: null } },
+  }
+  h.adapters = {
+    'vivir-fuengirola': createSupabaseChannelAdapter({
+      channelKey: 'vivir-fuengirola', schema: 'public', table: 'businesses',
+      getClient: () => ({ schema: () => ({ from: () => query }) }), map: mapVivirPublication,
+    }),
+    'conoce-fuengirola': createSupabaseChannelAdapter({
+      channelKey: 'conoce-fuengirola', schema: 'conoce', table: 'businesses',
+      getClient: () => { throw new Error('Missing private destination configuration') }, map: mapConocePublication,
+    }),
+  }
+  const result = await publishApprovedProfileWithDependencies(candidate().profile.id, h)
+  assert.deepEqual(result.channels.map(channel => [channel.channelKey, channel.status]), [
+    ['vivir-fuengirola', 'published'], ['conoce-fuengirola', 'failed'],
+  ])
+  assert.doesNotMatch(JSON.stringify(result), /Missing private/)
 })
 
 test('a retry refuses changed data instead of publishing it as an old version', async () => {
