@@ -8,6 +8,7 @@ const BODY_LIMIT_BYTES = 32 * 1024
 const PROFILE_LIMIT_BYTES = 24 * 1024
 const PROFILE_MAX_DEPTH = 5
 const PROFILE_MAX_KEYS = 100
+const PROFILE_MAX_ITEMS = 111
 const TURNSTILE_TIMEOUT_MS = 8_000
 const BUSINESS_PROFILE_KEYS = new Set([
   'schema_version', 'catalog', 'canonicalSlug', 'legalName', 'displayName', 'cif',
@@ -85,13 +86,16 @@ function turnstileConfiguration(env) {
   return { state: 'disabled' }
 }
 
-function inspectProfile(value, depth = 1, state = { keys: 0 }) {
+function inspectProfile(value, depth = 1, state = { keys: 0, items: 0 }) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || depth > PROFILE_MAX_DEPTH) return false
   for (const [key, child] of Object.entries(value)) {
     state.keys += 1
     if (state.keys > PROFILE_MAX_KEYS || key.length > 120) return false
-    if (child && typeof child === 'object') {
-      if (Array.isArray(child) || !inspectProfile(child, depth + 1, state)) return false
+    if (Array.isArray(child)) {
+      state.items += child.length
+      if (state.items > PROFILE_MAX_ITEMS || child.some(item => item !== null && !['string', 'number', 'boolean'].includes(typeof item))) return false
+    } else if (child && typeof child === 'object') {
+      if (!inspectProfile(child, depth + 1, state)) return false
     } else if (!['string', 'number', 'boolean'].includes(typeof child) && child !== null) {
       return false
     }

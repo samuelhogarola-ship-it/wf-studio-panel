@@ -32,6 +32,10 @@ const validBusinessProfile = {
   categoryKey: 'restaurantes',
   categoryLabel: 'Restaurantes',
   shortDescription: 'Bodega local en Fuengirola.',
+  neighborhoodKeys: ['centro'],
+  services: ['Comida local'],
+  schedule: ['Lunes a viernes'],
+  photos: [],
   plan: 'pro',
 }
 
@@ -226,11 +230,43 @@ test('required fields, enum values and common string limits fail before persiste
   assert.equal(writes, 0)
 })
 
+test('business forms from both websites accept bounded lists and preserve them', async () => {
+  for (const [origin, platform] of [
+    ['https://vivirenfuengirola.com', 'vivir-fuengirola-negocios'],
+    ['https://conocefuengirola.com', 'conoce-fuengirola'],
+  ]) {
+    let stored
+    const payload = { ...validBusinessPayload, platform, sourceUrl: `${origin}/registrar` }
+    const response = await handlePlatformRequestPost(request('POST', payload, origin), acceptingOptions({
+      createRequest: async input => { stored = input; return 'created' },
+    }))
+    assert.equal(response.status, 201, origin)
+    assert.deepEqual(stored.profile_data.profile.neighborhoodKeys, ['centro'])
+    assert.deepEqual(stored.profile_data.profile.services, ['Comida local'])
+    assert.deepEqual(stored.profile_data.profile.schedule, ['Lunes a viernes'])
+  }
+})
+
+test('business intake accepts the full documented limits for profile lists', async () => {
+  const list = (prefix, count) => Array.from({ length: count }, (_, index) => `${prefix}-${index}`)
+  const payload = { ...validBusinessPayload, profile: { ...validBusinessProfile,
+    neighborhoodKeys: list('barrio', 20), services: list('servicio', 50),
+    schedule: list('horario', 21), photos: list('https://example.test/foto', 20),
+  } }
+  let stored
+  const response = await handlePlatformRequestPost(request('POST', payload), acceptingOptions({
+    createRequest: async input => { stored = input; return 'created' },
+  }))
+  assert.equal(response.status, 201)
+  assert.equal(stored.profile_data.profile.photos.length, 20)
+  assert.equal(stored.profile_data.profile.services.length, 50)
+})
+
 test('profile must be a bounded object and the whole body is capped at 32 KiB', async () => {
   const tooDeep = { a: { b: { c: { d: { e: { f: 'too deep' } } } } } }
   const tooManyKeys = Object.fromEntries(Array.from({ length: 101 }, (_, index) => [`key${index}`, index]))
   const oversizedProfile = { text: 'x'.repeat(24_576) }
-  for (const profile of [[], tooDeep, tooManyKeys, oversizedProfile]) {
+  for (const profile of [[], tooDeep, tooManyKeys, oversizedProfile, { items: [ { nested: 'no' } ] }, { items: Array(112).fill('x') }]) {
     const response = await handlePlatformRequestPost(request('POST', { ...validPayload, profile }), acceptingOptions())
     assert.equal(response.status, 400)
     assert.equal((await response.json()).error, 'invalid_payload')
