@@ -35,7 +35,7 @@ export function mapCanonicalPublication(snapshot, channel, sourceVersion) {
     miniweb_enabled: rights.miniweb,
     seo_enabled: rights.seo,
     stats_level: rights.stats,
-    editorial_placement: rights.editorialPlacement,
+    editorial_placement: rights.editorialPlacement && channel.editorialPlacement,
   }
   return { ...projection, payload_hash: stablePayloadHash(projection) }
 }
@@ -83,7 +83,7 @@ export function mapVivirPublication(snapshot, channel, sourceVersion) {
     miniweb_enabled: rights.miniweb,
     seo_enabled: rights.seo,
     stats_level: rights.stats,
-    editorial_placement: rights.editorialPlacement,
+    editorial_placement: rights.editorialPlacement && channel.editorialPlacement,
     channel_enabled: channel.enabled,
     publication_status: 'published',
     published_at: snapshot.sourceUpdatedAt,
