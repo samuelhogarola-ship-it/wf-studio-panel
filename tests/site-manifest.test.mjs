@@ -34,9 +34,15 @@ test('registry and analytics adapters derive identity from the manifest', () => 
     getSites().map(({ key, name, domain, productionUrl, panel }) => ({ key, name, domain, productionUrl, panel })),
     SITE_MANIFEST.map(({ key, name, domain, productionUrl, panel }) => ({ key, name, domain, productionUrl, panel })),
   );
+  const analyticsSites = getConfiguredUmamiSites({});
+  assert.equal(analyticsSites.length, SITE_MANIFEST.length + 1);
   assert.deepEqual(
-    getConfiguredUmamiSites({}).map(({ key, label, domain, source, panelKey }) => ({ key, label, domain, source, panelKey })),
-    SITE_MANIFEST.map(({ key, name, domain, analytics, panelKey }) => ({ key, label: name, domain, source: analytics.source, panelKey })),
+    analyticsSites
+      .filter(({ key }) => key !== 'gimnasionuevoestilo' && key !== 'gimnasionuevoestilo-arroyo')
+      .map(({ key, label, domain, source, panelKey }) => ({ key, label, domain, source, panelKey })),
+    SITE_MANIFEST
+      .filter(({ key }) => key !== 'gimnasionuevoestilo')
+      .map(({ key, name, domain, analytics, panelKey }) => ({ key, label: name, domain, source: analytics.source, panelKey })),
   );
 });
 

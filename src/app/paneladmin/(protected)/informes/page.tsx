@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import Link from 'next/link'
 
+import { GenerateStatReportButton } from '@/components/admin/generate-stat-report-button'
 import { AdminShell } from '@/components/layout/app-shell'
 import { Card } from '@/components/ui/card'
 import { requireAdmin } from '@/lib/auth'
@@ -65,9 +66,12 @@ export default async function AdminInformesPage({
       locale={locale}
     >
       <Card className="mb-6 overflow-hidden">
-        <div className="border-b border-line px-6 py-5">
-          <h2 className="text-xl font-bold text-foreground">Informes estadísticos</h2>
-          <p className="mt-1 text-sm text-muted">Resumen mensual automático de Umami para las webs gestionadas.</p>
+        <div className="flex flex-col gap-4 border-b border-line px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Informes estadísticos</h2>
+            <p className="mt-1 text-sm text-muted">Resumen mensual automático de Umami para las webs gestionadas.</p>
+          </div>
+          <GenerateStatReportButton />
         </div>
         {statReports.length > 0 ? (
           <div className="grid gap-0 lg:grid-cols-[240px_1fr]">
