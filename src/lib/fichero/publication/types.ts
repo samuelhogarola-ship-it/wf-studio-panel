@@ -25,6 +25,10 @@ export type ChannelProjection = Record<string, unknown> & {
   payload_hash: string
 }
 
+export type VivirChannelProjection = Omit<ChannelProjection, 'public_slug'> & {
+  slug: string
+}
+
 export type PreparedProjection = {
   channelId: string
   channelKey: DirectoryChannelKey

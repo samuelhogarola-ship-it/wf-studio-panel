@@ -16,9 +16,9 @@ declare module '@/lib/fichero/publication/adapter.mjs' {
 }
 
 declare module '@/lib/fichero/publication/map-vivir.mjs' {
-  import type { CanonicalPublicationSnapshot, ChannelProjection, PublicationChannel } from '@/lib/fichero/publication/types'
+  import type { CanonicalPublicationSnapshot, ChannelProjection, PublicationChannel, VivirChannelProjection } from '@/lib/fichero/publication/types'
   export function mapCanonicalPublication(snapshot: CanonicalPublicationSnapshot, channel: PublicationChannel, sourceVersion: number): ChannelProjection
-  export const mapVivirPublication: typeof mapCanonicalPublication
+  export function mapVivirPublication(snapshot: CanonicalPublicationSnapshot, channel: PublicationChannel, sourceVersion: number): VivirChannelProjection
 }
 
 declare module '@/lib/fichero/publication/map-conoce.mjs' {
