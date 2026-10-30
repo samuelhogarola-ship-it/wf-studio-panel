@@ -57,6 +57,10 @@ El modo apply:
 - crea enlaces `directory_profile_channels` conservando cada slug;
 - escribe `canonical_profile_id` en la proyección existente;
 - no borra filas, no retira contenido y no ejecuta publicación;
-- falla por completo si queda un `ambiguous` o `conflict` sin decisión.
+- valida todas las decisiones y rechaza ambigüedades sin resolver antes de escribir;
+- rechaza una ficha o un canal que ya estén enlazados a otra identidad o slug;
+- conserva la categoría existente del destino al crear el enlace del canal.
+
+Las escrituras abarcan bases distintas y **no son una transacción conjunta**. Si una operación falla o se interrumpe, puede haber cambios parciales. No repetir a ciegas: generar un nuevo informe, revisar los enlaces realmente aplicados y decidir cómo continuar con la copia de seguridad disponible.
 
 Cada salida usa creación exclusiva: no sobrescribe un informe anterior. Utilice un nombre nuevo por ejecución y conserve el resultado como evidencia de auditoría.

@@ -5,7 +5,7 @@ import process from 'node:process'
 
 import { createClient } from '@supabase/supabase-js'
 
-import { buildReconciliationReport } from '../src/lib/fichero/reconciliation.mjs'
+import { buildReconciliationReport, prepareReconciliationActions } from '../src/lib/fichero/reconciliation.mjs'
 
 function parseArguments(argv) {
   const args = { dryRun: false, apply: false, output: null, input: null, decisions: null }
@@ -106,23 +106,9 @@ async function loadDataset(args, configuration) {
   return loadLiveDataset(configuration)
 }
 
-function decisionMap(document) {
-  if (!document || !Array.isArray(document.decisions)) throw new Error('invalid_decisions_file')
-  return new Map(document.decisions.map(decision => [`${decision.channelKey}:${decision.rowId}`, decision]))
-}
-
-function ensureConflictDecisions(report, decisions) {
-  for (const item of [...report.ambiguous, ...report.conflict]) {
-    if (!decisions.has(`${item.channelKey}:${item.rowId}`)) {
-      throw new Error('apply_requires_decisions')
-    }
-  }
-}
-
 async function applyReconciliation(dataset, report, decisionsDocument, configuration) {
   assertEnvironment(configuration)
-  const decisions = decisionMap(decisionsDocument)
-  ensureConflictDecisions(report, decisions)
+  const actions = prepareReconciliationActions(dataset, report, decisionsDocument)
   const panel = client(configuration.panelUrl, configuration.panelKey)
   const destinations = {
     'vivir-fuengirola': client(configuration.vivirUrl, configuration.vivirKey),
@@ -143,19 +129,7 @@ async function applyReconciliation(dataset, report, decisionsDocument, configura
   const rowsByKey = new Map(rows.map(row => [`${row.channelKey}:${row.id}`, row]))
   let changesApplied = 0
 
-  const automatic = report.matched.map(item => ({
-    channelKey: item.channelKey,
-    rowId: item.rowId,
-    profileId: item.profileId,
-  }))
-  const explicit = [...decisions.values()]
-  const actions = new Map(
-    automatic.map(action => [`${action.channelKey}:${action.rowId}`, action]),
-  )
-  for (const action of explicit) {
-    actions.set(`${action.channelKey}:${action.rowId}`, action)
-  }
-  for (const action of actions.values()) {
+  for (const action of actions) {
     const row = rowsByKey.get(`${action.channelKey}:${action.rowId}`)
     if (!row) throw new Error('decision_row_not_found')
     let profileId = action.profileId
@@ -184,19 +158,29 @@ async function applyReconciliation(dataset, report, decisionsDocument, configura
     if (!profileId) throw new Error('decision_profile_required')
     const channelId = channelIds.get(action.channelKey)
     if (!channelId) throw new Error('reconciliation_channel_unavailable')
-    const { error: linkError } = await panel.from('directory_profile_channels').upsert({
-      profile_id: profileId,
-      channel_id: channelId,
-      enabled: true,
-      public_slug: row.slug,
-      editorial_placement: false,
-    }, { onConflict: 'profile_id,channel_id' })
-    if (linkError) throw new Error('profile_channel_link_failed')
-    const { error: destinationError } = await destinations[action.channelKey]
-      .from('businesses')
-      .update({ canonical_profile_id: profileId })
-      .eq('slug', row.slug)
-    if (destinationError) throw new Error('destination_link_failed')
+    if (row.canonicalProfileId) {
+      const { data: current, error: currentError } = await destinations[action.channelKey]
+        .from('businesses').select('canonical_profile_id').eq('slug', row.slug).maybeSingle()
+      if (currentError || current?.canonical_profile_id !== profileId) throw new Error('destination_link_failed_or_changed')
+    }
+    const { data: existingLink, error: lookupError } = await panel.from('directory_profile_channels')
+      .select('public_slug').eq('profile_id', profileId).eq('channel_id', channelId).maybeSingle()
+    if (lookupError) throw new Error('profile_channel_lookup_failed')
+    if (existingLink && existingLink.public_slug !== row.slug) throw new Error('profile_channel_already_linked')
+    if (!existingLink) {
+      const { error: linkError } = await panel.from('directory_profile_channels').insert({
+        profile_id: profileId, channel_id: channelId, enabled: true,
+        public_slug: row.slug, category_slug: row.categoryKey || null, editorial_placement: false,
+      })
+      if (linkError) throw new Error('profile_channel_link_failed')
+    }
+    if (!row.canonicalProfileId) {
+      const { data: linked, error: destinationError } = await destinations[action.channelKey]
+        .from('businesses')
+        .update({ canonical_profile_id: profileId })
+        .eq('slug', row.slug).is('canonical_profile_id', null).select('slug')
+      if (destinationError || linked?.length !== 1) throw new Error('destination_link_failed_or_changed')
+    }
     changesApplied += 1
   }
   return changesApplied

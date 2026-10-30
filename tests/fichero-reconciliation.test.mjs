@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   buildReconciliationReport,
   matchBusinessToCanonical,
+  prepareReconciliationActions,
   redactReconciliationRow,
 } from "../src/lib/fichero/reconciliation.mjs";
 
@@ -111,4 +112,28 @@ test("el CLI exige decisiones explícitas antes de aplicar", () => {
   assert.match(source, /--decisions/);
   assert.match(source, /apply_requires_decisions/);
   assert.doesNotMatch(source, /delete\(|\.delete\(/);
+});
+
+
+test("la preparación rechaza enlaces existentes, decisiones duplicadas y conflictos sin resolver", () => {
+  const profile = { id: "p1", channelSlugs: { "vivir-fuengirola": "existente" } };
+  const row = { id: "row-1", channelKey: "vivir-fuengirola", slug: "nuevo", canonicalProfileId: null };
+  const dataset = { canonicalProfiles: [profile], vivirBusinesses: [row], conoceBusinesses: [] };
+  const report = { matched: [], ambiguous: [], conflict: [], invalid: [] };
+  const action = { channelKey: row.channelKey, rowId: row.id, profileId: profile.id };
+  assert.throws(() => prepareReconciliationActions(dataset, report, { decisions: [action] }), /profile_channel_already_linked/);
+  assert.throws(() => prepareReconciliationActions(dataset, report, { decisions: [action, action] }), /duplicate_reconciliation_decision/);
+  assert.throws(() => prepareReconciliationActions(dataset, { ...report, conflict: [action] }, { decisions: [] }), /apply_requires_decisions/);
+  const clean = { ...dataset, canonicalProfiles: [{ ...profile, channelSlugs: {} }], vivirBusinesses: [{ ...row, canonicalProfileId: "otra-ficha" }] };
+  assert.throws(() => prepareReconciliationActions(clean, report, { decisions: [action] }), /destination_already_linked/);
+  const ok = { ...clean, vivirBusinesses: [{ ...row }] };
+  assert.deepEqual(prepareReconciliationActions(ok, report, { decisions: [action] }), [action]);
+});
+
+test("una ficha no puede recibir dos slugs distintos en el mismo canal", () => {
+  const p = { id: "p1", channelSlugs: {} };
+  const rows = ["uno", "dos"].map(slug => ({ id: slug, slug, channelKey: "vivir-fuengirola" }));
+  const report = { matched: [], ambiguous: [], conflict: [], invalid: [] };
+  const decisions = rows.map(row => ({ channelKey: row.channelKey, rowId: row.id, profileId: p.id }));
+  assert.throws(() => prepareReconciliationActions({ canonicalProfiles: [p], vivirBusinesses: rows, conoceBusinesses: [] }, report, { decisions }), /duplicate_profile_channel_decision/);
 });

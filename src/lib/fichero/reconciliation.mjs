@@ -150,3 +150,47 @@ export function buildReconciliationReport({ canonicalProfiles = [], vivirBusines
   }
   return report
 }
+
+// Validate the whole proposed batch before any cross-project writes begin.
+export function prepareReconciliationActions(dataset, report, decisionsDocument) {
+  if (!decisionsDocument || !Array.isArray(decisionsDocument.decisions)) throw new Error('invalid_decisions_file')
+  if (report.invalid.length) throw new Error('reconciliation_invalid_rows')
+  const rows = [...dataset.vivirBusinesses, ...dataset.conoceBusinesses]
+  const rowsByKey = new Map(rows.map(row => [`${row.channelKey}:${row.id}`, row]))
+  const profiles = new Map(dataset.canonicalProfiles.map(profile => [profile.id, profile]))
+  const explicit = new Map()
+  for (const action of decisionsDocument.decisions) {
+    const key = `${action.channelKey}:${action.rowId}`
+    if (explicit.has(key)) throw new Error('duplicate_reconciliation_decision')
+    explicit.set(key, action)
+  }
+  for (const item of [...report.ambiguous, ...report.conflict]) {
+    if (!explicit.has(`${item.channelKey}:${item.rowId}`)) throw new Error('apply_requires_decisions')
+  }
+  const actions = new Map(report.matched.map(item => [
+    `${item.channelKey}:${item.rowId}`,
+    { channelKey: item.channelKey, rowId: item.rowId, profileId: item.profileId },
+  ]))
+  for (const [key, action] of explicit) actions.set(key, action)
+  const claimed = new Set()
+  for (const [key, action] of actions) {
+    const row = rowsByKey.get(key)
+    if (!row) throw new Error('decision_row_not_found')
+    if (!CHANNELS.has(action.channelKey)) throw new Error('reconciliation_channel_unavailable')
+    if (Boolean(action.profileId) === Boolean(action.createProfile)) throw new Error('decision_profile_required')
+    if (action.createProfile && (typeof action.createProfile !== 'object' || Array.isArray(action.createProfile))) throw new Error('invalid_profile_decision')
+    if (action.profileId) {
+      const profile = profiles.get(action.profileId)
+      if (!profile) throw new Error('decision_profile_not_found')
+      if (row.canonicalProfileId && row.canonicalProfileId !== action.profileId) throw new Error('destination_already_linked')
+      const previousSlug = profile.channelSlugs?.[action.channelKey]
+      if (previousSlug && previousSlug !== row.slug) throw new Error('profile_channel_already_linked')
+      const identity = `${action.channelKey}:${action.profileId}`
+      if (claimed.has(identity)) throw new Error('duplicate_profile_channel_decision')
+      claimed.add(identity)
+    } else if (row.canonicalProfileId) {
+      throw new Error('destination_already_linked')
+    }
+  }
+  return [...actions.values()]
+}
