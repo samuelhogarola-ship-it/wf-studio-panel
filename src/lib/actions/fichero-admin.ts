@@ -38,6 +38,18 @@ function safeError(): FicheroActionState {
   return { error: 'No se pudo completar la operación de Fichero.' }
 }
 
+function publicationOutcome(publication: PublicationResult, profileId: string): FicheroActionState {
+  const labels: Record<DirectoryChannelKey, string> = {
+    'vivir-fuengirola': 'Vivir en Fuengirola',
+    'conoce-fuengirola': 'Conoce Fuengirola',
+  }
+  const failed = publication.channels.filter(channel => channel.status === 'failed')
+  if (failed.length > 0) {
+    return { error: `La ficha quedó aprobada, pero falló la publicación en ${failed.map(channel => labels[channel.channelKey]).join(' y ')}. Revisa el estado y reintenta el canal.`, profileId, publication }
+  }
+  return { success: 'Publicación completada en los canales seleccionados.', profileId, publication }
+}
+
 function revalidateProfile(catalogKey: string, profileId: string) {
   revalidatePath(`/paneladmin/fichero/${catalogKey}`)
   revalidatePath(`/paneladmin/fichero/${catalogKey}/fichas`)
@@ -149,7 +161,7 @@ export async function reviewDirectoryProfileAction(
   if (decision === 'approve_publish') {
     try {
       const publication = await publishApprovedProfile(profileId)
-      return { success: 'Ficha aprobada y publicación procesada.', profileId, publication }
+      return publicationOutcome(publication, profileId)
     } catch { return { error: 'La ficha quedó aprobada, pero no se pudo iniciar la publicación.', profileId } }
   }
   return { success: approved ? 'Ficha aprobada. Aún no se ha publicado.' : 'Ficha rechazada.', profileId }
@@ -168,6 +180,6 @@ export async function retryDirectoryProfileChannelAction(
   try {
     const publication = await retryProfileChannel(profileId, channelKey, sourceVersion)
     revalidateProfile(catalogKey, profileId)
-    return { success: 'Reintento procesado para el canal seleccionado.', profileId, publication }
+    return publicationOutcome(publication, profileId)
   } catch { return safeError() }
 }
