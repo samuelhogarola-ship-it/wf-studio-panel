@@ -145,6 +145,62 @@ test('Postgres keeps business intake human-reviewed, draft-only and idempotent',
       assert.equal((await db.query('select count(*)::int as count from public.directory_profile_reviews where profile_id = $1', [profileId])).rows[0].count, 1)
     })
 
+    await t.test('publication preparation increments once and channel results remain independent and retryable', async () => {
+      await queryAs('authenticated', adminId, "update public.directory_profiles set review_status = 'approved', approved_by = auth.uid(), approved_at = now() where id = $1", [profileId])
+      const current = (await db.query('select updated_at::text as updated_at from public.directory_profiles where id = $1', [profileId])).rows[0]
+      const links = (await db.query(
+        `select link.channel_id, channel.key
+         from public.directory_profile_channels link
+         join public.directory_channels channel on channel.id = link.channel_id
+         where link.profile_id = $1 order by channel.key`,
+        [profileId],
+      )).rows
+      const projections = links.map((link, index) => ({
+        channelId: link.channel_id,
+        channelKey: link.key,
+        publicSlug: `draft-${requestId}`,
+        payloadHash: String(index + 1).repeat(64),
+      }))
+      const prepared = await queryAs(
+        'authenticated',
+        adminId,
+        'select * from public.prepare_directory_publication($1, $2, $3)',
+        [profileId, current.updated_at, JSON.stringify(projections)],
+      )
+      assert.equal(prepared.rowCount, 2)
+      assert.deepEqual(new Set(prepared.rows.map(row => row.source_version)), new Set(['1']))
+      assert.deepEqual(new Set(prepared.rows.map(row => row.status)), new Set(['pending']))
+
+      const refreshed = (await db.query('select content_version, review_status, updated_at::text as updated_at from public.directory_profiles where id = $1', [profileId])).rows[0]
+      assert.equal(refreshed.content_version, '1')
+      assert.equal(refreshed.review_status, 'approved')
+      const repeated = await queryAs(
+        'authenticated',
+        adminId,
+        'select * from public.prepare_directory_publication($1, $2, $3)',
+        [profileId, refreshed.updated_at, JSON.stringify(projections)],
+      )
+      assert.deepEqual(repeated.rows.map(row => row.event_id).sort(), prepared.rows.map(row => row.event_id).sort())
+      assert.equal((await db.query('select count(*)::int as count from public.directory_publication_events where profile_id = $1', [profileId])).rows[0].count, 2)
+
+      const [failedEvent, publishedEvent] = prepared.rows
+      assert.equal((await queryAs('authenticated', adminId, 'select public.begin_directory_publication_event($1) as claimed', [publishedEvent.event_id])).rows[0].claimed, true)
+      assert.equal((await queryAs('authenticated', adminId, "select public.finish_directory_publication_event($1, 'published', $2, null, null) as finished", [publishedEvent.event_id, 'remote-published'])).rows[0].finished, true)
+      assert.equal((await queryAs('authenticated', adminId, 'select public.begin_directory_publication_event($1) as claimed', [failedEvent.event_id])).rows[0].claimed, true)
+      assert.equal((await queryAs('authenticated', adminId, "select public.finish_directory_publication_event($1, 'failed', null, $2, $3) as finished", [failedEvent.event_id, 'destination_unavailable', 'No se pudo completar la publicación.'])).rows[0].finished, true)
+
+      const states = (await db.query('select status from public.directory_publication_events where profile_id = $1 order by status', [profileId])).rows.map(row => row.status)
+      assert.deepEqual(states, ['failed', 'published'])
+      const afterPartial = (await db.query('select review_status, published_at from public.directory_profiles where id = $1', [profileId])).rows[0]
+      assert.equal(afterPartial.review_status, 'approved')
+      assert.ok(afterPartial.published_at instanceof Date)
+
+      assert.equal((await queryAs('authenticated', adminId, 'select public.begin_directory_publication_event($1) as claimed', [failedEvent.event_id])).rows[0].claimed, true)
+      await queryAs('authenticated', adminId, "select public.finish_directory_publication_event($1, 'published', $2, null, null)", [failedEvent.event_id, 'remote-retried'])
+      assert.equal((await db.query('select count(*)::int as count from public.directory_publication_events where profile_id = $1 and status = $2', [profileId, 'published'])).rows[0].count, 2)
+      assert.equal((await db.query('select count(*)::int as count from public.directory_publication_events where profile_id = $1', [profileId])).rows[0].count, 2)
+    })
+
     await t.test('rejection records the human decision and never creates a profile', async () => {
       const rejected = await queryAs(
         'authenticated',

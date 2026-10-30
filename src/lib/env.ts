@@ -26,3 +26,25 @@ export function getSupabaseAdminKey(env: NodeJS.ProcessEnv = process.env) {
 
   return value
 }
+
+export function requireFicheroPublishingEnabled(env: NodeJS.ProcessEnv = process.env) {
+  if (env.FICHERO_PUBLISHING_ENABLED?.trim().toLowerCase() !== 'true') {
+    throw new Error('Fichero publishing is disabled')
+  }
+}
+
+export function getFicheroDestinationEnv(
+  destination: 'vivir' | 'conoce',
+  env: NodeJS.ProcessEnv = process.env,
+) {
+  const urlName = destination === 'vivir'
+    ? 'VIVIR_FUENGIROLA_SUPABASE_URL'
+    : 'CONOCE_FUENGIROLA_SUPABASE_URL'
+  const keyName = destination === 'vivir'
+    ? 'VIVIR_FUENGIROLA_SUPABASE_SERVICE_ROLE_KEY'
+    : 'CONOCE_FUENGIROLA_SUPABASE_SERVICE_ROLE_KEY'
+  const url = env[urlName]?.trim()
+  const serviceKey = env[keyName]?.trim()
+  if (!url || !serviceKey) throw new Error(`Missing Fichero destination configuration: ${destination}`)
+  return { url, serviceKey }
+}

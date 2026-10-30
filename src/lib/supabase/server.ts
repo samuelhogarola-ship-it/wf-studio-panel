@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { NextRequest, NextResponse } from 'next/server'
 
-import { getPublicEnv, getSupabaseAdminKey } from '@/lib/env'
+import { getFicheroDestinationEnv, getPublicEnv, getSupabaseAdminKey } from '@/lib/env'
 import type { Database } from '@/lib/supabase/types'
 
 export function createSuperEntrenadorAdminClient() {
@@ -31,6 +31,16 @@ export function createTodoPlasticoAdminClient() {
   const url = process.env.TODO_PLASTICO_URL
   const serviceKey = process.env.TODO_PLASTICO_SERVICE_KEY
   if (!url || !serviceKey) throw new Error('Missing TODO_PLASTICO_URL or TODO_PLASTICO_SERVICE_KEY env vars')
+  return createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+}
+
+export function createVivirFuengirolaAdminClient() {
+  const { url, serviceKey } = getFicheroDestinationEnv('vivir')
+  return createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+}
+
+export function createConoceFuengirolaAdminClient() {
+  const { url, serviceKey } = getFicheroDestinationEnv('conoce')
   return createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
