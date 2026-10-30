@@ -10,6 +10,10 @@ export type SupportSessionRow = { id: string; admin_user_id: string; client_id: 
 export type PlatformRequestPlatform = 'vivir-fuengirola' | 'vivir-fuengirola-negocios' | 'conoce-fuengirola'
 export type PlatformRequestType = 'client' | 'business' | 'subscription_interest'
 export type PlatformRequestStatus = 'pending' | 'approved' | 'rejected'
+export type DirectoryPlan = 'gratis' | 'pro' | 'premium'
+export type DirectoryReviewStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'archived'
+export type DirectoryPublicationStatus = 'pending' | 'publishing' | 'published' | 'failed'
+export type DirectoryReviewDecision = 'approved' | 'rejected' | 'returned_to_draft'
 
 export type Database = {
   __InternalSupabase: { PostgrestVersion: "14.5" }
@@ -21,6 +25,60 @@ export type Database = {
         Update: { platform?: PlatformRequestPlatform; request_type?: PlatformRequestType; name?: string; email?: string; phone?: string | null; company?: string | null; profile_data?: Json; message?: string | null; source_url?: string | null; status?: PlatformRequestStatus; converted_client_id?: string | null; reviewed_by?: string | null; reviewed_at?: string | null; rejection_reason?: string | null; updated_at?: string }
         Relationships: [
           { foreignKeyName: "platform_requests_converted_client_id_fkey"; columns: ["converted_client_id"]; isOneToOne: false; referencedRelation: "clients"; referencedColumns: ["id"] },
+        ]
+      }
+      directory_catalogs: {
+        Row: { id: string; key: string; name: string; status: 'active' | 'archived'; created_at: string; updated_at: string }
+        Insert: { id?: string; key: string; name: string; status?: 'active' | 'archived'; created_at?: string; updated_at?: string }
+        Update: { id?: string; key?: string; name?: string; status?: 'active' | 'archived'; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
+      directory_channels: {
+        Row: { id: string; catalog_id: string; key: string; name: string; status: 'active' | 'archived'; created_at: string; updated_at: string }
+        Insert: { id?: string; catalog_id: string; key: string; name: string; status?: 'active' | 'archived'; created_at?: string; updated_at?: string }
+        Update: { id?: string; catalog_id?: string; key?: string; name?: string; status?: 'active' | 'archived'; created_at?: string; updated_at?: string }
+        Relationships: [{ foreignKeyName: "directory_channels_catalog_id_fkey"; columns: ["catalog_id"]; isOneToOne: false; referencedRelation: "directory_catalogs"; referencedColumns: ["id"] }]
+      }
+      directory_profiles: {
+        Row: { id: string; catalog_id: string; source_request_id: string | null; owner_user_id: string | null; canonical_slug: string; legal_name: string | null; display_name: string; cif: string | null; contact_email: string | null; phone: string | null; whatsapp: string | null; website: string | null; address: string | null; latitude: number | null; longitude: number | null; category_key: string; category_label: string; neighborhood_keys: string[]; short_description: string; long_description: string; seo_title: string | null; seo_description: string | null; services: string[]; schedule: string[]; photos: string[]; plan: DirectoryPlan; review_status: DirectoryReviewStatus; content_version: number; approved_at: string | null; approved_by: string | null; published_at: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; catalog_id: string; source_request_id?: string | null; owner_user_id?: string | null; canonical_slug: string; legal_name?: string | null; display_name: string; cif?: string | null; contact_email?: string | null; phone?: string | null; whatsapp?: string | null; website?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null; category_key: string; category_label: string; neighborhood_keys?: string[]; short_description?: string; long_description?: string; seo_title?: string | null; seo_description?: string | null; services?: string[]; schedule?: string[]; photos?: string[]; plan?: DirectoryPlan; review_status?: DirectoryReviewStatus; content_version?: number; approved_at?: string | null; approved_by?: string | null; published_at?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; catalog_id?: string; source_request_id?: string | null; owner_user_id?: string | null; canonical_slug?: string; legal_name?: string | null; display_name?: string; cif?: string | null; contact_email?: string | null; phone?: string | null; whatsapp?: string | null; website?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null; category_key?: string; category_label?: string; neighborhood_keys?: string[]; short_description?: string; long_description?: string; seo_title?: string | null; seo_description?: string | null; services?: string[]; schedule?: string[]; photos?: string[]; plan?: DirectoryPlan; review_status?: DirectoryReviewStatus; content_version?: number; approved_at?: string | null; approved_by?: string | null; published_at?: string | null; created_at?: string; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "directory_profiles_catalog_id_fkey"; columns: ["catalog_id"]; isOneToOne: false; referencedRelation: "directory_catalogs"; referencedColumns: ["id"] },
+          { foreignKeyName: "directory_profiles_source_request_id_fkey"; columns: ["source_request_id"]; isOneToOne: true; referencedRelation: "platform_requests"; referencedColumns: ["id"] },
+        ]
+      }
+      directory_profile_channels: {
+        Row: { profile_id: string; channel_id: string; enabled: boolean; public_slug: string; editorial_placement: boolean; last_published_version: number | null; last_publication_status: DirectoryPublicationStatus | null; last_publication_error: string | null; last_published_at: string | null; updated_at: string }
+        Insert: { profile_id: string; channel_id: string; enabled?: boolean; public_slug: string; editorial_placement?: boolean; last_published_version?: number | null; last_publication_status?: DirectoryPublicationStatus | null; last_publication_error?: string | null; last_published_at?: string | null; updated_at?: string }
+        Update: { profile_id?: string; channel_id?: string; enabled?: boolean; public_slug?: string; editorial_placement?: boolean; last_published_version?: number | null; last_publication_status?: DirectoryPublicationStatus | null; last_publication_error?: string | null; last_published_at?: string | null; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "directory_profile_channels_profile_id_fkey"; columns: ["profile_id"]; isOneToOne: false; referencedRelation: "directory_profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "directory_profile_channels_channel_id_fkey"; columns: ["channel_id"]; isOneToOne: false; referencedRelation: "directory_channels"; referencedColumns: ["id"] },
+        ]
+      }
+      directory_profile_reviews: {
+        Row: { id: string; profile_id: string; reviewer_id: string; decision: DirectoryReviewDecision; notes: string | null; snapshot: Json; created_at: string }
+        Insert: { id?: string; profile_id: string; reviewer_id: string; decision: DirectoryReviewDecision; notes?: string | null; snapshot: Json; created_at?: string }
+        Update: { id?: string; profile_id?: string; reviewer_id?: string; decision?: DirectoryReviewDecision; notes?: string | null; snapshot?: Json; created_at?: string }
+        Relationships: [{ foreignKeyName: "directory_profile_reviews_profile_id_fkey"; columns: ["profile_id"]; isOneToOne: false; referencedRelation: "directory_profiles"; referencedColumns: ["id"] }]
+      }
+      directory_publication_events: {
+        Row: { id: string; profile_id: string; channel_id: string; source_version: number; idempotency_key: string; status: DirectoryPublicationStatus; attempt_count: number; payload_hash: string; remote_record_id: string | null; error_code: string | null; error_message: string | null; started_at: string | null; completed_at: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; profile_id: string; channel_id: string; source_version: number; idempotency_key: string; status?: DirectoryPublicationStatus; attempt_count?: number; payload_hash: string; remote_record_id?: string | null; error_code?: string | null; error_message?: string | null; started_at?: string | null; completed_at?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; profile_id?: string; channel_id?: string; source_version?: number; idempotency_key?: string; status?: DirectoryPublicationStatus; attempt_count?: number; payload_hash?: string; remote_record_id?: string | null; error_code?: string | null; error_message?: string | null; started_at?: string | null; completed_at?: string | null; created_at?: string; updated_at?: string }
+        Relationships: [
+          { foreignKeyName: "directory_publication_events_profile_id_fkey"; columns: ["profile_id"]; isOneToOne: false; referencedRelation: "directory_profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "directory_publication_events_channel_id_fkey"; columns: ["channel_id"]; isOneToOne: false; referencedRelation: "directory_channels"; referencedColumns: ["id"] },
+        ]
+      }
+      directory_slug_redirects: {
+        Row: { id: string; profile_id: string; channel_id: string; old_slug: string; new_slug: string; http_status: 308; created_at: string }
+        Insert: { id?: string; profile_id: string; channel_id: string; old_slug: string; new_slug: string; http_status?: 308; created_at?: string }
+        Update: { id?: string; profile_id?: string; channel_id?: string; old_slug?: string; new_slug?: string; http_status?: 308; created_at?: string }
+        Relationships: [
+          { foreignKeyName: "directory_slug_redirects_profile_id_fkey"; columns: ["profile_id"]; isOneToOne: false; referencedRelation: "directory_profiles"; referencedColumns: ["id"] },
+          { foreignKeyName: "directory_slug_redirects_channel_id_fkey"; columns: ["channel_id"]; isOneToOne: false; referencedRelation: "directory_channels"; referencedColumns: ["id"] },
         ]
       }
       admin_support_sessions: {
