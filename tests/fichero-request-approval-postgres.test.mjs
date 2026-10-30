@@ -146,7 +146,9 @@ test('Postgres keeps business intake human-reviewed, draft-only and idempotent',
     })
 
     await t.test('publication preparation increments once and channel results remain independent and retryable', async () => {
-      await queryAs('authenticated', adminId, "update public.directory_profiles set review_status = 'approved', approved_by = auth.uid(), approved_at = now() where id = $1", [profileId])
+      const reviewed = await queryAs('authenticated', adminId, "select public.review_directory_profile($1, 'approved', $2) as status", [profileId, 'Revisión editorial completada'])
+      assert.equal(reviewed.rows[0].status, 'approved')
+      assert.equal((await db.query('select count(*)::int as count from public.directory_profile_reviews where profile_id = $1', [profileId])).rows[0].count, 2)
       const current = (await db.query('select updated_at::text as updated_at from public.directory_profiles where id = $1', [profileId])).rows[0]
       const links = (await db.query(
         `select link.channel_id, channel.key

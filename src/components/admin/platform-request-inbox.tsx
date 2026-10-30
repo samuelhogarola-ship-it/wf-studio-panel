@@ -7,7 +7,7 @@ import { approvePlatformRequestAction, rejectPlatformRequestAction } from '@/lib
 import type { PlatformRequestListItem } from '@/lib/platform-requests/admin'
 import type { Json, PlatformRequestStatus, PlatformRequestType } from '@/lib/supabase/types'
 
-type InboxScope = 'vivir-clients' | 'vivir-businesses' | 'conoce'
+type InboxScope = 'vivir-clients' | 'vivir-businesses' | 'conoce' | 'fichero'
 
 const TYPE_LABELS = {
   client: 'Cliente',
@@ -23,6 +23,7 @@ const STATUS_LABELS: Record<PlatformRequestStatus, string> = {
 
 function scopeConfig(scope: InboxScope) {
   if (scope === 'conoce') return { base: '/paneladmin/conoce-fuengirola/solicitudes', scopeValue: null }
+  if (scope === 'fichero') return { base: '/paneladmin/fichero/fuengirola/solicitudes', scopeValue: null }
   return {
     base: '/paneladmin/vivir-en-fuengirola/solicitudes',
     scopeValue: scope === 'vivir-businesses' ? 'businesses' : 'clients',
@@ -138,7 +139,7 @@ export function PlatformRequestInbox({ scope, data, query, status, page }: {
 
   return (
     <div>
-      {scope !== 'conoce' ? <div className="mb-4 flex gap-2"><Link href={`${config.base}?scope=clients`} aria-current={scope === 'vivir-clients' ? 'page' : undefined} className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold">Clientes</Link><Link href={`${config.base}?scope=businesses`} aria-current={scope === 'vivir-businesses' ? 'page' : undefined} className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold">Negocios</Link></div> : null}
+      {scope === 'vivir-clients' || scope === 'vivir-businesses' ? <div className="mb-4 flex gap-2"><Link href={`${config.base}?scope=clients`} aria-current={scope === 'vivir-clients' ? 'page' : undefined} className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold">Clientes</Link><Link href={`${config.base}?scope=businesses`} aria-current={scope === 'vivir-businesses' ? 'page' : undefined} className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold">Negocios</Link></div> : null}
       <form action={config.base} className="mb-4 flex flex-wrap gap-2 rounded-2xl border border-line bg-white p-3">
         {config.scopeValue ? <input type="hidden" name="scope" value={config.scopeValue} /> : null}
         <input type="search" name="q" defaultValue={query} placeholder="Buscar nombre, email o empresa…" className="min-w-64 flex-1 rounded-xl border border-line px-4 py-2 text-sm" />

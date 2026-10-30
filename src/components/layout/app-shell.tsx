@@ -48,6 +48,12 @@ export function AdminShell({
           label: 'Proyectos',
           icon: panelIcon,
         },
+        {
+          href: '/paneladmin/fichero',
+          label: 'Fichero',
+          icon: panelIcon,
+          activePrefix: '/paneladmin/fichero',
+        },
       ],
     },
     {
