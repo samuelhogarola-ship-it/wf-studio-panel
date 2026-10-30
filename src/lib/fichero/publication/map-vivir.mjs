@@ -7,6 +7,7 @@ export function mapCanonicalPublication(snapshot, channel, sourceVersion) {
   const projection = {
     canonical_profile_id: profile.id,
     source_version: sourceVersion,
+    owner_user_id: profile.ownerUserId ?? null,
     public_slug: channel.publicSlug,
     legal_name: profile.legalName,
     display_name: profile.displayName,
@@ -45,6 +46,7 @@ export function mapVivirPublication(snapshot, channel, sourceVersion) {
   const projection = {
     canonical_profile_id: profile.id,
     source_version: sourceVersion,
+    owner_user_id: profile.ownerUserId ?? null,
     slug: channel.publicSlug,
     name: profile.displayName,
     legal_name: profile.legalName,

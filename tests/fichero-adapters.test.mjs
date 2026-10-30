@@ -10,6 +10,7 @@ const snapshot = {
   profile: {
     id: '10000000-0000-4000-8000-000000000001',
     catalogId: '10000000-0000-4000-8000-000000000002',
+    ownerUserId: '30000000-0000-4000-8000-000000000001',
     canonicalSlug: 'academia-sol',
     legalName: 'Academia Sol SL',
     displayName: 'Academia Sol',
@@ -58,6 +59,7 @@ test('Vivir and Conoce projections share canonical identity, version and premium
   }
   assert.equal(conoce.public_slug, 'academia-sol')
   assert.equal(vivir.name, conoce.display_name)
+  assert.equal(vivir.owner_user_id, snapshot.profile.ownerUserId)
   assert.equal(vivir.slug, 'academia-sol')
   assert.equal(vivir.status, 'publicado')
   assert.equal(vivir.channel_enabled, true)

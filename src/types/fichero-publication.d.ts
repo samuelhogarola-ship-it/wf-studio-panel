@@ -1,5 +1,5 @@
 declare module '@/lib/fichero/publication/adapter.mjs' {
-  import type { CanonicalPublicationSnapshot, ChannelProjection, DirectoryChannelKey, PublicationAdapter, PublicationChannel } from '@/lib/fichero/publication/types'
+  import type { CanonicalPublicationSnapshot, DirectoryChannelKey, PublicationAdapter, PublicationChannel, PublicationProjection } from '@/lib/fichero/publication/types'
 
   export class PublicationAdapterError extends Error {
     code: string
@@ -11,7 +11,7 @@ declare module '@/lib/fichero/publication/adapter.mjs' {
     schema: string
     table: string
     client: unknown
-    map: (snapshot: CanonicalPublicationSnapshot, channel: PublicationChannel, sourceVersion: number) => ChannelProjection
+    map: (snapshot: CanonicalPublicationSnapshot, channel: PublicationChannel, sourceVersion: number) => PublicationProjection
   }): PublicationAdapter
 }
 

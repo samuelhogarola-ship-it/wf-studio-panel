@@ -17,15 +17,18 @@ export type CanonicalPublicationSnapshot = {
   sourceUpdatedAt: string
 }
 
-export type ChannelProjection = Record<string, unknown> & {
+export type PublicationProjection = Record<string, unknown> & {
   canonical_profile_id: string
   source_version: number
-  public_slug: string
   plan: CanonicalDirectoryProfile['plan']
   payload_hash: string
 }
 
-export type VivirChannelProjection = Omit<ChannelProjection, 'public_slug'> & {
+export type ChannelProjection = PublicationProjection & {
+  public_slug: string
+}
+
+export type VivirChannelProjection = PublicationProjection & {
   slug: string
 }
 

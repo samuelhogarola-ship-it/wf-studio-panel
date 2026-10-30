@@ -23,6 +23,7 @@ function profileFromRow(row: ProfileRow): CanonicalPublicationSnapshot['profile'
   return {
     id: row.id,
     catalogId: row.catalog_id,
+    ownerUserId: row.owner_user_id,
     canonicalSlug: row.canonical_slug,
     legalName: row.legal_name,
     displayName: row.display_name,

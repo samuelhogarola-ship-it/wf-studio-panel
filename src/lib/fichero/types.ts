@@ -16,6 +16,7 @@ export type DirectoryPlanEntitlements = {
 export type CanonicalDirectoryProfile = {
   id: string
   catalogId: string
+  ownerUserId?: string | null
   canonicalSlug: string
   legalName: string | null
   displayName: string
