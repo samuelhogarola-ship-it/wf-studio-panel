@@ -1,0 +1,122 @@
+{
+  "canonicalProfiles": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "displayName": "Academia Sol",
+      "cif": "B-12345678",
+      "website": "https://academiasol.es/",
+      "contactEmail": "hola@academiasol.es",
+      "channelSlugs": {
+        "vivir-fuengirola": "academia-sol",
+        "conoce-fuengirola": "academia-sol-fuengirola"
+      }
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "displayName": "Clínica Mar",
+      "cif": "B87654321",
+      "website": "https://clinicamar.es",
+      "contactEmail": "citas@clinicamar.es",
+      "channelSlugs": {
+        "vivir-fuengirola": "clinica-mar",
+        "conoce-fuengirola": "clinica-mar"
+      }
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000003",
+      "displayName": "Academia Sol Centro",
+      "cif": "B99999999",
+      "website": "https://academiasol.es",
+      "contactEmail": "centro@academiasol.es",
+      "channelSlugs": {
+        "vivir-fuengirola": "academia-sol-centro",
+        "conoce-fuengirola": "academia-sol-centro"
+      }
+    }
+  ],
+  "vivirBusinesses": [
+    {
+      "id": "vivir-1",
+      "canonicalProfileId": "10000000-0000-4000-8000-000000000001",
+      "name": "Nombre antiguo",
+      "slug": "slug-antiguo"
+    },
+    {
+      "id": "vivir-3",
+      "canonicalProfileId": "10000000-0000-4000-8000-000000000001",
+      "name": "Clínica Mar",
+      "slug": "clinica-mar",
+      "cif": "B87654321"
+    },
+    {
+      "id": "vivir-4",
+      "name": "Negocio Nuevo",
+      "slug": "negocio-nuevo"
+    }
+  ],
+  "conoceBusinesses": [
+    {
+      "id": "conoce-1",
+      "name": "Clínica Mar Fuengirola",
+      "slug": "otro-slug",
+      "cif": "b 87654321"
+    },
+    {
+      "id": "conoce-3",
+      "name": "Academia Sol",
+      "slug": "sin-coincidencia",
+      "website": "https://academiasol.es"
+    }
+  ],
+  "cases": {
+    "canonical": {
+      "id": "vivir-1",
+      "canonicalProfileId": "10000000-0000-4000-8000-000000000001",
+      "name": "Nombre antiguo",
+      "slug": "slug-antiguo",
+      "cif": "",
+      "channelKey": "vivir-fuengirola"
+    },
+    "cif": {
+      "id": "vivir-2",
+      "name": "Clínica Mar Fuengirola",
+      "slug": "otro-slug",
+      "cif": "b 87654321",
+      "channelKey": "vivir-fuengirola"
+    },
+    "domain": {
+      "id": "conoce-1",
+      "name": "Clínica Mar",
+      "slug": "clinica-mar-nueva",
+      "website": "https://www.clinicamar.es/contacto",
+      "channelKey": "conoce-fuengirola"
+    },
+    "slug": {
+      "id": "conoce-2",
+      "name": "Mar Salud",
+      "slug": "clinica-mar",
+      "channelKey": "conoce-fuengirola"
+    },
+    "conflict": {
+      "id": "vivir-3",
+      "canonicalProfileId": "10000000-0000-4000-8000-000000000001",
+      "name": "Clínica Mar",
+      "slug": "clinica-mar",
+      "cif": "B87654321",
+      "channelKey": "vivir-fuengirola"
+    },
+    "ambiguousDomain": {
+      "id": "conoce-3",
+      "name": "Academia Sol",
+      "slug": "sin-coincidencia",
+      "website": "https://academiasol.es",
+      "channelKey": "conoce-fuengirola"
+    },
+    "manual": {
+      "id": "vivir-4",
+      "name": "Negocio Nuevo",
+      "slug": "negocio-nuevo",
+      "channelKey": "vivir-fuengirola"
+    }
+  }
+}
