@@ -16,6 +16,11 @@ export type SiteManifestEntry = {
     legacyDashboard: boolean
     legacyKey?: string
     legacyLabel?: string
+    properties?: readonly {
+      key: string
+      label: string
+      envSuffix: string
+    }[]
     profile?: {
       schemaVersion: 1
       languages: readonly AnalyticsRouteDimension[]

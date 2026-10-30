@@ -501,7 +501,19 @@
     "analytics": {
       "source": "personal",
       "envSuffix": "GIMNASIONUEVOESTILO",
-      "legacyDashboard": false
+      "legacyDashboard": false,
+      "properties": [
+        {
+          "key": "gimnasionuevoestilo",
+          "label": "Gimnasio Nuevo Estilo · Fuengirola",
+          "envSuffix": "GIMNASIONUEVOESTILO"
+        },
+        {
+          "key": "gimnasionuevoestilo-arroyo",
+          "label": "Gimnasio Nuevo Estilo · Arroyo de la Miel",
+          "envSuffix": "GIMNASIONUEVOESTILO_ARROYO"
+        }
+      ]
     },
     "blogger": {
       "enabled": false

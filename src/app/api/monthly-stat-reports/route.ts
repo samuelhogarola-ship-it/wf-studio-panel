@@ -15,6 +15,7 @@ import {
 } from '@/lib/cron/monthly-stat-reports.mjs'
 import { createMonthlyStatReportRepository } from '@/lib/data/monthly-stat-reports.mjs'
 import { sendMonthlyStatReportEmail } from '@/lib/email'
+import { getOptionalIdentity } from '@/lib/auth'
 import { createSupabaseAdminClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -32,26 +33,26 @@ function getRequiredConfig() {
   }
 }
 
-async function runMonthlyStatReport(request: Request) {
+function isAuthorizedCron(request: Request) {
   const cronSecret = process.env.CRON_SECRET
   const monthlySecret = process.env.MONTHLY_STAT_REPORTS_CRON_SECRET
   if (!cronSecret && !monthlySecret) {
-    return NextResponse.json({ error: 'cron_not_configured', message: 'Cron secret is required.' }, { status: 503 })
+    return false
   }
 
-  if (!isAuthorizedMonthlyCronRequest({
+  return isAuthorizedMonthlyCronRequest({
     cronSecret,
     monthlySecret,
     authorization: request.headers.get('authorization'),
     headerSecret: request.headers.get('x-cron-secret'),
-  })) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  })
+}
 
-  const setup = getRequiredConfig()
-  if ('error' in setup) return setup.error
+async function runMonthlyStatReport({ deliverEmail }: { deliverEmail: boolean }) {
+  const setup = deliverEmail ? getRequiredConfig() : null
+  if (setup && 'error' in setup) return setup.error
 
-  const { reportTo } = setup.config
+  const reportTo = setup?.config.reportTo
   const reportRepository = createMonthlyStatReportRepository(createSupabaseAdminClient())
   const sites = getConfiguredReportSites()
 
@@ -72,7 +73,7 @@ async function runMonthlyStatReport(request: Request) {
         complete,
       })
     },
-    sendReport: async ({ to, monthKey, idempotencyKey }) => {
+    sendReport: deliverEmail ? async ({ to, monthKey, idempotencyKey }) => {
       const claimToken = randomUUID()
       return deliverMonthlyStatReport({
         monthKey,
@@ -89,11 +90,11 @@ async function runMonthlyStatReport(request: Request) {
         completeDelivery: (input) => reportRepository.completeDelivery(input),
         releaseDelivery: (input) => reportRepository.releaseDelivery(input),
       })
-    },
+    } : undefined,
     reportTo,
   })
 
-  if (!result.deliverySatisfied) {
+  if (deliverEmail && !result.deliverySatisfied) {
     return NextResponse.json({
       ok: false,
       error: 'incomplete_site_reports',
@@ -105,9 +106,23 @@ async function runMonthlyStatReport(request: Request) {
 }
 
 export async function GET(request: Request) {
-  return runMonthlyStatReport(request)
+  if (!process.env.CRON_SECRET && !process.env.MONTHLY_STAT_REPORTS_CRON_SECRET) {
+    return NextResponse.json({ error: 'cron_not_configured', message: 'Cron secret is required.' }, { status: 503 })
+  }
+  if (!isAuthorizedCron(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  return runMonthlyStatReport({ deliverEmail: true })
 }
 
 export async function POST(request: Request) {
-  return runMonthlyStatReport(request)
+  const isPanelRequest = request.headers.get('x-wf-report-request') === 'paneladmin'
+  if (isPanelRequest) {
+    const identity = await getOptionalIdentity()
+    if (!identity || identity.role !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    return runMonthlyStatReport({ deliverEmail: false })
+  }
+
+  if (!isAuthorizedCron(request)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  return runMonthlyStatReport({ deliverEmail: true })
 }
