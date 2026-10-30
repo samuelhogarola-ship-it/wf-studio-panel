@@ -2,6 +2,10 @@
 
 Fichero se gestiona en WF Studio Panel. Una solicitud crea un borrador; la publicación en Vivir y Conoce requiere revisión y confirmación humanas. Cada destino tiene su propia categoría y registra su propio resultado.
 
+## Diseño original
+
+Se conserva una copia sin modificar del [diseño](superpowers/specs/2026-10-30-fichero-fuengirola-design.md) y del [plan](superpowers/plans/2026-10-30-fichero-fuengirola-implementation.md) encontrados en el directorio local de Vivir. Son documentos de planificación; sus casillas no acreditan por sí solas el estado actual de implementación o producción.
+
 ## Estado y precauciones
 
 - Las ramas de Panel, Vivir y Conoce se revisan conjuntamente: el cambio de tablas y vistas debe coordinarse con la aplicación que las lee. No publicar primero las migraciones de las webs de forma aislada.
