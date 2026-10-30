@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 import { requireAdmin } from '@/lib/auth'
 import { publishApprovedProfile, retryProfileChannel } from '@/lib/actions/fichero'
+import { channelCategories } from '@/lib/fichero/channel-categories'
 import { findDirectoryProfileDuplicates } from '@/lib/fichero/admin'
 import { parseDirectoryProfileInput } from '@/lib/fichero/validation.mjs'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
@@ -70,6 +71,14 @@ export async function saveDirectoryProfileAction(
   })
   if (!parsed.success) return { error: Object.values(parsed.fieldErrors).flat()[0] ?? 'Revisa los campos de la ficha.' }
 
+  for (const key of channelKeys) {
+    const enabled = formData.get(`channel_${key}_enabled`) === 'on'
+    const category = value(formData, `channel_${key}_category`)
+    if (enabled && !(channelCategories[key] as readonly string[]).includes(category)) {
+      return { error: `Selecciona una categoría válida para ${key === 'vivir-fuengirola' ? 'Vivir en Fuengirola' : 'Conoce Fuengirola'}.` }
+    }
+  }
+
   const duplicates = await findDirectoryProfileDuplicates({
     catalogId: catalog.id, profileId: profileId ?? undefined, cif: parsed.data.cif,
     email: parsed.data.contactEmail, displayName: parsed.data.displayName,
@@ -107,7 +116,8 @@ export async function saveDirectoryProfileAction(
       profile_id: savedId, channel_id: channel.id,
       enabled: formData.get(`channel_${key}_enabled`) === 'on',
       public_slug: value(formData, `channel_${key}_slug`) || parsed.data.canonicalSlug,
-      editorial_placement: parsed.data.plan === 'premium',
+      category_slug: value(formData, `channel_${key}_category`) || null,
+      editorial_placement: parsed.data.plan === 'premium' && formData.get(`channel_${key}_enabled`) === 'on',
     }, { onConflict: 'profile_id,channel_id' })
     if (error) return safeError()
   }

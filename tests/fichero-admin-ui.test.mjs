@@ -15,8 +15,8 @@ const profile = {
   reviewStatus: 'pending_review', contentVersion: 2, ownerUserId: null,
 }
 const channels = [
-  { channelId: '20000000-0000-4000-8000-000000000001', channelKey: 'vivir-fuengirola', enabled: true, publicSlug: 'academia-sol', editorialPlacement: true, lastPublishedVersion: 2, lastPublicationStatus: 'published', lastPublicationError: null },
-  { channelId: '20000000-0000-4000-8000-000000000002', channelKey: 'conoce-fuengirola', enabled: true, publicSlug: 'academia-sol', editorialPlacement: true, lastPublishedVersion: null, lastPublicationStatus: 'failed', lastPublicationError: 'Destino no disponible' },
+  { channelId: '20000000-0000-4000-8000-000000000001', channelKey: 'vivir-fuengirola', categorySlug: 'servicios', enabled: true, publicSlug: 'academia-sol', editorialPlacement: true, lastPublishedVersion: 2, lastPublicationStatus: 'published', lastPublicationError: null },
+  { channelId: '20000000-0000-4000-8000-000000000002', channelKey: 'conoce-fuengirola', categorySlug: 'escuelas-de-idiomas', enabled: true, publicSlug: 'academia-sol', editorialPlacement: true, lastPublishedVersion: null, lastPublicationStatus: 'failed', lastPublicationError: 'Destino no disponible' },
 ]
 const actionMocks = {
   '@/lib/actions/fichero': {

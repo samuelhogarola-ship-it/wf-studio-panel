@@ -83,6 +83,7 @@ async function loadCandidate(db: DirectoryDb, profileId: string): Promise<Canoni
         channelKey: channel.key as DirectoryChannelKey,
         enabled: link.enabled && channel.status === 'active',
         publicSlug: link.public_slug,
+        categorySlug: link.category_slug,
         editorialPlacement: link.editorial_placement,
       }
     }),

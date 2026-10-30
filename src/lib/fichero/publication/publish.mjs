@@ -13,6 +13,7 @@ function validateSnapshot(snapshot) {
   const parsed = parseDirectoryProfileInput(snapshot.profile)
   if (!parsed.success) throw new Error('Profile validation failed before publication')
   if (!snapshot.channels.some(channel => channel.enabled)) throw new Error('Profile has no enabled publication channels')
+  if (snapshot.channels.some(channel => channel.enabled && !channel.categorySlug)) throw new Error('Selecciona una categoría para cada canal activo antes de publicar.')
 }
 
 function channelFor(snapshot, key) {

@@ -37,8 +37,8 @@ const snapshot = {
     contentVersion: 0,
   },
   channels: [
-    { channelId: '20000000-0000-4000-8000-000000000001', channelKey: 'vivir-fuengirola', enabled: true, publicSlug: 'academia-sol', editorialPlacement: false },
-    { channelId: '20000000-0000-4000-8000-000000000002', channelKey: 'conoce-fuengirola', enabled: true, publicSlug: 'academia-sol', editorialPlacement: false },
+    { channelId: '20000000-0000-4000-8000-000000000001', channelKey: 'vivir-fuengirola', categorySlug: 'servicios', enabled: true, publicSlug: 'academia-sol', editorialPlacement: false },
+    { channelId: '20000000-0000-4000-8000-000000000002', channelKey: 'conoce-fuengirola', categorySlug: 'escuelas-de-idiomas', enabled: true, publicSlug: 'academia-sol', editorialPlacement: false },
   ],
 }
 
@@ -59,20 +59,21 @@ test('Vivir and Conoce projections share canonical identity, version and premium
   }
   assert.equal(conoce.slug, 'academia-sol')
   assert.equal(vivir.name, conoce.name)
-  assert.equal(conoce.category_slug, 'educacion')
+  assert.equal(conoce.category_slug, 'escuelas-de-idiomas')
   assert.equal(conoce.summary, snapshot.profile.shortDescription)
   assert.equal(conoce.description, snapshot.profile.longDescription)
   assert.equal(conoce.location, snapshot.profile.address)
   assert.equal(conoce.neighborhood, 'centro')
   assert.equal(conoce.publication_status, 'published')
   assert.equal(conoce.channel_enabled, true)
-  assert.equal(vivir.owner_user_id, snapshot.profile.ownerUserId)
+  assert.equal(Object.hasOwn(vivir, 'owner_user_id'), false)
+  assert.equal(Object.hasOwn(conoce, 'owner_user_id'), false)
   assert.equal(vivir.slug, 'academia-sol')
   assert.equal(vivir.status, 'publicado')
   assert.equal(vivir.channel_enabled, true)
   assert.equal(vivir.publication_status, 'published')
   assert.equal(vivir.published_at, snapshot.sourceUpdatedAt)
-  assert.equal(vivir.category_slug, 'educacion')
+  assert.equal(vivir.category_slug, 'servicios')
   assert.deepEqual(vivir.neighborhood_slugs, ['centro'])
   assert.deepEqual(vivir.services, conoce.services)
 })

@@ -20,8 +20,8 @@ function candidate(reviewStatus = 'approved') {
       reviewStatus, contentVersion: 0,
     },
     channels: [
-      { channelId: '20000000-0000-4000-8000-000000000001', channelKey: 'vivir-fuengirola', enabled: true, publicSlug: 'academia-sol', editorialPlacement: false },
-      { channelId: '20000000-0000-4000-8000-000000000002', channelKey: 'conoce-fuengirola', enabled: true, publicSlug: 'academia-sol', editorialPlacement: false },
+      { channelId: '20000000-0000-4000-8000-000000000001', channelKey: 'vivir-fuengirola', categorySlug: 'servicios', enabled: true, publicSlug: 'academia-sol', editorialPlacement: false },
+      { channelId: '20000000-0000-4000-8000-000000000002', channelKey: 'conoce-fuengirola', categorySlug: 'escuelas-de-idiomas', enabled: true, publicSlug: 'academia-sol', editorialPlacement: false },
     ],
   }
 }
@@ -74,6 +74,17 @@ test('draft and rejected profiles fail validation before any version increment',
     await assert.rejects(publishApprovedProfileWithDependencies(candidate().profile.id, { repository, adapters: {} }), /approved/i)
     assert.equal(prepared, false)
   }
+})
+
+test('publication requires a destination category for every enabled channel', async () => {
+  const h = harness()
+  h.repository.loadPublicationCandidate = async () => {
+    const snapshot = candidate()
+    snapshot.channels[1].categorySlug = null
+    return snapshot
+  }
+  await assert.rejects(publishApprovedProfileWithDependencies(candidate().profile.id, h), /categoría/i)
+  assert.equal(h.calls.includes('prepare'), false)
 })
 
 test('one publish increments once and attempts every enabled channel once', async () => {

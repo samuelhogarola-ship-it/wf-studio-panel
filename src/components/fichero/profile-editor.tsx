@@ -5,6 +5,7 @@ import { useActionState, useState } from 'react'
 
 import { saveDirectoryProfileAction } from '@/lib/actions/fichero-admin'
 import type { DirectoryAdminChannel, DirectoryAdminProfile } from '@/lib/fichero/admin'
+import { categoryLabel, channelCategories } from '@/lib/fichero/channel-categories'
 import type { DirectoryPlan } from '@/lib/supabase/types'
 
 const channelLabels = { 'vivir-fuengirola': 'Vivir en Fuengirola', 'conoce-fuengirola': 'Conoce Fuengirola' }
@@ -49,7 +50,7 @@ export function ProfileEditor({ catalogKey, profile, channels, duplicates = [] }
       </section>
       <section className="grid gap-4 rounded-2xl border border-line bg-white p-6 lg:grid-cols-2">
         <h2 className="lg:col-span-2 text-lg font-black">Canales públicos</h2>
-        {(['vivir-fuengirola', 'conoce-fuengirola'] as const).map(key => { const channel = byKey.get(key); return <div key={key} className="rounded-xl border border-line p-4"><label className="flex items-center gap-2 font-bold"><input type="checkbox" name={`channel_${key}_enabled`} defaultChecked={channel?.enabled ?? true} />{channelLabels[key]}</label><label className="mt-3 block text-sm font-semibold">Slug público<input name={`channel_${key}_slug`} defaultValue={channel?.publicSlug ?? profile?.canonicalSlug ?? ''} className="mt-2 w-full rounded-xl border border-line px-3 py-2 font-normal" /></label></div> })}
+        {(['vivir-fuengirola', 'conoce-fuengirola'] as const).map(key => { const channel = byKey.get(key); return <div key={key} className="rounded-xl border border-line p-4"><label className="flex items-center gap-2 font-bold"><input type="checkbox" name={`channel_${key}_enabled`} defaultChecked={channel?.enabled ?? true} />{channelLabels[key]}</label><label className="mt-3 block text-sm font-semibold">Categoría de {channelLabels[key]}<select name={`channel_${key}_category`} defaultValue={channel?.categorySlug ?? ''} className="mt-2 w-full rounded-xl border border-line px-3 py-2 font-normal"><option value="">Selecciona una categoría</option>{channelCategories[key].map(category => <option key={category} value={category}>{categoryLabel(category)}</option>)}</select></label><label className="mt-3 block text-sm font-semibold">Slug público<input name={`channel_${key}_slug`} defaultValue={channel?.publicSlug ?? profile?.canonicalSlug ?? ''} className="mt-2 w-full rounded-xl border border-line px-3 py-2 font-normal" /></label></div> })}
       </section>
       {shownDuplicates.length > 0 ? <section className="rounded-2xl border border-amber-300 bg-amber-50 p-5"><h2 className="font-black text-amber-950">Posibles duplicados: revisión humana obligatoria</h2>{shownDuplicates.map(item => <p key={item.id} className="mt-2 text-sm"><Link className="font-semibold underline" href={`/paneladmin/fichero/${catalogKey}/fichas/${item.id}`}>{item.displayName}</Link> · {item.canonicalSlug}</p>)}<label className="mt-4 flex items-center gap-2 text-sm font-semibold"><input type="checkbox" name="duplicate_reviewed" value="yes" required />He comparado estas coincidencias y son fichas distintas.</label></section> : null}
       <button disabled={pending} className="rounded-full bg-slate-900 px-6 py-3 font-bold text-white disabled:opacity-50">{pending ? 'Guardando…' : 'Guardar borrador'}</button>

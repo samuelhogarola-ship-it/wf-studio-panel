@@ -49,9 +49,9 @@ export type Database = {
         ]
       }
       directory_profile_channels: {
-        Row: { profile_id: string; channel_id: string; enabled: boolean; public_slug: string; editorial_placement: boolean; last_published_version: number | null; last_publication_status: DirectoryPublicationStatus | null; last_publication_error: string | null; last_published_at: string | null; updated_at: string }
-        Insert: { profile_id: string; channel_id: string; enabled?: boolean; public_slug: string; editorial_placement?: boolean; last_published_version?: number | null; last_publication_status?: DirectoryPublicationStatus | null; last_publication_error?: string | null; last_published_at?: string | null; updated_at?: string }
-        Update: { profile_id?: string; channel_id?: string; enabled?: boolean; public_slug?: string; editorial_placement?: boolean; last_published_version?: number | null; last_publication_status?: DirectoryPublicationStatus | null; last_publication_error?: string | null; last_published_at?: string | null; updated_at?: string }
+        Row: { profile_id: string; channel_id: string; enabled: boolean; public_slug: string; category_slug: string | null; editorial_placement: boolean; last_published_version: number | null; last_publication_status: DirectoryPublicationStatus | null; last_publication_error: string | null; last_published_at: string | null; updated_at: string }
+        Insert: { profile_id: string; channel_id: string; enabled?: boolean; public_slug: string; category_slug?: string | null; editorial_placement?: boolean; last_published_version?: number | null; last_publication_status?: DirectoryPublicationStatus | null; last_publication_error?: string | null; last_published_at?: string | null; updated_at?: string }
+        Update: { profile_id?: string; channel_id?: string; enabled?: boolean; public_slug?: string; category_slug?: string | null; editorial_placement?: boolean; last_published_version?: number | null; last_publication_status?: DirectoryPublicationStatus | null; last_publication_error?: string | null; last_published_at?: string | null; updated_at?: string }
         Relationships: [
           { foreignKeyName: "directory_profile_channels_profile_id_fkey"; columns: ["profile_id"]; isOneToOne: false; referencedRelation: "directory_profiles"; referencedColumns: ["id"] },
           { foreignKeyName: "directory_profile_channels_channel_id_fkey"; columns: ["channel_id"]; isOneToOne: false; referencedRelation: "directory_channels"; referencedColumns: ["id"] },

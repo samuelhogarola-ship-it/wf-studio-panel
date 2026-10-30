@@ -8,6 +8,7 @@ export type PublicationChannel = {
   channelKey: DirectoryChannelKey
   enabled: boolean
   publicSlug: string
+  categorySlug: string | null
   editorialPlacement: boolean
 }
 

@@ -14,6 +14,7 @@ export type DirectoryAdminChannel = {
   channelKey: DirectoryChannelKey
   enabled: boolean
   publicSlug: string
+  categorySlug: string | null
   editorialPlacement: boolean
   lastPublishedVersion: number | null
   lastPublicationStatus: DirectoryPublicationStatus | null
@@ -128,7 +129,7 @@ export async function getDirectoryProfile(catalogKey: string, profileId: string)
   const keys = new Map((channelRows ?? []).map(channel => [channel.id, channel.key as DirectoryChannelKey]))
   const channels: DirectoryAdminChannel[] = (links ?? []).map(link => ({
     channelId: link.channel_id, channelKey: keys.get(link.channel_id)!, enabled: link.enabled,
-    publicSlug: link.public_slug, editorialPlacement: link.editorial_placement,
+    publicSlug: link.public_slug, categorySlug: link.category_slug, editorialPlacement: link.editorial_placement,
     lastPublishedVersion: link.last_published_version, lastPublicationStatus: link.last_publication_status,
     lastPublicationError: link.last_publication_error,
   })).filter(channel => channel.channelKey)
