@@ -36,7 +36,9 @@ begin
   v_status := p_decision;
   update public.directory_profiles
   set review_status = v_status,
-      approved_at = case when v_status = 'approved' then now() else null end,
+      approved_at = case when v_status <> 'approved' then null
+                         when v_profile.review_status = 'approved' then v_profile.approved_at
+                         else now() end,
       approved_by = case when v_status = 'approved' then auth.uid() else null end
   where id = p_profile_id;
 

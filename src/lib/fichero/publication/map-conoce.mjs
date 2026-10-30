@@ -33,7 +33,7 @@ export function mapConocePublication(snapshot, channel, sourceVersion) {
     seo_title: profile.seoTitle,
     seo_description: profile.seoDescription,
     source_label: 'Fichero · revisión humana',
-    last_verified: snapshot.sourceUpdatedAt.slice(0, 10),
+    last_verified: (snapshot.reviewedAt ?? snapshot.sourceUpdatedAt).slice(0, 10),
     plan: profile.plan,
     is_recommended: rights.recommendedPlacement,
     contact_actions_enabled: rights.contactActions,
@@ -43,7 +43,7 @@ export function mapConocePublication(snapshot, channel, sourceVersion) {
     editorial_placement: rights.editorialPlacement && channel.editorialPlacement,
     channel_enabled: channel.enabled,
     publication_status: 'published',
-    published_at: snapshot.sourceUpdatedAt,
+    published_at: snapshot.reviewedAt ?? snapshot.sourceUpdatedAt,
   }
   return { ...projection, payload_hash: stablePayloadHash(projection) }
 }

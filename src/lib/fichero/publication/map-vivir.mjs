@@ -72,7 +72,7 @@ export function mapVivirPublication(snapshot, channel, sourceVersion) {
     plan: profile.plan,
     featured_reason: 'Ficha aprobada mediante revisión humana en Fichero',
     source_label: 'Fichero · revisión humana',
-    source_verified_at: snapshot.sourceUpdatedAt.slice(0, 10),
+    source_verified_at: (snapshot.reviewedAt ?? snapshot.sourceUpdatedAt).slice(0, 10),
     services: profile.services,
     credentials: [],
     profiles: [],
@@ -85,7 +85,7 @@ export function mapVivirPublication(snapshot, channel, sourceVersion) {
     editorial_placement: rights.editorialPlacement && channel.editorialPlacement,
     channel_enabled: channel.enabled,
     publication_status: 'published',
-    published_at: snapshot.sourceUpdatedAt,
+    published_at: snapshot.reviewedAt ?? snapshot.sourceUpdatedAt,
   }
   return { ...projection, payload_hash: stablePayloadHash(projection) }
 }

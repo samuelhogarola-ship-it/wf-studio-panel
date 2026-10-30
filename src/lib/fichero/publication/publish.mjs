@@ -29,6 +29,10 @@ async function attemptEvent(snapshot, event, dependencies) {
   const adapter = dependencies.adapters[event.channelKey]
   if (!adapter) throw new Error(`Publication adapter unavailable: ${event.channelKey}`)
   const channel = channelFor(snapshot, event.channelKey)
+  const projection = mappers[event.channelKey](snapshot, channel, event.sourceVersion)
+  if (projection.payload_hash !== event.payloadHash) {
+    throw new Error('La ficha cambió desde este intento. Vuelve a revisarla antes de publicar.')
+  }
   await dependencies.repository.markPublishing(event.eventId)
   try {
     const result = await adapter.publish(snapshot, channel, event.sourceVersion)

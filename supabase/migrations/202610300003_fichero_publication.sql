@@ -48,6 +48,7 @@ begin
     select 1 from public.directory_publication_events existing_event
     where existing_event.profile_id = p_profile_id
       and existing_event.source_version = v_profile.content_version
+      and existing_event.created_at >= v_profile.approved_at
   ) then
     return query
     select event.id, event.channel_id, channel.key, link.public_slug,

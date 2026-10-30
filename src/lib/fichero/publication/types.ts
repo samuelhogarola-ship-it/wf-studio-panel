@@ -16,6 +16,7 @@ export type CanonicalPublicationSnapshot = {
   profile: CanonicalDirectoryProfile
   channels: PublicationChannel[]
   sourceUpdatedAt: string
+  reviewedAt: string
 }
 
 export type PublicationProjection = Record<string, unknown> & {

@@ -74,6 +74,7 @@ async function loadCandidate(db: DirectoryDb, profileId: string): Promise<Canoni
 
   return {
     sourceUpdatedAt: profile.updated_at,
+    reviewedAt: profile.approved_at ?? profile.updated_at,
     profile: profileFromRow(profile),
     channels: links.map((link: ProfileChannelRow) => {
       const channel = byId.get(link.channel_id)

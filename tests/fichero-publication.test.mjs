@@ -115,6 +115,37 @@ test('partial failure persists independent results and keeps the approved versio
   assert.equal(h.calls.filter(call => call.startsWith('adapter:conoce-fuengirola')).length, 2)
 })
 
+test('a retry refuses changed data instead of publishing it as an old version', async () => {
+  const h = harness({ failChannel: 'conoce-fuengirola' })
+  await publishApprovedProfileWithDependencies(candidate().profile.id, h)
+  const original = h.repository.loadRetryCandidate
+  h.repository.loadRetryCandidate = async (...args) => {
+    const result = await original(...args)
+    result.snapshot.profile.displayName = 'Ficha modificada'
+    return result
+  }
+  const previous = h.calls.filter(call => call.startsWith('adapter:conoce-fuengirola')).length
+  await assert.rejects(retryProfileChannelWithDependencies(candidate().profile.id, 'conoce-fuengirola', 1, h), /cambi[oó]/i)
+  assert.equal(h.calls.filter(call => call.startsWith('adapter:conoce-fuengirola')).length, previous)
+})
+
+test('bookkeeping updates do not change a reviewed publication payload', async () => {
+  const h = harness({ failChannel: 'conoce-fuengirola' })
+  const reviewed = '2026-10-30T12:00:00.000Z'
+  h.repository.loadPublicationCandidate = async () => ({ ...candidate(), reviewedAt: reviewed })
+  await publishApprovedProfileWithDependencies(candidate().profile.id, h)
+  const original = h.repository.loadRetryCandidate
+  h.repository.loadRetryCandidate = async (...args) => {
+    const result = await original(...args)
+    result.snapshot.reviewedAt = reviewed
+    result.snapshot.sourceUpdatedAt = '2026-10-30T12:05:00.000Z'
+    return result
+  }
+  h.adapters['conoce-fuengirola'].publish = async () => ({ remoteRecordId: 'restored' })
+  const result = await retryProfileChannelWithDependencies(candidate().profile.id, 'conoce-fuengirola', 1, h)
+  assert.equal(result.channels[0].status, 'published')
+})
+
 test('publishing an already published version is a no-op', async () => {
   const h = harness({ statusByChannel: { 'vivir-fuengirola': 'published', 'conoce-fuengirola': 'published' } })
   const result = await publishApprovedProfileWithDependencies(candidate().profile.id, h)

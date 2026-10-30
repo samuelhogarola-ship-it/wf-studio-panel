@@ -203,6 +203,33 @@ test('Postgres keeps business intake human-reviewed, draft-only and idempotent',
       assert.equal((await db.query('select count(*)::int as count from public.directory_publication_events where profile_id = $1', [profileId])).rows[0].count, 2)
     })
 
+    await t.test('editing and reapproving creates a new publication version', async () => {
+      const links = (await db.query(
+        `select link.channel_id, channel.key from public.directory_profile_channels link
+         join public.directory_channels channel on channel.id = link.channel_id
+         where link.profile_id = $1 order by channel.key`, [profileId],
+      )).rows
+      const projections = links.map((link, index) => ({
+        channelId: link.channel_id, channelKey: link.key, publicSlug: `draft-${requestId}`,
+        payloadHash: String(index + 3).repeat(64),
+      }))
+      const before = (await db.query('select approved_at::text as approved_at from public.directory_profiles where id = $1', [profileId])).rows[0]
+      await queryAs('authenticated', adminId, "select public.review_directory_profile($1, 'approved', null)", [profileId])
+      const repeated = (await db.query('select approved_at::text as approved_at from public.directory_profiles where id = $1', [profileId])).rows[0]
+      assert.equal(repeated.approved_at, before.approved_at)
+
+      await db.query("update public.directory_profiles set display_name = 'Ficha editada', review_status = 'draft', approved_at = null, approved_by = null where id = $1", [profileId])
+      await queryAs('authenticated', adminId, "select public.review_directory_profile($1, 'approved', null)", [profileId])
+      const current = (await db.query('select updated_at::text as updated_at from public.directory_profiles where id = $1', [profileId])).rows[0]
+      const next = await queryAs('authenticated', adminId,
+        'select * from public.prepare_directory_publication($1, $2, $3)',
+        [profileId, current.updated_at, JSON.stringify(projections)])
+      assert.equal(next.rowCount, 2)
+      assert.deepEqual(new Set(next.rows.map(row => row.source_version)), new Set(['2']))
+      assert.deepEqual(new Set(next.rows.map(row => row.status)), new Set(['pending']))
+      assert.equal((await db.query('select count(*)::int as count from public.directory_publication_events where profile_id = $1', [profileId])).rows[0].count, 4)
+    })
+
     await t.test('rejection records the human decision and never creates a profile', async () => {
       const rejected = await queryAs(
         'authenticated',
