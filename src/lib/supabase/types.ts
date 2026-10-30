@@ -253,6 +253,7 @@ export type Database = {
     }
     Functions: {
       approve_platform_request: { Args: { p_request_id: string }; Returns: { outcome: 'created_client' | 'existing_client'; client_id: string }[] }
+      approve_directory_request: { Args: { p_request_id: string; p_profile_patch: Json }; Returns: { outcome: 'created_profile' | 'existing_profile'; profile_id: string }[] }
       reject_platform_request: { Args: { p_request_id: string; p_reason: string | null }; Returns: boolean }
       mark_message_read: { Args: { p_message_id: string }; Returns: undefined }
       create_invoice_draft: { Args: { p_amount: number; p_client_id: string | null; p_concept: string; p_issued_at: string; p_notes: string | null; p_payment_method: string; p_recipient_company: string | null; p_recipient_email: string; p_recipient_kind: string; p_recipient_name: string }; Returns: { id: string; number: string }[] }

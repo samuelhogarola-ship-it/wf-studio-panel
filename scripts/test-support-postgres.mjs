@@ -127,7 +127,11 @@ try {
     safeArgs: ['container', 'migrate'],
   })
   console.error('[support-db] migrations applied')
-  await run(process.execPath, ['--test', 'tests/support-session-postgres.test.mjs'], { cwd: root, extraEnv: { WF_SUPPORT_TEST_DATABASE_URL: databaseUrl } })
+  await run(process.execPath, [
+    '--test',
+    'tests/support-session-postgres.test.mjs',
+    'tests/fichero-request-approval-postgres.test.mjs',
+  ], { cwd: root, extraEnv: { WF_SUPPORT_TEST_DATABASE_URL: databaseUrl } })
   console.error('[support-db] integration tests passed')
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Local database tests failed')

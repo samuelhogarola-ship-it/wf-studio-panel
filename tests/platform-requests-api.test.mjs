@@ -22,6 +22,28 @@ const validPayload = {
   token: '',
 }
 
+const validBusinessProfile = {
+  schema_version: 'fichero.v1',
+  catalog: 'fuengirola',
+  canonicalSlug: 'bodega-sol',
+  displayName: 'Bodega Sol',
+  cif: 'B-12.345.678',
+  contactEmail: 'hola@bodegasol.example',
+  categoryKey: 'restaurantes',
+  categoryLabel: 'Restaurantes',
+  shortDescription: 'Bodega local en Fuengirola.',
+  plan: 'pro',
+}
+
+const validBusinessPayload = {
+  ...validPayload,
+  platform: 'vivir-fuengirola-negocios',
+  requestType: 'business',
+  name: 'Bodega Sol',
+  email: 'hola@bodegasol.example',
+  profile: validBusinessProfile,
+}
+
 function request(method, body, origin = 'https://vivirenfuengirola.com') {
   const resolvedBody = body === undefined && method === 'POST' ? validPayload : body
   return new Request('https://admin.webfuengirola.com/api/platform-requests', {
@@ -89,6 +111,7 @@ test('origin-to-platform mapping rejects cross-platform submissions and forged s
     ...validPayload,
     platform: 'conoce-fuengirola',
     requestType: 'business',
+    profile: validBusinessProfile,
     sourceUrl: 'https://conocefuengirola.com/alta',
   }, 'https://conocefuengirola.com'), acceptingOptions())
   assert.equal(conoceBusiness.status, 201)
@@ -113,6 +136,73 @@ test('valid payload is normalized and fingerprinted before persistence', async (
     source_url: 'https://vivirenfuengirola.com/registro',
     fingerprint: '6c2ce602dc572c06475ca442cd3dec407172c0df5ea78197dc67db8b2a115128',
   })
+})
+
+test('both Fuengirola sources accept the same strict fichero.v1 business contract', async () => {
+  const received = []
+  const options = acceptingOptions({ createRequest: async (payload) => { received.push(payload); return 'created' } })
+  const vivir = await handlePlatformRequestPost(request('POST', validBusinessPayload), options)
+  const conoce = await handlePlatformRequestPost(request('POST', {
+    ...validBusinessPayload,
+    platform: 'conoce-fuengirola',
+    sourceUrl: 'https://conocefuengirola.com/publica-tu-negocio',
+  }, 'https://conocefuengirola.com'), options)
+
+  assert.equal(vivir.status, 201)
+  assert.equal(conoce.status, 201)
+  assert.equal(received[0].profile_data.schema_version, 'fichero.v1')
+  assert.equal(received[0].profile_data.catalog, 'fuengirola')
+  assert.equal(received[0].profile_data.profile.plan, 'pro')
+  assert.equal(received[0].profile_data.profile.cif, 'B12345678')
+  assert.equal(received[1].profile_data.profile.displayName, 'Bodega Sol')
+})
+
+test('business intake rejects unknown profile fields, unsupported versions and invalid plans before writing', async () => {
+  let writes = 0
+  const options = acceptingOptions({ createRequest: async () => { writes += 1; return 'created' } })
+  for (const profile of [
+    { ...validBusinessProfile, ownerUserId: 'attacker-controlled' },
+    { ...validBusinessProfile, schema_version: 'fichero.v2' },
+    { ...validBusinessProfile, catalog: 'otro-catalogo' },
+    { ...validBusinessProfile, plan: 'normal' },
+  ]) {
+    const response = await handlePlatformRequestPost(request('POST', { ...validBusinessPayload, profile }), options)
+    assert.equal(response.status, 400)
+    assert.deepEqual(await response.json(), { success: false, error: 'invalid_payload' })
+  }
+  assert.equal(writes, 0)
+})
+
+test('business duplicate fingerprints span both source platforms by normalized CIF', async () => {
+  const received = []
+  const options = acceptingOptions({ createRequest: async (payload) => { received.push(payload); return 'created' } })
+  await handlePlatformRequestPost(request('POST', validBusinessPayload), options)
+  await handlePlatformRequestPost(request('POST', {
+    ...validBusinessPayload,
+    platform: 'conoce-fuengirola',
+    sourceUrl: 'https://conocefuengirola.com/publica-tu-negocio',
+    profile: { ...validBusinessProfile, cif: ' b 12345678 ' },
+  }, 'https://conocefuengirola.com'), options)
+
+  assert.equal(received.length, 2)
+  assert.equal(received[0].fingerprint, received[1].fingerprint)
+})
+
+test('business duplicate fingerprints fall back to normalized email domain and name when CIF is absent', async () => {
+  const received = []
+  const options = acceptingOptions({ createRequest: async (payload) => { received.push(payload); return 'created' } })
+  const profile = { ...validBusinessProfile, cif: '' }
+  await handlePlatformRequestPost(request('POST', { ...validBusinessPayload, profile }), options)
+  await handlePlatformRequestPost(request('POST', {
+    ...validBusinessPayload,
+    platform: 'conoce-fuengirola',
+    name: '  BODEGA SOL ',
+    email: ' HOLA@BODEGASOL.EXAMPLE ',
+    sourceUrl: 'https://conocefuengirola.com/publica-tu-negocio',
+    profile: { ...profile, displayName: 'Bódega   Sol' },
+  }, 'https://conocefuengirola.com'), options)
+
+  assert.equal(received[0].fingerprint, received[1].fingerprint)
 })
 
 test('required fields, enum values and common string limits fail before persistence', async () => {

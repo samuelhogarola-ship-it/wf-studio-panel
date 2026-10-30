@@ -28,6 +28,17 @@ const requestB = {
   request_type: 'business',
   name: 'Bodega Sol',
   email: 'hola@bodegasol.example',
+  profile_data: {
+    schema_version: 'fichero.v1',
+    catalog: 'fuengirola',
+    profile: {
+      canonicalSlug: 'bodega-sol',
+      displayName: 'Bodega Sol',
+      categoryKey: 'restaurantes',
+      categoryLabel: 'Restaurantes',
+      plan: 'pro',
+    },
+  },
   created_at: '2026-10-29T11:00:00Z',
 }
 const requestC = {
@@ -44,6 +55,7 @@ test('Supabase types expose platform request rows and exact workflow RPC results
   assert.match(source, /export type PlatformRequestPlatform = 'vivir-fuengirola' \| 'vivir-fuengirola-negocios' \| 'conoce-fuengirola'/)
   assert.match(source, /platform_requests: \{[\s\S]*?profile_data: Json[\s\S]*?status: PlatformRequestStatus/)
   assert.match(source, /approve_platform_request: \{ Args: \{ p_request_id: string \}; Returns: \{ outcome: 'created_client' \| 'existing_client'; client_id: string \}\[\] \}/)
+  assert.match(source, /approve_directory_request: \{ Args: \{ p_request_id: string; p_profile_patch: Json \}; Returns: \{ outcome: 'created_profile' \| 'existing_profile'; profile_id: string \}\[\] \}/)
   assert.match(source, /reject_platform_request: \{ Args: \{ p_request_id: string; p_reason: string \| null \}; Returns: boolean \}/)
 })
 
@@ -152,18 +164,22 @@ test('pending counts are returned independently for all three platform namespace
 
 function actionSetup({ request = requestA, approveOutcome = 'created_client', rpcFailure } = {}) {
   const clientId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  const profileId = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
   const db = database({ platform_requests: [request] }, {}, {
     rpcs: {
       approve_platform_request: () => rpcFailure
         ? { data: null, error: { message: rpcFailure } }
         : { data: [{ outcome: approveOutcome, client_id: clientId }], error: null },
+      approve_directory_request: () => rpcFailure
+        ? { data: null, error: { message: rpcFailure } }
+        : { data: [{ outcome: approveOutcome, profile_id: profileId }], error: null },
       reject_platform_request: () => ({ data: true, error: null }),
     },
   })
   const revalidated = []
   const auth = boundary(db, { 'next/cache': { revalidatePath: (path) => revalidated.push(path) } })
   const actions = loadProjectModule('src/lib/actions/platform-requests.ts', auth.mocks)
-  return { actions, auth, db, revalidated, clientId }
+  return { actions, auth, db, revalidated, clientId, profileId }
 }
 
 test('approve validates the request id before database work', async () => {
@@ -181,23 +197,44 @@ for (const [outcome, message] of [
   ['existing_client', 'Solicitud aprobada y enlazada al cliente existente.'],
 ]) {
   test(`approve maps ${outcome} and revalidates paths derived from the stored platform`, async () => {
-    const { actions, db, revalidated, clientId } = actionSetup({ request: requestB, approveOutcome: outcome })
+    const { actions, db, revalidated, clientId } = actionSetup({ request: requestA, approveOutcome: outcome })
     const formData = new FormData()
-    formData.set('request_id', requestB.id)
+    formData.set('request_id', requestA.id)
     formData.set('platform', 'conoce-fuengirola')
     const result = await actions.approvePlatformRequestAction({}, formData)
 
     assert.equal(result.success, message)
     assert.equal(result.clientId, clientId)
     assert.equal(result.clientHref, `/paneladmin/clientes/${clientId}`)
-    assert.ok(db.calls.some((call) => call.table === 'rpc:approve_platform_request' && call.args.p_request_id === requestB.id))
+    assert.ok(db.calls.some((call) => call.table === 'rpc:approve_platform_request' && call.args.p_request_id === requestA.id))
     assert.deepEqual(new Set(revalidated), new Set([
       '/paneladmin/inicio',
       '/paneladmin/vivir-en-fuengirola/solicitudes',
-      '/paneladmin/vivir-en-fuengirola/negocios',
+      '/paneladmin/vivir-en-fuengirola/clientes',
       `/paneladmin/clientes/${clientId}`,
     ]))
     assert.equal(revalidated.includes('/paneladmin/conoce-fuengirola/solicitudes'), false)
+  })
+}
+
+for (const [outcome, message] of [
+  ['created_profile', 'Ficha creada para revisión.'],
+  ['existing_profile', 'Solicitud ya enlazada a una ficha.'],
+]) {
+  test(`business approval maps ${outcome} to a canonical draft without CRM conversion`, async () => {
+    const { actions, db, revalidated, profileId } = actionSetup({ request: requestB, approveOutcome: outcome })
+    const formData = new FormData()
+    formData.set('request_id', requestB.id)
+    const result = await actions.approvePlatformRequestAction({}, formData)
+
+    assert.equal(result.success, message)
+    assert.equal(result.profileId, profileId)
+    assert.equal(result.profileHref, `/paneladmin/fichero/fuengirola/fichas/${profileId}`)
+    assert.equal(db.calls.some((call) => call.table === 'rpc:approve_platform_request'), false)
+    assert.ok(db.calls.some((call) => call.table === 'rpc:approve_directory_request'
+      && call.args.p_request_id === requestB.id
+      && JSON.stringify(call.args.p_profile_patch) === '{}'))
+    assert.ok(revalidated.includes('/paneladmin/fichero/fuengirola/fichas'))
   })
 }
 
