@@ -1,13 +1,21 @@
 import { getSites } from "../sites/registry.mjs";
 
-const SITE_REGISTRY = getSites().map((site) => [
-  site.key,
-  site.name,
-  site.domain,
-  site.analytics.source,
-  site.panel.key,
-  site.analytics.envSuffix,
-]);
+const SITE_REGISTRY = getSites().flatMap((site) => {
+  const properties = site.analytics.properties || [{
+    key: site.key,
+    label: site.name,
+    envSuffix: site.analytics.envSuffix,
+  }];
+
+  return properties.map((property) => [
+    property.key,
+    property.label,
+    site.domain,
+    site.analytics.source,
+    site.panel.key,
+    property.envSuffix,
+  ]);
+});
 
 const LEGACY_WEBSITE_ID_ENV = {
   vokabellab: "STAT_REPORT_UMAMI_WEBSITE_ID_VOKABELWORLD",
@@ -141,15 +149,29 @@ export async function resolveUmamiSites({ connection, token, sites, fetchImpl = 
     return sites;
   }
   const websites = Array.isArray(response) ? response : response?.data || [];
+  const domainCounts = sites.reduce((counts, site) => {
+    const domain = site.domain.toLowerCase();
+    counts.set(domain, (counts.get(domain) || 0) + 1);
+    return counts;
+  }, new Map());
 
   return sites.map((site) => {
     if (site.websiteId) return site;
-    const match = websites.find((website) => {
+    const normalizedLabel = site.label.toLowerCase();
+    const normalizedDomain = site.domain.toLowerCase();
+    const nameMatch = websites.find((website) => {
       const id = website.id || website.websiteId || website.website_id;
-      const domain = String(website.domain || "").toLowerCase();
       const name = String(website.name || "").toLowerCase();
-      return id && (domain === site.domain.toLowerCase() || name === site.label.toLowerCase());
+      return id && name === normalizedLabel;
     });
+    const domainMatch = domainCounts.get(normalizedDomain) === 1
+      ? websites.find((website) => {
+        const id = website.id || website.websiteId || website.website_id;
+        const domain = String(website.domain || "").toLowerCase();
+        return id && domain === normalizedDomain;
+      })
+      : undefined;
+    const match = nameMatch || domainMatch;
     const websiteId = match?.id || match?.websiteId || match?.website_id;
     return websiteId ? { ...site, websiteId } : site;
   });

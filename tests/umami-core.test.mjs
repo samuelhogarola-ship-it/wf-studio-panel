@@ -9,6 +9,7 @@ import {
   getPanelUmamiSites,
   getTrailingComparisonRange,
   getUmamiConnections,
+  resolveUmamiSites,
 } from "../src/lib/analytics/umami-core.mjs";
 
 function jsonResponse(data, status = 200) {
@@ -46,13 +47,13 @@ test("aGama and TodoPlastico share the isolated agama analytics source", () => {
     sites.filter((site) => site.source === "agama").map((site) => site.key),
     ["agama", "todoplastico"],
   );
-  assert.equal(sites.filter((site) => site.source === "personal").length, 16);
+  assert.equal(sites.filter((site) => site.source === "personal").length, 17);
 });
 
-test("registry exposes all eighteen sites with their exact panel grouping", () => {
+test("registry exposes nineteen analytics properties with their exact panel grouping", () => {
   const sites = getConfiguredUmamiSites({});
 
-  assert.equal(sites.length, 18);
+  assert.equal(sites.length, 19);
   assert.deepEqual(
     getPanelUmamiSites("vokabel-world", sites).map((site) => site.key),
     ["vokabellab", "imkontext", "derdiedas"],
@@ -61,6 +62,70 @@ test("registry exposes all eighteen sites with their exact panel grouping", () =
     getPanelUmamiSites("superentrenador", sites).map((site) => site.key),
     ["superentrenador", "coachstudio"],
   );
+});
+
+test("Gimnasio Nuevo Estilo exposes Fuengirola and Arroyo as separate properties", () => {
+  const sites = getConfiguredUmamiSites({
+    UMAMI_WEBSITE_ID_GIMNASIONUEVOESTILO: "fuengirola-id",
+    UMAMI_WEBSITE_ID_GIMNASIONUEVOESTILO_ARROYO: "arroyo-id",
+  });
+  const gymSites = sites.filter((site) => site.key === "gimnasionuevoestilo" || site.key === "gimnasionuevoestilo-arroyo");
+
+  assert.deepEqual(gymSites, [
+    {
+      key: "gimnasionuevoestilo",
+      label: "Gimnasio Nuevo Estilo · Fuengirola",
+      domain: "gimnasionuevoestilo.com",
+      source: "personal",
+      panelKey: "reports-only",
+      websiteId: "fuengirola-id",
+    },
+    {
+      key: "gimnasionuevoestilo-arroyo",
+      label: "Gimnasio Nuevo Estilo · Arroyo de la Miel",
+      domain: "gimnasionuevoestilo.com",
+      source: "personal",
+      panelKey: "reports-only",
+      websiteId: "arroyo-id",
+    },
+  ]);
+});
+
+test("duplicate-domain properties resolve by exact Umami name without crossing IDs", async () => {
+  const sites = getConfiguredUmamiSites({})
+    .filter((site) => site.key === "gimnasionuevoestilo" || site.key === "gimnasionuevoestilo-arroyo");
+  const resolved = await resolveUmamiSites({
+    connection: { baseUrl: "https://analytics.example" },
+    token: "token",
+    sites,
+    fetchImpl: async () => jsonResponse({ data: [
+      { id: "fuengirola-id", name: "Gimnasio Nuevo Estilo · Fuengirola", domain: "gimnasionuevoestilo.com" },
+      { id: "arroyo-id", name: "Gimnasio Nuevo Estilo · Arroyo de la Miel", domain: "gimnasionuevoestilo.com" },
+    ] }),
+  });
+
+  assert.deepEqual(resolved.map(({ key, websiteId }) => ({ key, websiteId })), [
+    { key: "gimnasionuevoestilo", websiteId: "fuengirola-id" },
+    { key: "gimnasionuevoestilo-arroyo", websiteId: "arroyo-id" },
+  ]);
+});
+
+test("duplicate-domain properties fail closed when their exact Umami name is absent", async () => {
+  const sites = getConfiguredUmamiSites({})
+    .filter((site) => site.key === "gimnasionuevoestilo" || site.key === "gimnasionuevoestilo-arroyo");
+  const resolved = await resolveUmamiSites({
+    connection: { baseUrl: "https://analytics.example" },
+    token: "token",
+    sites,
+    fetchImpl: async () => jsonResponse({ data: [
+      { id: "legacy-id", name: "Gimnasio Nuevo Estilo", domain: "gimnasionuevoestilo.com" },
+    ] }),
+  });
+
+  assert.deepEqual(resolved.map(({ key, websiteId }) => ({ key, websiteId })), [
+    { key: "gimnasionuevoestilo", websiteId: undefined },
+    { key: "gimnasionuevoestilo-arroyo", websiteId: undefined },
+  ]);
 });
 
 test("new connection variables override legacy monthly-report variables", () => {

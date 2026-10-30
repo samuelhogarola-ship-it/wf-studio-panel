@@ -105,7 +105,7 @@ test("configured report sites include all panels and keep missing website ids vi
     STAT_REPORT_UMAMI_WEBSITE_ID_SUPERENTRENADOR: "super-id",
   });
 
-  assert.equal(sites.length, 18);
+  assert.equal(sites.length, 19);
   assert.equal(sites.find((site) => site.key === "webfuengirola")?.source, "personal");
   assert.equal(sites.find((site) => site.key === "webfuengirola")?.websiteId, "wf-id");
   assert.equal(sites.find((site) => site.key === "superentrenador")?.websiteId, "super-id");
@@ -630,4 +630,36 @@ test("newly connected public websites participate in monthly reports", () => {
   for (const [key, id] of [["bionatura", "bio-id"], ["sportmassagefuengirola", "sport-id"], ["deutschkompakt", "deutsch-id"]]) {
     assert.equal(sites.find((site) => site.key === key)?.websiteId, id);
   }
+});
+
+test("monthly reports keep both Gimnasio Nuevo Estilo locations separate", () => {
+  const sites = getConfiguredReportSites({
+    UMAMI_WEBSITE_ID_GIMNASIONUEVOESTILO: "fuengirola-id",
+    UMAMI_WEBSITE_ID_GIMNASIONUEVOESTILO_ARROYO: "arroyo-id",
+  });
+
+  assert.deepEqual(
+    sites
+      .filter((site) => site.key === "gimnasionuevoestilo" || site.key === "gimnasionuevoestilo-arroyo")
+      .map(({ key, label, websiteId }) => ({ key, label, websiteId })),
+    [
+      { key: "gimnasionuevoestilo", label: "Gimnasio Nuevo Estilo · Fuengirola", websiteId: "fuengirola-id" },
+      { key: "gimnasionuevoestilo-arroyo", label: "Gimnasio Nuevo Estilo · Arroyo de la Miel", websiteId: "arroyo-id" },
+    ],
+  );
+});
+
+test("the protected reports panel can generate the monthly snapshot on demand", async () => {
+  const [routeSource, pageSource, buttonSource] = await Promise.all([
+    readFile(new URL("../src/app/api/monthly-stat-reports/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../src/app/paneladmin/(protected)/informes/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../src/components/admin/generate-stat-report-button.tsx", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(routeSource, /getOptionalIdentity/);
+  assert.match(routeSource, /identity\.role !== 'admin'/);
+  assert.match(routeSource, /x-wf-report-request/);
+  assert.match(pageSource, /GenerateStatReportButton/);
+  assert.match(buttonSource, /method: 'POST'/);
+  assert.match(buttonSource, /x-wf-report-request/);
 });
