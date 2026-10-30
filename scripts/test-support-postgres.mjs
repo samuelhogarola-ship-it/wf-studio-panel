@@ -131,6 +131,7 @@ try {
     '--test',
     'tests/support-session-postgres.test.mjs',
     'tests/fichero-request-approval-postgres.test.mjs',
+    'tests/fichero-intake-postgres.test.mjs',
   ], { cwd: root, extraEnv: { WF_SUPPORT_TEST_DATABASE_URL: databaseUrl } })
   console.error('[support-db] integration tests passed')
 } catch (error) {
