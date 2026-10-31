@@ -27,8 +27,8 @@ test('creates the complete canonical directory model with its fixed state domain
 
   assert.match(sql, /plan text not null[^;]+check \(plan in \('gratis', 'pro', 'premium'\)\)/)
   assert.match(sql, /review_status text not null[^;]+check \(review_status in \('draft', 'pending_review', 'approved', 'rejected', 'archived'\)\)/)
-  assert.match(sql, /last_publication_status text[^;]+check \(last_publication_status is null or last_publication_status in \('pending', 'publishing', 'published', 'failed'\)\)/)
-  assert.match(sql, /status text not null[^;]+check \(status in \('pending', 'publishing', 'published', 'failed'\)\)/)
+  assert.match(sql, /last_publication_status text[^;]+check \(last_publication_status is null or last_publication_status in \('pending', 'publishing', 'published', 'failed', 'withdrawn'\)\)/)
+  assert.match(sql, /status text not null[^;]+check \(status in \('pending', 'publishing', 'published', 'failed', 'withdrawn'\)\)/)
 })
 
 test('creates the extension schema before installing citext into it', async () => {

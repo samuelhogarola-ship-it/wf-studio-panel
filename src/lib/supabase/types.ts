@@ -12,7 +12,7 @@ export type PlatformRequestType = 'client' | 'business' | 'subscription_interest
 export type PlatformRequestStatus = 'pending' | 'approved' | 'rejected'
 export type DirectoryPlan = 'gratis' | 'pro' | 'premium'
 export type DirectoryReviewStatus = 'draft' | 'pending_review' | 'approved' | 'rejected' | 'archived'
-export type DirectoryPublicationStatus = 'pending' | 'publishing' | 'published' | 'failed'
+export type DirectoryPublicationStatus = 'pending' | 'publishing' | 'published' | 'failed' | 'withdrawn'
 export type DirectoryReviewDecision = 'approved' | 'rejected' | 'returned_to_draft'
 
 export type Database = {
@@ -256,7 +256,7 @@ export type Database = {
       approve_directory_request: { Args: { p_request_id: string; p_profile_patch: Json }; Returns: { outcome: 'created_profile' | 'existing_profile'; profile_id: string }[] }
       prepare_directory_publication: { Args: { p_profile_id: string; p_expected_updated_at: string; p_projections: Json }; Returns: { event_id: string; channel_id: string; channel_key: string; public_slug: string; source_version: number; payload_hash: string; status: DirectoryPublicationStatus }[] }
       begin_directory_publication_event: { Args: { p_event_id: string }; Returns: boolean }
-      finish_directory_publication_event: { Args: { p_event_id: string; p_status: 'published' | 'failed'; p_remote_record_id: string | null; p_error_code: string | null; p_error_message: string | null }; Returns: boolean }
+      finish_directory_publication_event: { Args: { p_event_id: string; p_status: 'published' | 'withdrawn' | 'failed'; p_remote_record_id: string | null; p_error_code: string | null; p_error_message: string | null }; Returns: boolean }
       review_directory_profile: { Args: { p_profile_id: string; p_decision: 'approved' | 'rejected'; p_note: string | null }; Returns: 'approved' | 'rejected' }
       reject_platform_request: { Args: { p_request_id: string; p_reason: string | null }; Returns: boolean }
       mark_message_read: { Args: { p_message_id: string }; Returns: undefined }

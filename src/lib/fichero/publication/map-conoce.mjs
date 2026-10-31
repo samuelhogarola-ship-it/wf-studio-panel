@@ -42,7 +42,7 @@ export function mapConocePublication(snapshot, channel, sourceVersion) {
     stats_level: rights.stats,
     editorial_placement: rights.editorialPlacement && channel.editorialPlacement,
     channel_enabled: channel.enabled,
-    publication_status: 'published',
+    publication_status: channel.enabled ? 'published' : 'withdrawn',
     published_at: snapshot.reviewedAt ?? snapshot.sourceUpdatedAt,
   }
   return { ...projection, payload_hash: stablePayloadHash(projection) }

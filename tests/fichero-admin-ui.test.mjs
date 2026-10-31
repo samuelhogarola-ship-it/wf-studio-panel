@@ -70,6 +70,15 @@ test('review keeps save, approve and publish separate and requires explicit reje
   assert.match(html, /(?:name="note"[^>]*required|required[^>]*name="note")/)
 })
 
+test('review names the channel that will be withdrawn before confirmation', () => {
+  const { ReviewPanel } = loadProjectModule('src/components/fichero/review-panel.tsx', actionMocks)
+  const selected = channels.map((channel, index) => index ? { ...channel, enabled: false, lastPublicationStatus: 'published' } : channel)
+  const html = renderToStaticMarkup(React.createElement(ReviewPanel, { profileId: profile.id, channels: selected }))
+  assert.match(html, /Conoce Fuengirola \(retirar\)/)
+  assert.match(html, /Vivir en Fuengirola \(publicar\)/)
+  assert.match(html, /Confirmo los cambios/)
+})
+
 test('publication feedback is per channel and retry remains scoped to the failed version', () => {
   const { PublicationStatus } = loadProjectModule('src/components/fichero/publication-status.tsx', actionMocks)
   const events = [

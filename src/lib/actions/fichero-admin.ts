@@ -47,7 +47,7 @@ function publicationOutcome(publication: PublicationResult, profileId: string): 
   if (failed.length > 0) {
     return { error: `La ficha quedó aprobada, pero falló la publicación en ${failed.map(channel => labels[channel.channelKey]).join(' y ')}. Revisa el estado y reintenta el canal.`, profileId, publication }
   }
-  return { success: 'Publicación completada en los canales seleccionados.', profileId, publication }
+  return { success: 'Cambios completados en los canales indicados.', profileId, publication }
 }
 
 function revalidateProfile(catalogKey: string, profileId: string) {

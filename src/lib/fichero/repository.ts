@@ -85,6 +85,7 @@ async function loadCandidate(db: DirectoryDb, profileId: string): Promise<Canoni
         enabled: link.enabled && channel.status === 'active',
         publicSlug: link.public_slug,
         categorySlug: link.category_slug,
+        lastPublicationStatus: link.last_publication_status,
         editorialPlacement: link.editorial_placement,
       }
     }),
@@ -164,10 +165,10 @@ export function directoryPublicationRepository(db: DirectoryDb): PublicationRepo
       if (error || !data) fail('El intento de publicación ya está procesándose o ha finalizado.')
     },
 
-    async markPublished(eventId, remoteRecordId) {
+    async markPublished(eventId, remoteRecordId, status) {
       const { error } = await db.rpc('finish_directory_publication_event', {
         p_event_id: eventId,
-        p_status: 'published',
+        p_status: status,
         p_remote_record_id: remoteRecordId,
         p_error_code: null,
         p_error_message: null,

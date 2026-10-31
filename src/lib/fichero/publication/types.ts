@@ -9,6 +9,7 @@ export type PublicationChannel = {
   enabled: boolean
   publicSlug: string
   categorySlug: string | null
+  lastPublicationStatus: DirectoryPublicationStatus | null
   editorialPlacement: boolean
 }
 
@@ -50,7 +51,7 @@ export type PublicationEvent = PreparedProjection & {
 export type ChannelPublicationResult = {
   channelKey: DirectoryChannelKey
   sourceVersion: number
-  status: 'published' | 'failed'
+  status: 'published' | 'withdrawn' | 'failed'
   remoteRecordId?: string
   errorCode?: string
   errorMessage?: string
@@ -71,6 +72,6 @@ export type PublicationRepository = {
   preparePublication(snapshot: CanonicalPublicationSnapshot, projections: PreparedProjection[]): Promise<{ sourceVersion: number; events: PublicationEvent[] }>
   loadRetryCandidate(profileId: string, channelKey: DirectoryChannelKey, sourceVersion: number): Promise<{ snapshot: CanonicalPublicationSnapshot; event: PublicationEvent }>
   markPublishing(eventId: string): Promise<void>
-  markPublished(eventId: string, remoteRecordId: string): Promise<void>
+  markPublished(eventId: string, remoteRecordId: string, status: 'published' | 'withdrawn'): Promise<void>
   markFailed(eventId: string, error: { code: string; message: string }): Promise<void>
 }

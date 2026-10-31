@@ -54,7 +54,7 @@ function harness({ statusByChannel = {}, failChannel } = {}) {
       return { snapshot: candidate(), event }
     },
     async markPublishing(eventId) { calls.push(`publishing:${eventId}`) },
-    async markPublished(eventId, remoteRecordId) { calls.push(`published:${eventId}:${remoteRecordId}`); stored.get(eventId.replace('event-', '')).status = 'published' },
+    async markPublished(eventId, remoteRecordId, status) { calls.push(`published:${eventId}:${remoteRecordId}`); stored.get(eventId.replace('event-', '')).status = status },
     async markFailed(eventId, error) { calls.push(`failed:${eventId}:${error.code}:${error.message}`); stored.get(eventId.replace('event-', '')).status = 'failed' },
   }
   const adapters = Object.fromEntries(['vivir-fuengirola', 'conoce-fuengirola'].map(channelKey => [channelKey, {
@@ -116,6 +116,40 @@ test('partial failure persists independent results and keeps the approved versio
   assert.equal(h.contentVersion, 1)
   assert.equal(h.calls.filter(call => call.startsWith('adapter:vivir-fuengirola')).length, 1)
   assert.equal(h.calls.filter(call => call.startsWith('adapter:conoce-fuengirola')).length, 2)
+})
+
+test('reviewed disabling withdraws only previously published channels', async () => {
+  const h = harness()
+  const snapshot = candidate()
+  snapshot.channels[0].enabled = false
+  snapshot.channels[0].lastPublicationStatus = 'published'
+  h.repository.loadPublicationCandidate = async () => snapshot
+  let withdrawal
+  h.adapters['vivir-fuengirola'].publish = async (current, channel, version) => {
+    withdrawal = mapVivirPublication(current, channel, version)
+    return { remoteRecordId: 'vivir-remote' }
+  }
+  const result = await publishApprovedProfileWithDependencies(snapshot.profile.id, h)
+  assert.equal(withdrawal.channel_enabled, false)
+  assert.equal(withdrawal.publication_status, 'disabled')
+  assert.deepEqual(result.channels.map(channel => channel.status), ['withdrawn', 'published'])
+  assert.equal(h.stored.get('vivir-fuengirola').status, 'withdrawn')
+})
+
+test('both destinations can be withdrawn together without creating new public records', async () => {
+  const h = harness()
+  const snapshot = candidate()
+  for (const channel of snapshot.channels) { channel.enabled = false; channel.lastPublicationStatus = 'published' }
+  h.repository.loadPublicationCandidate = async () => snapshot
+  let conoceProjection
+  h.adapters['conoce-fuengirola'].publish = async (current, channel, version) => {
+    conoceProjection = mapConocePublication(current, channel, version)
+    return { remoteRecordId: 'conoce-remote' }
+  }
+  const result = await publishApprovedProfileWithDependencies(snapshot.profile.id, h)
+  assert.deepEqual(result.channels.map(channel => channel.status), ['withdrawn', 'withdrawn'])
+  assert.equal(conoceProjection.channel_enabled, false)
+  assert.equal(conoceProjection.publication_status, 'withdrawn')
 })
 
 test('a missing destination configuration does not block the other channel', async () => {

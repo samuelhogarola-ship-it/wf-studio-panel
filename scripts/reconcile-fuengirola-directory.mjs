@@ -53,8 +53,8 @@ async function loadLiveDataset(configuration) {
   const [profilesResult, linksResult, vivirResult, conoceResult] = await Promise.all([
     panel.from('directory_profiles').select('id,display_name,cif,website,contact_email'),
     panel.from('directory_profile_channels').select('profile_id,public_slug,directory_channels!inner(key)'),
-    vivir.from('businesses').select('canonical_profile_id,slug,name,cif,website,contact_email,phone,category_slug,category_label,short_description,long_description,plan'),
-    conoce.from('businesses').select('canonical_profile_id,slug,name,cif,website,contact_email,phone,category_slug,category,summary,description,plan'),
+    vivir.from('businesses').select('canonical_profile_id,slug,name,cif,website,contact_email,phone,category_slug,category_label,short_description,long_description,plan,status,publication_status,channel_enabled'),
+    conoce.from('businesses').select('canonical_profile_id,slug,name,cif,website,contact_email,phone,category_slug,category,summary,description,plan,publication_status,channel_enabled'),
   ])
   for (const result of [profilesResult, linksResult, vivirResult, conoceResult]) {
     if (result.error) throw new Error('reconciliation_read_failed')
@@ -82,6 +82,8 @@ async function loadLiveDataset(configuration) {
     id: `${channelKey}:${row.slug}`,
     channelKey,
     canonicalProfileId: row.canonical_profile_id,
+    isPublished: row.publication_status === 'published' && row.channel_enabled === true
+      && (channelKey !== 'vivir-fuengirola' || row.status === 'publicado'),
     slug: row.slug,
     name: row.name,
     cif: row.cif,
@@ -171,6 +173,7 @@ async function applyReconciliation(dataset, report, decisionsDocument, configura
       const { error: linkError } = await panel.from('directory_profile_channels').insert({
         profile_id: profileId, channel_id: channelId, enabled: true,
         public_slug: row.slug, category_slug: row.categoryKey || null, editorial_placement: false,
+        last_publication_status: row.isPublished ? 'published' : null,
       })
       if (linkError) throw new Error('profile_channel_link_failed')
     }

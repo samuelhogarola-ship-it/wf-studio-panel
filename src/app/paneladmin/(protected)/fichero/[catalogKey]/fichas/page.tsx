@@ -12,7 +12,7 @@ import type { DirectoryPlan, DirectoryPublicationStatus, DirectoryReviewStatus }
 export const dynamic = 'force-dynamic'
 const plans = new Set<DirectoryPlan>(['gratis', 'pro', 'premium'])
 const reviews = new Set<DirectoryReviewStatus>(['draft', 'pending_review', 'approved', 'rejected', 'archived'])
-const publications = new Set<DirectoryPublicationStatus>(['pending', 'publishing', 'published', 'failed'])
+const publications = new Set<DirectoryPublicationStatus>(['pending', 'publishing', 'published', 'failed', 'withdrawn'])
 
 export default async function Page({ params, searchParams }: { params: Promise<{ catalogKey: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const [{ catalogKey }, query] = await Promise.all([params, searchParams])

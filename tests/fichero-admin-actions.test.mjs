@@ -73,6 +73,6 @@ test('review and retry report destination failures rather than global success', 
   assert.equal(retried.success, undefined)
   result = { ...result, channels: [{ channelKey: 'conoce-fuengirola', sourceVersion: 1, status: 'published' }] }
   const success = await retryDirectoryProfileChannelAction({}, form)
-  assert.match(success.success, /completada/)
+  assert.match(success.success, /completados/)
   assert.equal(success.error, undefined)
 })

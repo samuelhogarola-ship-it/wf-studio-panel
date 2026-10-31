@@ -6,7 +6,7 @@ import { retryDirectoryProfileChannelAction } from '@/lib/actions/fichero-admin'
 import type { DirectoryAdminEvent } from '@/lib/fichero/admin'
 
 const labels = { 'vivir-fuengirola': 'Vivir en Fuengirola', 'conoce-fuengirola': 'Conoce Fuengirola' }
-const statuses = { pending: 'Pendiente', publishing: 'Publicando', published: 'Publicado', failed: 'Falló' }
+const statuses = { pending: 'Pendiente', publishing: 'Publicando', published: 'Publicado', withdrawn: 'Retirado', failed: 'Falló' }
 
 function Retry({ profileId, catalogKey, event }: { profileId: string; catalogKey: string; event: DirectoryAdminEvent }) {
   const [state, action, pending] = useActionState(retryDirectoryProfileChannelAction, {})

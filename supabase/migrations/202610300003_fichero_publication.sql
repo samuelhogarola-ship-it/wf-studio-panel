@@ -65,7 +65,7 @@ begin
   select count(*) into v_enabled_count
   from public.directory_profile_channels link
   join public.directory_channels channel on channel.id = link.channel_id
-  where link.profile_id = p_profile_id and link.enabled and channel.status = 'active';
+  where link.profile_id = p_profile_id and (link.enabled or (link.last_publication_status is not null and link.last_publication_status <> 'withdrawn')) and channel.status = 'active';
 
   select count(*) into v_valid_count
   from (
@@ -76,7 +76,7 @@ begin
       and item ->> 'payloadHash' ~ '^[0-9a-f]{64}$'
   ) projection
   join public.directory_profile_channels link
-    on link.profile_id = p_profile_id and link.channel_id = projection.channel_id and link.enabled
+    on link.profile_id = p_profile_id and link.channel_id = projection.channel_id and (link.enabled or (link.last_publication_status is not null and link.last_publication_status <> 'withdrawn'))
   join public.directory_channels channel
     on channel.id = link.channel_id and channel.status = 'active';
 
@@ -107,7 +107,7 @@ begin
   update public.directory_profile_channels link
   set last_publication_status = 'pending',
       last_publication_error = null
-  where link.profile_id = p_profile_id and link.enabled;
+  where link.profile_id = p_profile_id and (link.enabled or (link.last_publication_status is not null and link.last_publication_status <> 'withdrawn'));
 
   return query
   select event.id, event.channel_id, channel.key, link.public_slug,
@@ -134,7 +134,7 @@ begin
   end if;
   select status into v_status from public.directory_publication_events where id = p_event_id for update;
   if not found then raise exception 'Publication event not found' using errcode = 'P0002'; end if;
-  if v_status in ('published', 'publishing') then return false; end if;
+  if v_status in ('published', 'withdrawn', 'publishing') then return false; end if;
   update public.directory_publication_events
   set status = 'publishing', attempt_count = attempt_count + 1, started_at = now(),
       completed_at = null, error_code = null, error_message = null
@@ -160,29 +160,29 @@ begin
   if auth.uid() is null or not private.is_admin() then
     raise exception 'Administrator access required' using errcode = '42501';
   end if;
-  if p_status not in ('published', 'failed') then
+  if p_status not in ('published', 'withdrawn', 'failed') then
     raise exception 'Invalid publication result' using errcode = '22023';
   end if;
   select * into v_event from public.directory_publication_events where id = p_event_id for update;
   if not found then raise exception 'Publication event not found' using errcode = 'P0002'; end if;
-  if v_event.status = 'published' and p_status = 'published' then return false; end if;
+  if v_event.status in ('published', 'withdrawn') and v_event.status = p_status then return false; end if;
   if v_event.status <> 'publishing' then
     raise exception 'Publication event is not in progress' using errcode = 'P0001';
   end if;
 
   update public.directory_publication_events
   set status = p_status,
-      remote_record_id = case when p_status = 'published' then nullif(btrim(p_remote_record_id), '') else null end,
+      remote_record_id = case when p_status in ('published', 'withdrawn') then nullif(btrim(p_remote_record_id), '') else null end,
       error_code = case when p_status = 'failed' then left(coalesce(nullif(btrim(p_error_code), ''), 'destination_unavailable'), 80) else null end,
       error_message = case when p_status = 'failed' then left(coalesce(nullif(btrim(p_error_message), ''), 'No se pudo completar la publicación.'), 240) else null end,
       completed_at = now()
   where id = p_event_id;
 
   update public.directory_profile_channels
-  set last_published_version = case when p_status = 'published' then v_event.source_version else last_published_version end,
+  set last_published_version = case when p_status in ('published', 'withdrawn') then v_event.source_version else last_published_version end,
       last_publication_status = p_status,
       last_publication_error = case when p_status = 'failed' then left(coalesce(nullif(btrim(p_error_message), ''), 'No se pudo completar la publicación.'), 240) else null end,
-      last_published_at = case when p_status = 'published' then now() else last_published_at end
+      last_published_at = case when p_status in ('published', 'withdrawn') then now() else last_published_at end
   where profile_id = v_event.profile_id and channel_id = v_event.channel_id;
 
   if p_status = 'published' then

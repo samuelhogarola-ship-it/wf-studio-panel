@@ -230,6 +230,34 @@ test('Postgres keeps business intake human-reviewed, draft-only and idempotent',
       assert.equal((await db.query('select count(*)::int as count from public.directory_publication_events where profile_id = $1', [profileId])).rows[0].count, 4)
     })
 
+    await t.test('confirmed disabling prepares and records withdrawal from both channels', async () => {
+      const pending = (await db.query('select id from public.directory_publication_events where profile_id=$1 and source_version=2', [profileId])).rows
+      for (const event of pending) {
+        await queryAs('authenticated', adminId, 'select public.begin_directory_publication_event($1)', [event.id])
+        await queryAs('authenticated', adminId, "select public.finish_directory_publication_event($1, 'published', 'remote', null, null)", [event.id])
+      }
+      await db.query("update public.directory_profiles set review_status='draft',approved_at=null,approved_by=null where id=$1", [profileId])
+      await db.query('update public.directory_profile_channels set enabled=false, editorial_placement=false where profile_id=$1', [profileId])
+      await queryAs('authenticated', adminId, "select public.review_directory_profile($1, 'approved', null)", [profileId])
+      const current = (await db.query('select updated_at::text as updated_at from public.directory_profiles where id=$1', [profileId])).rows[0]
+      const links = (await db.query(`select link.channel_id,channel.key,link.public_slug from public.directory_profile_channels link
+        join public.directory_channels channel on channel.id=link.channel_id where link.profile_id=$1 order by channel.key`, [profileId])).rows
+      const projections = links.map((link, index) => ({ channelId: link.channel_id, channelKey: link.key,
+        publicSlug: link.public_slug, payloadHash: String(index + 5).repeat(64) }))
+      const prepared = await queryAs('authenticated', adminId, 'select * from public.prepare_directory_publication($1,$2,$3)', [profileId, current.updated_at, JSON.stringify(projections)])
+      assert.equal(prepared.rowCount, 2)
+      assert.deepEqual(new Set(prepared.rows.map(row => row.source_version)), new Set(['3']))
+      for (const event of prepared.rows) {
+        assert.equal((await queryAs('authenticated', adminId, 'select public.begin_directory_publication_event($1) as claimed', [event.event_id])).rows[0].claimed, true)
+        await queryAs('authenticated', adminId, "select public.finish_directory_publication_event($1, 'withdrawn', 'remote', null, null)", [event.event_id])
+      }
+      const stored = await db.query('select enabled,last_publication_status from public.directory_profile_channels where profile_id=$1', [profileId])
+      assert.deepEqual(stored.rows.map(row => [row.enabled,row.last_publication_status]), [[false,'withdrawn'],[false,'withdrawn']])
+      const after = (await db.query('select updated_at::text as updated_at from public.directory_profiles where id=$1', [profileId])).rows[0]
+      const repeat = await queryAs('authenticated', adminId, 'select * from public.prepare_directory_publication($1,$2,$3)', [profileId, after.updated_at, JSON.stringify(projections)])
+      assert.deepEqual(new Set(repeat.rows.map(row => row.status)), new Set(['withdrawn']))
+    })
+
     await t.test('rejection records the human decision and never creates a profile', async () => {
       const rejected = await queryAs(
         'authenticated',
