@@ -12,6 +12,8 @@ export type PlatformRequestActionState = {
   success?: string
   clientId?: string
   clientHref?: string
+  profileId?: string
+  profileHref?: string
 }
 
 const requestIdSchema = z.string().uuid()
@@ -36,19 +38,23 @@ async function loadStoredRequest(requestId: string) {
   const supabase = await createSupabaseServerClient()
   const { data, error } = await supabase
     .from('platform_requests')
-    .select('id,platform,status')
+    .select('id,platform,request_type,status')
     .eq('id', requestId)
     .maybeSingle()
   if (error || !data) return { supabase, request: null }
   return { supabase, request: data }
 }
 
-function revalidateRequestViews(platform: PlatformRequestPlatform, clientId?: string) {
+function revalidateRequestViews(platform: PlatformRequestPlatform, clientId?: string, profileId?: string) {
   const paths = PLATFORM_PATHS[platform]
   revalidatePath('/paneladmin/inicio')
   revalidatePath(paths.inbox)
   revalidatePath(paths.list)
   if (clientId) revalidatePath(`/paneladmin/clientes/${clientId}`)
+  if (profileId) {
+    revalidatePath('/paneladmin/fichero/fuengirola/fichas')
+    revalidatePath(`/paneladmin/fichero/fuengirola/fichas/${profileId}`)
+  }
 }
 
 function safeRpcError(message: string | undefined): PlatformRequestActionState {
@@ -67,6 +73,24 @@ export async function approvePlatformRequestAction(
 
   const { supabase, request } = await loadStoredRequest(parsedId.data)
   if (!request) return { error: 'La solicitud no existe.' }
+  if (request.request_type === 'business') {
+    const { data, error } = await supabase.rpc('approve_directory_request', {
+      p_request_id: parsedId.data,
+      p_profile_patch: {},
+    })
+    if (error) return safeRpcError(error.message)
+    const result = data?.[0]
+    if (!result) return { error: 'No se pudo actualizar la solicitud.' }
+
+    revalidateRequestViews(request.platform, undefined, result.profile_id)
+    return {
+      success: result.outcome === 'created_profile'
+        ? 'Ficha creada para revisión.'
+        : 'Solicitud ya enlazada a una ficha.',
+      profileId: result.profile_id,
+      profileHref: `/paneladmin/fichero/fuengirola/fichas/${result.profile_id}`,
+    }
+  }
   const { data, error } = await supabase.rpc('approve_platform_request', { p_request_id: parsedId.data })
   if (error) return safeRpcError(error.message)
   const result = data?.[0]

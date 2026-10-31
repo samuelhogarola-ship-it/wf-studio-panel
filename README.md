@@ -58,6 +58,11 @@ TODO_PLASTICO_SERVICE_KEY=
 TODO_PLASTICO_ADMIN_URL=
 NEXT_PUBLIC_TODO_PLASTICO_PUBLIC_URL=
 NEXT_PUBLIC_TODO_PLASTICO_ADMIN_URL=
+FICHERO_PUBLISHING_ENABLED=false
+VIVIR_FUENGIROLA_SUPABASE_URL=
+VIVIR_FUENGIROLA_SUPABASE_SERVICE_ROLE_KEY=
+CONOCE_FUENGIROLA_SUPABASE_URL=
+CONOCE_FUENGIROLA_SUPABASE_SERVICE_ROLE_KEY=
 SUPERENTRENADOR_URL=
 SUPERENTRENADOR_SERVICE_KEY=
 NEXT_PUBLIC_SUPERENTRENADOR_URL=
@@ -205,6 +210,11 @@ Configura estas variables en Coolify antes de hacer el primer deploy:
 | `TODO_PLASTICO_ADMIN_URL`              | Login admin exacto: `https://todo-plastico.com/ingresar?next=/admin`                |
 | `NEXT_PUBLIC_TODO_PLASTICO_PUBLIC_URL` | Panel de clientes exacto: `https://todo-plastico.com/panel`                         |
 | `NEXT_PUBLIC_TODO_PLASTICO_ADMIN_URL`  | Login admin usado desde el lanzador                                                 |
+| `FICHERO_PUBLISHING_ENABLED`           | Activa la publicación manual solo cuando ambos destinos están preparados            |
+| `VIVIR_FUENGIROLA_SUPABASE_URL`        | URL Supabase de Vivir en Fuengirola, solo servidor                                  |
+| `VIVIR_FUENGIROLA_SUPABASE_SERVICE_ROLE_KEY` | Service role de Vivir en Fuengirola, solo servidor                           |
+| `CONOCE_FUENGIROLA_SUPABASE_URL`       | URL Supabase de Conoce Fuengirola, solo servidor                                    |
+| `CONOCE_FUENGIROLA_SUPABASE_SERVICE_ROLE_KEY` | Service role de Conoce Fuengirola, solo servidor                             |
 | `SUPERENTRENADOR_URL`                  | URL Supabase/API de Superentrenador                                                 |
 | `SUPERENTRENADOR_SERVICE_KEY`          | Service role key de Superentrenador, solo servidor                                  |
 | `NEXT_PUBLIC_SUPERENTRENADOR_URL`      | URL publica del marketplace Superentrenador                                         |

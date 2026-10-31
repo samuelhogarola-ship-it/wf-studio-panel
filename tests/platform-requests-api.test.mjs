@@ -22,6 +22,32 @@ const validPayload = {
   token: '',
 }
 
+const validBusinessProfile = {
+  schema_version: 'fichero.v1',
+  catalog: 'fuengirola',
+  canonicalSlug: 'bodega-sol',
+  displayName: 'Bodega Sol',
+  cif: 'B-12.345.678',
+  contactEmail: 'hola@bodegasol.example',
+  categoryKey: 'restaurantes',
+  categoryLabel: 'Restaurantes',
+  shortDescription: 'Bodega local en Fuengirola.',
+  neighborhoodKeys: ['centro'],
+  services: ['Comida local'],
+  schedule: ['Lunes a viernes'],
+  photos: [],
+  plan: 'pro',
+}
+
+const validBusinessPayload = {
+  ...validPayload,
+  platform: 'vivir-fuengirola-negocios',
+  requestType: 'business',
+  name: 'Bodega Sol',
+  email: 'hola@bodegasol.example',
+  profile: validBusinessProfile,
+}
+
 function request(method, body, origin = 'https://vivirenfuengirola.com') {
   const resolvedBody = body === undefined && method === 'POST' ? validPayload : body
   return new Request('https://admin.webfuengirola.com/api/platform-requests', {
@@ -89,6 +115,7 @@ test('origin-to-platform mapping rejects cross-platform submissions and forged s
     ...validPayload,
     platform: 'conoce-fuengirola',
     requestType: 'business',
+    profile: validBusinessProfile,
     sourceUrl: 'https://conocefuengirola.com/alta',
   }, 'https://conocefuengirola.com'), acceptingOptions())
   assert.equal(conoceBusiness.status, 201)
@@ -115,6 +142,73 @@ test('valid payload is normalized and fingerprinted before persistence', async (
   })
 })
 
+test('both Fuengirola sources accept the same strict fichero.v1 business contract', async () => {
+  const received = []
+  const options = acceptingOptions({ createRequest: async (payload) => { received.push(payload); return 'created' } })
+  const vivir = await handlePlatformRequestPost(request('POST', validBusinessPayload), options)
+  const conoce = await handlePlatformRequestPost(request('POST', {
+    ...validBusinessPayload,
+    platform: 'conoce-fuengirola',
+    sourceUrl: 'https://conocefuengirola.com/publica-tu-negocio',
+  }, 'https://conocefuengirola.com'), options)
+
+  assert.equal(vivir.status, 201)
+  assert.equal(conoce.status, 201)
+  assert.equal(received[0].profile_data.schema_version, 'fichero.v1')
+  assert.equal(received[0].profile_data.catalog, 'fuengirola')
+  assert.equal(received[0].profile_data.profile.plan, 'pro')
+  assert.equal(received[0].profile_data.profile.cif, 'B12345678')
+  assert.equal(received[1].profile_data.profile.displayName, 'Bodega Sol')
+})
+
+test('business intake rejects unknown profile fields, unsupported versions and invalid plans before writing', async () => {
+  let writes = 0
+  const options = acceptingOptions({ createRequest: async () => { writes += 1; return 'created' } })
+  for (const profile of [
+    { ...validBusinessProfile, ownerUserId: 'attacker-controlled' },
+    { ...validBusinessProfile, schema_version: 'fichero.v2' },
+    { ...validBusinessProfile, catalog: 'otro-catalogo' },
+    { ...validBusinessProfile, plan: 'normal' },
+  ]) {
+    const response = await handlePlatformRequestPost(request('POST', { ...validBusinessPayload, profile }), options)
+    assert.equal(response.status, 400)
+    assert.deepEqual(await response.json(), { success: false, error: 'invalid_payload' })
+  }
+  assert.equal(writes, 0)
+})
+
+test('business duplicate fingerprints span both source platforms by normalized CIF', async () => {
+  const received = []
+  const options = acceptingOptions({ createRequest: async (payload) => { received.push(payload); return 'created' } })
+  await handlePlatformRequestPost(request('POST', validBusinessPayload), options)
+  await handlePlatformRequestPost(request('POST', {
+    ...validBusinessPayload,
+    platform: 'conoce-fuengirola',
+    sourceUrl: 'https://conocefuengirola.com/publica-tu-negocio',
+    profile: { ...validBusinessProfile, cif: ' b 12345678 ' },
+  }, 'https://conocefuengirola.com'), options)
+
+  assert.equal(received.length, 2)
+  assert.equal(received[0].fingerprint, received[1].fingerprint)
+})
+
+test('business duplicate fingerprints fall back to normalized email domain and name when CIF is absent', async () => {
+  const received = []
+  const options = acceptingOptions({ createRequest: async (payload) => { received.push(payload); return 'created' } })
+  const profile = { ...validBusinessProfile, cif: '' }
+  await handlePlatformRequestPost(request('POST', { ...validBusinessPayload, profile }), options)
+  await handlePlatformRequestPost(request('POST', {
+    ...validBusinessPayload,
+    platform: 'conoce-fuengirola',
+    name: '  BODEGA SOL ',
+    email: ' HOLA@BODEGASOL.EXAMPLE ',
+    sourceUrl: 'https://conocefuengirola.com/publica-tu-negocio',
+    profile: { ...profile, displayName: 'Bódega   Sol' },
+  }, 'https://conocefuengirola.com'), options)
+
+  assert.equal(received[0].fingerprint, received[1].fingerprint)
+})
+
 test('required fields, enum values and common string limits fail before persistence', async () => {
   let writes = 0
   const options = acceptingOptions({ createRequest: async () => { writes += 1; return 'created' } })
@@ -136,11 +230,43 @@ test('required fields, enum values and common string limits fail before persiste
   assert.equal(writes, 0)
 })
 
+test('business forms from both websites accept bounded lists and preserve them', async () => {
+  for (const [origin, platform] of [
+    ['https://vivirenfuengirola.com', 'vivir-fuengirola-negocios'],
+    ['https://conocefuengirola.com', 'conoce-fuengirola'],
+  ]) {
+    let stored
+    const payload = { ...validBusinessPayload, platform, sourceUrl: `${origin}/registrar` }
+    const response = await handlePlatformRequestPost(request('POST', payload, origin), acceptingOptions({
+      createRequest: async input => { stored = input; return 'created' },
+    }))
+    assert.equal(response.status, 201, origin)
+    assert.deepEqual(stored.profile_data.profile.neighborhoodKeys, ['centro'])
+    assert.deepEqual(stored.profile_data.profile.services, ['Comida local'])
+    assert.deepEqual(stored.profile_data.profile.schedule, ['Lunes a viernes'])
+  }
+})
+
+test('business intake accepts the full documented limits for profile lists', async () => {
+  const list = (prefix, count) => Array.from({ length: count }, (_, index) => `${prefix}-${index}`)
+  const payload = { ...validBusinessPayload, profile: { ...validBusinessProfile,
+    neighborhoodKeys: list('barrio', 20), services: list('servicio', 50),
+    schedule: list('horario', 21), photos: list('https://example.test/foto', 20),
+  } }
+  let stored
+  const response = await handlePlatformRequestPost(request('POST', payload), acceptingOptions({
+    createRequest: async input => { stored = input; return 'created' },
+  }))
+  assert.equal(response.status, 201)
+  assert.equal(stored.profile_data.profile.photos.length, 20)
+  assert.equal(stored.profile_data.profile.services.length, 50)
+})
+
 test('profile must be a bounded object and the whole body is capped at 32 KiB', async () => {
   const tooDeep = { a: { b: { c: { d: { e: { f: 'too deep' } } } } } }
   const tooManyKeys = Object.fromEntries(Array.from({ length: 101 }, (_, index) => [`key${index}`, index]))
   const oversizedProfile = { text: 'x'.repeat(24_576) }
-  for (const profile of [[], tooDeep, tooManyKeys, oversizedProfile]) {
+  for (const profile of [[], tooDeep, tooManyKeys, oversizedProfile, { items: [ { nested: 'no' } ] }, { items: Array(112).fill('x') }]) {
     const response = await handlePlatformRequestPost(request('POST', { ...validPayload, profile }), acceptingOptions())
     assert.equal(response.status, 400)
     assert.equal((await response.json()).error, 'invalid_payload')

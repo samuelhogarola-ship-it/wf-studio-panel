@@ -2,11 +2,20 @@ import { createHash } from 'node:crypto'
 
 import { z } from 'zod'
 
+import { normalizeDirectoryIdentity, parseDirectoryProfileInput } from '../fichero/validation.mjs'
+
 const BODY_LIMIT_BYTES = 32 * 1024
 const PROFILE_LIMIT_BYTES = 24 * 1024
 const PROFILE_MAX_DEPTH = 5
 const PROFILE_MAX_KEYS = 100
+const PROFILE_MAX_ITEMS = 111
 const TURNSTILE_TIMEOUT_MS = 8_000
+const BUSINESS_PROFILE_KEYS = new Set([
+  'schema_version', 'catalog', 'canonicalSlug', 'legalName', 'displayName', 'cif',
+  'contactEmail', 'phone', 'whatsapp', 'website', 'address', 'latitude', 'longitude',
+  'categoryKey', 'categoryLabel', 'neighborhoodKeys', 'shortDescription',
+  'longDescription', 'seoTitle', 'seoDescription', 'services', 'schedule', 'photos', 'plan',
+])
 
 const PRODUCTION_ORIGINS = new Map([
   ['https://vivirenfuengirola.com', new Set(['vivir-fuengirola', 'vivir-fuengirola-negocios'])],
@@ -77,13 +86,16 @@ function turnstileConfiguration(env) {
   return { state: 'disabled' }
 }
 
-function inspectProfile(value, depth = 1, state = { keys: 0 }) {
+function inspectProfile(value, depth = 1, state = { keys: 0, items: 0 }) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || depth > PROFILE_MAX_DEPTH) return false
   for (const [key, child] of Object.entries(value)) {
     state.keys += 1
     if (state.keys > PROFILE_MAX_KEYS || key.length > 120) return false
-    if (child && typeof child === 'object') {
-      if (Array.isArray(child) || !inspectProfile(child, depth + 1, state)) return false
+    if (Array.isArray(child)) {
+      state.items += child.length
+      if (state.items > PROFILE_MAX_ITEMS || child.some(item => item !== null && !['string', 'number', 'boolean'].includes(typeof item))) return false
+    } else if (child && typeof child === 'object') {
+      if (!inspectProfile(child, depth + 1, state)) return false
     } else if (!['string', 'number', 'boolean'].includes(typeof child) && child !== null) {
       return false
     }
@@ -146,6 +158,36 @@ function fingerprint(platform, requestType, email) {
   return createHash('sha256').update(`${platform}|${requestType}|${email}`).digest('hex')
 }
 
+function parseBusinessProfile(value, fallbackEmail) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+  if (Object.keys(value).some(key => !BUSINESS_PROFILE_KEYS.has(key))) return null
+  if (value.schema_version !== 'fichero.v1' || value.catalog !== 'fuengirola') return null
+
+  const profileInput = Object.fromEntries(
+    Object.entries(value).filter(([key]) => key !== 'schema_version' && key !== 'catalog'),
+  )
+  const parsed = parseDirectoryProfileInput(profileInput)
+  if (!parsed.success) return null
+  const identity = normalizeDirectoryIdentity({
+    ...parsed.data,
+    contactEmail: parsed.data.contactEmail ?? fallbackEmail,
+  })
+  if (!identity.normalizedCif && (!identity.normalizedEmail || !identity.normalizedDomain || !identity.normalizedName)) return null
+
+  return {
+    profileData: {
+      schema_version: 'fichero.v1',
+      catalog: 'fuengirola',
+      profile: parsed.data,
+      identity,
+    },
+    fingerprint: createHash('sha256').update(identity.normalizedCif
+      ? `business|fuengirola|cif:${identity.normalizedCif}`
+      : `business|fuengirola|email:${identity.normalizedEmail}|domain:${identity.normalizedDomain}|name:${identity.normalizedName}`)
+      .digest('hex'),
+  }
+}
+
 export function handlePlatformRequestOptions(request, { env = process.env } = {}) {
   const origin = requestOrigin(request, env)
   if (!origin) return Response.json({ error: 'forbidden_origin' }, { status: 403 })
@@ -195,7 +237,16 @@ export async function handlePlatformRequestPost(request, {
     }
     if (data.website) return json({ success: true, outcome: 'created' }, 201, origin, methods)
 
-    const requestFingerprint = fingerprint(data.platform, data.requestType, data.email)
+    const business = data.requestType === 'business'
+      ? parseBusinessProfile(data.profile, data.email)
+      : null
+    if (data.requestType === 'business' && (
+      !business || !['vivir-fuengirola-negocios', 'conoce-fuengirola'].includes(data.platform)
+    )) {
+      return json({ success: false, error: 'invalid_payload' }, 400, origin, methods)
+    }
+
+    const requestFingerprint = business?.fingerprint ?? fingerprint(data.platform, data.requestType, data.email)
     if (config.state === 'enabled') {
       if (!data.token) return json({ success: false, error: 'invalid_payload' }, 400, origin, methods)
       const verification = await verifyToken(
@@ -218,7 +269,7 @@ export async function handlePlatformRequestPost(request, {
       phone: data.phone,
       company: data.company,
       message: data.message,
-      profile_data: data.profile,
+      profile_data: business?.profileData ?? data.profile,
       source_url: data.sourceUrl,
       fingerprint: requestFingerprint,
     })

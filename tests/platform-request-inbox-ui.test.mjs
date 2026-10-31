@@ -29,6 +29,16 @@ const request = {
   created_at: '2026-10-29T10:00:00Z',
 }
 
+const businessRequest = {
+  ...request,
+  id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  platform: 'vivir-fuengirola-negocios',
+  request_type: 'business',
+  name: 'Bodega Sol',
+  email: 'hola@bodegasol.example',
+  profile_data: { schema_version: 'fichero.v1', catalog: 'fuengirola', profile: { displayName: 'Bodega Sol' } },
+}
+
 const actionMocks = {
   '@/lib/actions/platform-requests': {
     approvePlatformRequestAction: async () => ({ success: 'ok' }),
@@ -95,6 +105,20 @@ test('request detail replaces the table, escapes profile data and exposes review
   assert.match(pendingHtml, />Aprobar</)
   assert.match(pendingHtml, />Rechazar</)
   assert.match(pendingHtml, /name="reason"/)
+})
+
+test('business review explains that approval creates a draft and does not publish it', () => {
+  const { PlatformRequestInbox } = loadProjectModule('src/components/admin/platform-request-inbox.tsx', actionMocks)
+  const html = renderToStaticMarkup(React.createElement(PlatformRequestInbox, {
+    scope: 'vivir-businesses',
+    data: { requests: [businessRequest], selectedRequest: businessRequest },
+    query: '',
+    status: 'pending',
+  }))
+
+  assert.match(html, /ficha canónica/i)
+  assert.match(html, /no se publica/i)
+  assert.doesNotMatch(html, /incorpora o enlaza esta ficha en el crm/i)
 })
 
 test('resolved detail keeps a durable outcome, audit reason and subscription preparation action', () => {

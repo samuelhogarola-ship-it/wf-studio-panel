@@ -5,9 +5,9 @@ import { useActionState } from 'react'
 
 import { approvePlatformRequestAction, rejectPlatformRequestAction } from '@/lib/actions/platform-requests'
 import type { PlatformRequestListItem } from '@/lib/platform-requests/admin'
-import type { Json, PlatformRequestStatus } from '@/lib/supabase/types'
+import type { Json, PlatformRequestStatus, PlatformRequestType } from '@/lib/supabase/types'
 
-type InboxScope = 'vivir-clients' | 'vivir-businesses' | 'conoce'
+type InboxScope = 'vivir-clients' | 'vivir-businesses' | 'conoce' | 'fichero'
 
 const TYPE_LABELS = {
   client: 'Cliente',
@@ -23,6 +23,7 @@ const STATUS_LABELS: Record<PlatformRequestStatus, string> = {
 
 function scopeConfig(scope: InboxScope) {
   if (scope === 'conoce') return { base: '/paneladmin/conoce-fuengirola/solicitudes', scopeValue: null }
+  if (scope === 'fichero') return { base: '/paneladmin/fichero/fuengirola/solicitudes', scopeValue: null }
   return {
     base: '/paneladmin/vivir-en-fuengirola/solicitudes',
     scopeValue: scope === 'vivir-businesses' ? 'businesses' : 'clients',
@@ -51,19 +52,23 @@ function flattenProfile(value: Json, prefix = ''): Array<[string, string]> {
   })
 }
 
-function ReviewActions({ requestId }: { requestId: string }) {
+function ReviewActions({ requestId, requestType }: { requestId: string; requestType: PlatformRequestType }) {
   const [approveState, approveAction, approvePending] = useActionState(approvePlatformRequestAction, {})
   const [rejectState, rejectAction, rejectPending] = useActionState(rejectPlatformRequestAction, {})
   const clientHref = approveState.clientHref
+  const profileHref = approveState.profileHref
 
   return (
     <div className="grid gap-4 border-t border-line pt-5 lg:grid-cols-2">
       <form action={approveAction} className="rounded-2xl bg-emerald-50 p-4">
         <input type="hidden" name="request_id" value={requestId} />
-        <p className="mb-3 text-sm text-emerald-900">Incorpora o enlaza esta ficha en el CRM. El acceso del cliente se crea después desde su ficha.</p>
+        <p className="mb-3 text-sm text-emerald-900">{requestType === 'business'
+          ? 'Crea una ficha canónica en borrador para revisión. No se publica hasta usar la acción de publicación.'
+          : 'Incorpora o enlaza esta ficha en el CRM. El acceso del cliente se crea después desde su ficha.'}</p>
         <button disabled={approvePending} className="rounded-full bg-emerald-700 px-5 py-2 text-sm font-semibold text-white disabled:opacity-50">{approvePending ? 'Aprobando…' : 'Aprobar'}</button>
         {approveState.error || approveState.success ? <p role={approveState.error ? 'alert' : 'status'} className="mt-3 text-sm">{approveState.error ?? approveState.success}</p> : null}
         {clientHref ? <Link href={clientHref} className="mt-3 block text-sm font-semibold text-emerald-800 underline">Abrir ficha del cliente</Link> : null}
+        {profileHref ? <Link href={profileHref} className="mt-3 block text-sm font-semibold text-emerald-800 underline">Abrir ficha para revisión</Link> : null}
       </form>
       <form action={rejectAction} className="rounded-2xl bg-rose-50 p-4">
         <input type="hidden" name="request_id" value={requestId} />
@@ -101,7 +106,7 @@ function RequestDetail({ scope, request, query, status, page }: {
         ].map(([label, value]) => <div key={label} className="rounded-xl bg-slate-50 p-4"><dt className="text-xs font-bold uppercase tracking-wider text-muted">{label}</dt><dd className="mt-1 break-words text-sm text-foreground">{value}</dd></div>)}
       </dl>
       {profile.length > 0 ? <div className="mt-6"><h3 className="font-bold text-foreground">Ficha recibida</h3><dl className="mt-3 grid gap-3 sm:grid-cols-2">{profile.map(([label, value]) => <div key={label} className="rounded-xl border border-line p-3"><dt className="text-xs font-semibold text-muted">{label}</dt><dd className="mt-1 break-words text-sm">{value}</dd></div>)}</dl></div> : null}
-      {request.status === 'pending' ? <ReviewActions requestId={request.id} /> : null}
+      {request.status === 'pending' ? <ReviewActions requestId={request.id} requestType={request.request_type} /> : null}
       {request.status !== 'pending' ? (
         <div className={`mt-6 rounded-2xl p-4 text-sm ${request.status === 'approved' ? 'bg-emerald-50 text-emerald-900' : 'bg-rose-50 text-rose-900'}`}>
           <p className="font-bold">{request.status === 'approved' ? 'Solicitud aprobada' : 'Solicitud rechazada'}</p>
@@ -134,7 +139,7 @@ export function PlatformRequestInbox({ scope, data, query, status, page }: {
 
   return (
     <div>
-      {scope !== 'conoce' ? <div className="mb-4 flex gap-2"><Link href={`${config.base}?scope=clients`} aria-current={scope === 'vivir-clients' ? 'page' : undefined} className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold">Clientes</Link><Link href={`${config.base}?scope=businesses`} aria-current={scope === 'vivir-businesses' ? 'page' : undefined} className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold">Negocios</Link></div> : null}
+      {scope === 'vivir-clients' || scope === 'vivir-businesses' ? <div className="mb-4 flex gap-2"><Link href={`${config.base}?scope=clients`} aria-current={scope === 'vivir-clients' ? 'page' : undefined} className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold">Clientes</Link><Link href={`${config.base}?scope=businesses`} aria-current={scope === 'vivir-businesses' ? 'page' : undefined} className="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold">Negocios</Link></div> : null}
       <form action={config.base} className="mb-4 flex flex-wrap gap-2 rounded-2xl border border-line bg-white p-3">
         {config.scopeValue ? <input type="hidden" name="scope" value={config.scopeValue} /> : null}
         <input type="search" name="q" defaultValue={query} placeholder="Buscar nombre, email o empresa…" className="min-w-64 flex-1 rounded-xl border border-line px-4 py-2 text-sm" />

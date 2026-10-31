@@ -1,4 +1,16 @@
 declare module '@/lib/platform-requests/public-api.mjs' {
+  export type FicheroBusinessProfileData = {
+    schema_version: 'fichero.v1'
+    catalog: 'fuengirola'
+    profile: Record<string, unknown>
+    identity: {
+      normalizedCif: string | null
+      normalizedEmail: string | null
+      normalizedDomain: string | null
+      normalizedName: string | null
+    }
+  }
+
   export type PlatformRequestInsert = {
     platform: 'vivir-fuengirola' | 'vivir-fuengirola-negocios' | 'conoce-fuengirola'
     request_type: 'client' | 'business' | 'subscription_interest'
@@ -7,7 +19,7 @@ declare module '@/lib/platform-requests/public-api.mjs' {
     phone: string
     company: string
     message: string
-    profile_data: Record<string, unknown>
+    profile_data: Record<string, unknown> | FicheroBusinessProfileData
     source_url: string
     fingerprint: string
   }
