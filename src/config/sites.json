@@ -648,7 +648,14 @@
       "legacyDashboard": true
     },
     "blogger": {
-      "enabled": false
+      "enabled": true,
+      "variant": "vps",
+      "runtime": "central-multisite",
+      "url": "https://admin.webfuengirola.com/paneladmin/blogger/superentrenador",
+      "apiBase": "/api/blogger/superentrenador/posts",
+      "buildEndpoint": "/api/blogger/superentrenador/build",
+      "contentDir": "biblioteca",
+      "publicPostBase": "/biblioteca/"
     }
   },
   {
