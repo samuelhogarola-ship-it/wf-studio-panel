@@ -15,7 +15,7 @@ import {
   getCustomBloggerSiteByHost,
 } from "../src/lib/blogger/custom-hosts.mjs";
 
-test("canonical website registry covers every current site and configures Samuel and Agama Blogger", () => {
+test("canonical website registry covers every current site and configures active Blogger tenants", () => {
   const sites = getSites();
   assert.equal(sites.length, 18);
   assert.equal(new Set(sites.map(({ key }) => key)).size, 18);
@@ -44,6 +44,17 @@ test("canonical website registry covers every current site and configures Samuel
   );
   assert.equal(agama.blogger.contentDir, "entrada-de-blog");
   assert.equal(agama.blogger.publicPostBase, "/entrada-de-blog/");
+
+  const superentrenador = getSiteByKey("superentrenador");
+  assert.equal(superentrenador.blogger.enabled, true);
+  assert.equal(superentrenador.blogger.runtime, "central-multisite");
+  assert.equal(superentrenador.blogger.variant, "vps");
+  assert.equal(
+    superentrenador.blogger.url,
+    "https://admin.webfuengirola.com/paneladmin/blogger/superentrenador",
+  );
+  assert.equal(superentrenador.blogger.contentDir, "biblioteca");
+  assert.equal(superentrenador.blogger.publicPostBase, "/biblioteca/");
 
   const todoPlastico = getSiteByKey("todoplastico");
   assert.equal(todoPlastico.domain, "todo-plastico.com");
@@ -90,6 +101,7 @@ test("canonical website registry covers every current site and configures Samuel
     ["agama", "vps"],
     ["personaltrainerfuengirola", "vps"],
     ["sportmassagefuengirola", "static"],
+    ["superentrenador", "vps"],
   ]);
 });
 
